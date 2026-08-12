@@ -11,10 +11,15 @@ import { e164Phone } from "./phone";
 
 const optionalString = z.preprocess((value) => (typeof value === "string" ? value.trim() : value), z.string()).optional().default("");
 const requiredString = z.preprocess((value) => (typeof value === "string" ? value.trim() : value), z.string().min(1));
+const optionalShortString = optionalString.pipe(z.string().max(255));
 const requiredShortString = requiredString.pipe(z.string().max(255));
 const optionalLongString = optionalString.pipe(z.string().max(5000));
 const requiredLongString = requiredString.pipe(z.string().max(5000));
 const optionalUrl = optionalString.refine((value) => value === "" || /^https?:\/\//i.test(value), "Enter a valid http or https URL.");
+const requiredStringArray = z.preprocess((value) => {
+  const values = Array.isArray(value) ? value : value == null ? [] : [value];
+  return [...new Set(values.map(String).map((entry) => entry.trim()).filter(Boolean))];
+}, z.array(z.string().min(1)).min(1));
 const optionalInstagramHandle = optionalString.transform((value) => socialHandleFromInput(value, ["instagram.com"]));
 const optionalXHandle = optionalString.transform((value) => socialHandleFromInput(value, ["x.com", "twitter.com"]));
 const optionalThreadsHandle = optionalString.transform((value) => socialHandleFromInput(value, ["threads.net"]));
@@ -33,6 +38,29 @@ const centsFromMoney = z.preprocess((value) => {
 
   return Math.round(Number(clean) * 100);
 }, z.number().int().min(1, "Amount must be at least $0.01."));
+const optionalCentsFromMoney = z.preprocess((value) => {
+  if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+    return 0;
+  }
+
+  if (typeof value !== "string" && typeof value !== "number") {
+    return value;
+  }
+
+  const clean = String(value).replace(/[^0-9.-]/g, "");
+  if (!clean) {
+    return Number.NaN;
+  }
+
+  return Math.round(Number(clean) * 100);
+}, z.number().int().min(0, "Amount cannot be negative."));
+const optionalNonnegativeInteger = z.preprocess((value) => {
+  if (value === undefined || value === null || (typeof value === "string" && value.trim() === "")) {
+    return 0;
+  }
+
+  return value;
+}, z.coerce.number().int().min(0));
 
 function socialHandleFromInput(value: string, hosts: string[]): string {
   const trimmed = value.trim();
@@ -174,11 +202,25 @@ export const brandCreateSchema = z.object({
 
 export const brandUpdateSchema = brandCreateSchema;
 
+export const strainCreateSchema = z.object({
+  name: requiredShortString,
+  breeder: optionalShortString,
+  genetics: optionalShortString,
+  sativa_percentage: z.coerce.number().int().min(0).max(100),
+  notes: optionalLongString,
+});
+
+export const strainUpdateSchema = strainCreateSchema;
+
 export const productCreateSchema = z.object({
   name: requiredShortString,
   brand_id: requiredString,
+  strain_ids: requiredStringArray,
   category: optionalString.pipe(z.string().max(255)),
+  unit_base_price_cents: optionalCentsFromMoney,
+  case_quantity: optionalNonnegativeInteger,
   sku: optionalString.pipe(z.string().max(255)),
+  upc: optionalString.pipe(z.string().max(255)),
   notes: optionalLongString,
 });
 

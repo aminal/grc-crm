@@ -99,6 +99,7 @@ export type InteractionRecord = FirestoreRecord<InteractionData> & {
 
 export type PackageData = {
   package_tag: string;
+  product_id?: string;
   strain: string;
   source_harvest: string;
   source_packages: string;
@@ -159,6 +160,7 @@ export type ParsedPackageData = Pick<PackageData,
 
 export type InventoryProductGroup = {
   key: string;
+  product_id?: string;
   item: string;
   source_packages: string;
   package_count: number;
@@ -186,6 +188,7 @@ export type ActorSnapshot = {
 export type OrderItem = {
   package_id: string;
   package_tag: string;
+  product_id?: string;
   strain: string;
   source_harvest: string;
   source_packages: string;
@@ -294,11 +297,27 @@ export type BrandData = {
   updated_at: FirestoreDate;
 };
 
+export type StrainData = {
+  name: string;
+  type?: string;
+  breeder: string;
+  genetics: string;
+  sativa_percentage: number;
+  notes: string;
+  deleted_at: FirestoreDate;
+  created_at: FirestoreDate;
+  updated_at: FirestoreDate;
+};
+
 export type ProductData = {
   name: string;
   brand_id: string;
+  strain_ids: string[];
   category: string;
+  unit_base_price_cents: number;
+  case_quantity: number;
   sku: string;
+  upc: string;
   notes: string;
   created_at: FirestoreDate;
   updated_at: FirestoreDate;
@@ -310,7 +329,7 @@ export type FieldChange = {
   next_value: string;
 };
 
-export type SettingsActivityAction = "created" | "updated";
+export type SettingsActivityAction = "created" | "updated" | "deleted";
 
 export type SettingsActivityData = {
   action: SettingsActivityAction;

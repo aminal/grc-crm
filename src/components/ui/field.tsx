@@ -10,14 +10,14 @@ const controlFrameClasses = [
   "relative block w-full",
   "before:absolute before:inset-px before:rounded-[calc(var(--radius-lg)-1px)] before:bg-white before:shadow-sm",
   "dark:before:hidden",
-  "after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:ring-transparent after:ring-inset focus-within:after:ring-2 focus-within:after:ring-blue-500",
+  "after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:ring-transparent after:ring-inset focus-within:after:ring-2 focus-within:after:ring-purple-500",
   "has-disabled:opacity-50 has-disabled:before:bg-zinc-950/5 has-disabled:before:shadow-none",
 ];
 
 const controlClasses = [
-  "relative font-medium block w-full appearance-none rounded-lg border border-zinc-950/10 bg-transparent text-base/6 text-zinc-950 placeholder:text-zinc-500 sm:text-base/6",
-  "hover:border-zinc-950/20 focus:outline-hidden disabled:border-zinc-950/20 disabled:bg-zinc-950/5",
-  "dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:border-white/20 dark:disabled:border-white/15 dark:disabled:bg-white/2.5 dark:scheme-dark",
+  "relative font-medium block w-full appearance-none rounded-lg border border-transparent bg-transparent text-base/6 text-zinc-950 placeholder:text-zinc-500 sm:text-base/6",
+  "hover:border-transparent focus:outline-hidden disabled:border-transparent disabled:bg-zinc-950/5",
+  "dark:border-transparent dark:bg-white/5 dark:text-white dark:hover:border-transparent dark:disabled:border-transparent dark:disabled:bg-white/2.5 dark:scheme-dark",
   "aria-invalid:border-red-500 aria-invalid:hover:border-red-500 dark:aria-invalid:border-red-600 dark:aria-invalid:hover:border-red-600",
 ];
 

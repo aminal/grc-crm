@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { buttonClasses } from "@/components/ui/button";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Field, Input, Select } from "@/components/ui/field";
+import { Input, Select } from "@/components/ui/field";
 import type { InventorySortDirection, InventorySortField } from "@/lib/metrc/inventory-grouping";
 
 type InventoryControlsProps = {
@@ -12,13 +11,66 @@ type InventoryControlsProps = {
   sort: InventorySortField;
   direction: InventorySortDirection;
   showSold: boolean;
-  countText: string;
 };
 
-export function InventoryControls({ query, sort, direction, showSold, countText }: InventoryControlsProps): React.ReactElement {
+export function InventoryControls({ query, sort, direction, showSold }: InventoryControlsProps): React.ReactElement {
+  const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
   const didLoadStoredControls = useRef(false);
+  const lastAppliedControls = useRef({ query, sort, direction, showSold });
+  const [queryValue, setQueryValue] = useState(query);
+  const [sortValue, setSortValue] = useState(sort);
+  const [directionValue, setDirectionValue] = useState(direction);
+  const [showSoldValue, setShowSoldValue] = useState(showSold);
+
+  const applyControls = useCallback(
+    (nextQuery: string, nextSort: InventorySortField, nextDirection: InventorySortDirection, nextShowSold: boolean, updateLastApplied = true) => {
+      localStorage.setItem("inventory-q", nextQuery);
+      localStorage.setItem("inventory-sort", nextSort);
+      localStorage.setItem("inventory-direction", nextDirection);
+      localStorage.setItem("inventory-show-sold", nextShowSold ? "1" : "0");
+
+      const next = new URLSearchParams();
+      if (nextQuery) {
+        next.set("q", nextQuery);
+      }
+      if (nextSort !== "expiration_date") {
+        next.set("sort", nextSort);
+      }
+      if (nextDirection !== "asc") {
+        next.set("direction", nextDirection);
+      }
+      if (nextShowSold) {
+        next.set("show_sold", "1");
+      }
+
+      if (updateLastApplied) {
+        lastAppliedControls.current = { query: nextQuery, sort: nextSort, direction: nextDirection, showSold: nextShowSold };
+      }
+
+      const search = next.toString();
+      if (search === searchParams.toString()) {
+        return;
+      }
+
+      router.replace(search ? `${pathname}?${search}` : pathname, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  useEffect(() => {
+    const lastApplied = lastAppliedControls.current;
+    if (query === lastApplied.query && sort === lastApplied.sort && direction === lastApplied.direction && showSold === lastApplied.showSold) {
+      return;
+    }
+
+    lastAppliedControls.current = { query, sort, direction, showSold };
+    setQueryValue(query);
+    setSortValue(sort);
+    setDirectionValue(direction);
+    setShowSoldValue(showSold);
+  }, [query, sort, direction, showSold]);
 
   useEffect(() => {
     if (didLoadStoredControls.current) {
@@ -31,71 +83,83 @@ export function InventoryControls({ query, sort, direction, showSold, countText 
     }
 
     const storedQuery = localStorage.getItem("inventory-q") ?? "";
-    const storedSort = (localStorage.getItem("inventory-sort") ?? "expiration_date") as InventorySortField;
-    const storedDirection = (localStorage.getItem("inventory-direction") ?? "asc") as InventorySortDirection;
+    const storedSort = parseInventorySortField(localStorage.getItem("inventory-sort")) ?? "expiration_date";
+    const storedDirection = parseInventorySortDirection(localStorage.getItem("inventory-direction")) ?? "asc";
     const storedShowSold = localStorage.getItem("inventory-show-sold") === "1";
     if (!storedQuery && storedSort === "expiration_date" && storedDirection === "asc" && !storedShowSold) {
       return;
     }
 
-    const next = new URLSearchParams();
-    if (storedQuery) {
-      next.set("q", storedQuery);
-    }
-    if (storedSort !== "expiration_date") {
-      next.set("sort", storedSort);
-    }
-    if (storedDirection !== "asc") {
-      next.set("direction", storedDirection);
-    }
-    if (storedShowSold) {
-      next.set("show_sold", "1");
+    applyControls(storedQuery, storedSort, storedDirection, storedShowSold, false);
+  }, [applyControls, searchParams]);
+
+  useEffect(() => {
+    const nextQuery = queryValue.trim();
+    if (nextQuery === query) {
+      return;
     }
 
-    router.replace(`/inventory?${next.toString()}`);
-  }, [router, searchParams]);
+    const timeout = window.setTimeout(() => {
+      applyControls(nextQuery, sortValue, directionValue, showSoldValue);
+    }, 250);
 
-  function persist(formData: FormData): void {
-    localStorage.setItem("inventory-q", String(formData.get("q") ?? ""));
-    localStorage.setItem("inventory-sort", String(formData.get("sort") ?? "expiration_date"));
-    localStorage.setItem("inventory-direction", String(formData.get("direction") ?? "asc"));
-    localStorage.setItem("inventory-show-sold", formData.get("show_sold") === "1" ? "1" : "0");
+    return () => window.clearTimeout(timeout);
+  }, [applyControls, directionValue, query, queryValue, showSoldValue, sortValue]);
+
+  function handleSortChange(event: React.ChangeEvent<HTMLSelectElement>): void {
+    const nextSort = event.target.value as InventorySortField;
+    setSortValue(nextSort);
+    applyControls(queryValue.trim(), nextSort, directionValue, showSoldValue);
+  }
+
+  function handleDirectionChange(event: React.ChangeEvent<HTMLSelectElement>): void {
+    const nextDirection = event.target.value as InventorySortDirection;
+    setDirectionValue(nextDirection);
+    applyControls(queryValue.trim(), sortValue, nextDirection, showSoldValue);
+  }
+
+  function handleShowSoldChange(event: React.ChangeEvent<HTMLInputElement>): void {
+    const nextShowSold = event.target.checked;
+    setShowSoldValue(nextShowSold);
+    applyControls(queryValue.trim(), sortValue, directionValue, nextShowSold);
   }
 
   return (
     <form
-      className="space-y-4"
+      className="rounded-lg bg-white/80 p-2 shadow-sm dark:bg-zinc-950/40"
+      role="search"
       onSubmit={(event) => {
-        persist(new FormData(event.currentTarget));
+        event.preventDefault();
+        applyControls(queryValue.trim(), sortValue, directionValue, showSoldValue);
       }}
     >
-      <Field label="Search inventory">
-        <Input name="q" defaultValue={query} placeholder="Item, tag, strain, category, source package" />
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Sort by">
-          <Select name="sort" defaultValue={sort}>
-            <option value="expiration_date">Expiration date</option>
-            <option value="item">Item</option>
-            <option value="package_count">Package count</option>
-            <option value="quantity">Quantity</option>
-          </Select>
-        </Field>
-        <Field label="Direction">
-          <Select name="direction" defaultValue={direction}>
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </Select>
-        </Field>
-      </div>
-      <label className="flex items-center gap-3 text-base/6 text-zinc-950 sm:text-sm/6 dark:text-white">
-        <Checkbox name="show_sold" value="1" defaultChecked={showSold} />
-        Show pending and sold packages
-      </label>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-zinc-600">{countText}</p>
-        <button className={buttonClasses("secondary")}>Apply Filters</button>
+      <div className="grid grid-cols-2 gap-2 xl:grid-cols-[minmax(18rem,1fr)_8rem_7rem_auto_auto] xl:items-center">
+        <div className="col-span-2 xl:col-span-1">
+          <Input type="search" name="q" value={queryValue} onChange={(event) => setQueryValue(event.target.value)} placeholder="Search inventory" aria-label="Search inventory" />
+        </div>
+        <Select name="sort" value={sortValue} onChange={handleSortChange} aria-label="Sort inventory">
+          <option value="expiration_date">Expiry</option>
+          <option value="item">Item</option>
+          <option value="package_count">Packages</option>
+          <option value="quantity">Qty</option>
+        </Select>
+        <Select name="direction" value={directionValue} onChange={handleDirectionChange} aria-label="Sort direction">
+          <option value="asc">Asc</option>
+          <option value="desc">Desc</option>
+        </Select>
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-white px-3 py-2 text-sm/6 font-medium text-zinc-950 shadow-sm dark:border-transparent dark:bg-white/5 dark:text-white">
+          <Checkbox name="show_sold" value="1" checked={showSoldValue} onChange={handleShowSoldChange} aria-label="Include sold packages" />
+          Sold
+        </label>
       </div>
     </form>
   );
+}
+
+function parseInventorySortField(value: string | null): InventorySortField | null {
+  return value === "expiration_date" || value === "item" || value === "package_count" || value === "quantity" ? value : null;
+}
+
+function parseInventorySortDirection(value: string | null): InventorySortDirection | null {
+  return value === "asc" || value === "desc" ? value : null;
 }

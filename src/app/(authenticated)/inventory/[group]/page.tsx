@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { groupInventory, listPackages } from "@/lib/data/inventory";
-import { compactNumber, formatDate } from "@/lib/domain/format";
+import { compactNumber, formatDate, formatInventoryCategory } from "@/lib/domain/format";
 
 export default async function InventoryGroupPage({ params }: { params: Promise<{ group: string }> }): Promise<React.ReactElement> {
   const { group: encodedGroup } = await params;
@@ -22,7 +22,7 @@ export default async function InventoryGroupPage({ params }: { params: Promise<{
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Summary label="Total Quantity" value={`${compactNumber(group.total_quantity)} ${group.mixed_units ? group.units.join(" / ") : group.unit_of_measure}`} />
-        <Summary label="Category" value={group.category || "—"} />
+        <Summary label="Category" value={formatInventoryCategory(group.category) || "—"} />
         <Summary label="Earliest Expiration" value={formatDate(group.expiration_date)} />
         <Summary label="Status" value={group.status} />
       </div>
@@ -38,7 +38,7 @@ export default async function InventoryGroupPage({ params }: { params: Promise<{
                     <StatusBadge status={packageRecord.data.package_status ?? (packageRecord.data.active ? "available" : "inactive")} />
                   </div>
                   <p className="mt-3 text-sm text-zinc-700">{packageRecord.data.item || "Unknown item"} · {packageRecord.data.strain || "No strain"}</p>
-                  <p className="text-sm text-zinc-600">{compactNumber(packageRecord.data.quantity)} {packageRecord.data.unit_of_measure} · {packageRecord.data.category || "No category"}</p>
+                  <p className="text-sm text-zinc-600">{compactNumber(packageRecord.data.quantity)} {packageRecord.data.unit_of_measure} · {formatInventoryCategory(packageRecord.data.category) || "No category"}</p>
                   <p className="text-sm text-zinc-500">Source: {packageRecord.data.source_packages || "—"}</p>
                   <p className="text-sm text-zinc-500">Location: {[packageRecord.data.location, packageRecord.data.sublocation].filter(Boolean).join(" / ") || "—"}</p>
                   <p className="text-sm text-zinc-500">Lab: {packageRecord.data.lab_testing_status || "—"}</p>

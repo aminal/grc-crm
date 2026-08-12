@@ -115,6 +115,32 @@ function cell(row: unknown[], columnMap: Partial<Record<keyof ParsedPackageData,
   return index === undefined ? "" : row[index];
 }
 
+function actualSheetRange(sheet: XLSX.WorkSheet): string | null {
+  const cells = Object.keys(sheet).filter((key) => /^[A-Z]+[0-9]+$/.test(key));
+  if (cells.length === 0) {
+    return null;
+  }
+
+  const range = cells.reduce(
+    (current, address) => {
+      const cellAddress = XLSX.utils.decode_cell(address);
+      return {
+        s: {
+          r: Math.min(current.s.r, cellAddress.r),
+          c: Math.min(current.s.c, cellAddress.c),
+        },
+        e: {
+          r: Math.max(current.e.r, cellAddress.r),
+          c: Math.max(current.e.c, cellAddress.c),
+        },
+      };
+    },
+    { s: { r: Number.POSITIVE_INFINITY, c: Number.POSITIVE_INFINITY }, e: { r: 0, c: 0 } },
+  );
+
+  return XLSX.utils.encode_range(range);
+}
+
 export function parseMetrcWorkbook(buffer: Buffer | ArrayBuffer | Uint8Array): ParsedPackageData[] {
   const workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
   const sheetName = workbook.SheetNames[0];
@@ -127,7 +153,12 @@ export function parseMetrcWorkbook(buffer: Buffer | ArrayBuffer | Uint8Array): P
     return [];
   }
 
-  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, blankrows: false });
+  const range = actualSheetRange(sheet);
+  if (!range) {
+    return [];
+  }
+
+  const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, raw: true, blankrows: false, range });
   const header = rows.shift();
   if (!header) {
     return [];

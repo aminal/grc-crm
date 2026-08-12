@@ -25,7 +25,7 @@ export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTable
 }
 
 export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>): React.ReactElement {
-  return <th className={cn("border-b border-b-zinc-950/10 px-4 py-2 font-medium first:pl-2.5 last:pr-(--gutter,--spacing(2)) sm:last:pr-1 dark:border-b-white/10", className)} {...props} />;
+  return <th className={cn("border-b border-b-zinc-950/10 px-4 py-2 font-semibold uppercase first:pl-2.5 last:pr-(--gutter,--spacing(2)) sm:last:pr-1 dark:border-b-white/10", className)} {...props} />;
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>): React.ReactElement {

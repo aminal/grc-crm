@@ -56,6 +56,7 @@ function itemSnapshot(packageRecord: FirestoreRecord<PackageData>, priceCents: n
   return {
     package_id: packageRecord.id,
     package_tag: packageData.package_tag,
+    ...(packageData.product_id ? { product_id: packageData.product_id } : {}),
     strain: packageData.strain ?? "",
     source_harvest: packageData.source_harvest ?? "",
     source_packages: packageData.source_packages ?? "",

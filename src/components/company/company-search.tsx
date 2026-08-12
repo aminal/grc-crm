@@ -64,7 +64,7 @@ export function CompanySearch({ query }: CompanySearchProps): React.ReactElement
       }}
     >
       <Field label="Search companies">
-        <Input type="search" name="q" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Company, license, or facility type" />
+        <Input type="search" name="q" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Company name, license, location, or facility type" />
       </Field>
     </form>
   );

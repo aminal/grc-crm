@@ -7,18 +7,18 @@ import { buttonClasses } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   findProduct,
+  findStrain,
   listBrands,
-  listProductActivity,
   listProducts,
+  listStrains,
 } from "@/lib/data/sales-settings";
-import { dateFromFirestore } from "@/lib/domain/format";
-import type { BrandData, FirestoreRecord, ProductData, SettingsActivityData } from "@/lib/domain/types";
+import type { BrandData, FirestoreRecord, ProductData, StrainData } from "@/lib/domain/types";
 
 const productsHref = "/products";
 
 type ProductDialogProduct = {
   id: string;
-  data: Pick<ProductData, "name" | "brand_id" | "category" | "sku" | "notes">;
+  data: Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
 };
 
 type ProductDialogBrand = {
@@ -26,16 +26,11 @@ type ProductDialogBrand = {
   name: string;
 };
 
-type ProductDialogActivity = {
+type ProductDialogStrain = {
   id: string;
-  data: Pick<SettingsActivityData, "action" | "reason" | "actor_email" | "actor_name" | "changes"> & {
-    created_at: string | null;
-  };
+  name: string;
+  deleted: boolean;
 };
-
-function serializeFirestoreDate(value: ProductData["created_at"] | SettingsActivityData["created_at"]): string | null {
-  return dateFromFirestore(value)?.toISOString() ?? null;
-}
 
 function serializeProduct(record: FirestoreRecord<ProductData>): ProductDialogProduct {
   return {
@@ -43,8 +38,12 @@ function serializeProduct(record: FirestoreRecord<ProductData>): ProductDialogPr
     data: {
       name: record.data.name,
       brand_id: record.data.brand_id,
+      strain_ids: record.data.strain_ids,
       category: record.data.category,
+      unit_base_price_cents: record.data.unit_base_price_cents,
+      case_quantity: record.data.case_quantity,
       sku: record.data.sku,
+      upc: record.data.upc,
       notes: record.data.notes,
     },
   };
@@ -57,18 +56,31 @@ function serializeBrand(record: FirestoreRecord<BrandData>): ProductDialogBrand 
   };
 }
 
-function serializeActivity(record: FirestoreRecord<SettingsActivityData>): ProductDialogActivity {
+function strainIsDeleted(strain: FirestoreRecord<StrainData>): boolean {
+  return strain.data.deleted_at !== null && strain.data.deleted_at !== undefined;
+}
+
+function serializeStrain(record: FirestoreRecord<StrainData>): ProductDialogStrain {
   return {
     id: record.id,
-    data: {
-      action: record.data.action,
-      reason: record.data.reason,
-      actor_email: record.data.actor_email,
-      actor_name: record.data.actor_name,
-      changes: record.data.changes,
-      created_at: serializeFirestoreDate(record.data.created_at),
-    },
+    name: record.data.name,
+    deleted: strainIsDeleted(record),
   };
+}
+
+function strainIdsFromProducts(products: FirestoreRecord<ProductData>[]): string[] {
+  return [...new Set(products.flatMap((product) => product.data.strain_ids))].filter(Boolean);
+}
+
+async function includeReferencedStrains(activeStrains: FirestoreRecord<StrainData>[], products: FirestoreRecord<ProductData>[]): Promise<FirestoreRecord<StrainData>[]> {
+  const activeIds = new Set(activeStrains.map((strain) => strain.id));
+  const missingIds = strainIdsFromProducts(products).filter((strainId) => !activeIds.has(strainId));
+  const referencedStrains = await Promise.all(missingIds.map(findStrain));
+
+  return [
+    ...activeStrains,
+    ...referencedStrains.filter((strain): strain is FirestoreRecord<StrainData> => strain !== null),
+  ].sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<{ product?: string }> }): Promise<React.ReactElement> {
@@ -79,26 +91,28 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
   let brands: FirestoreRecord<BrandData>[] = [];
   let products: FirestoreRecord<ProductData>[] = [];
+  let activeStrains: FirestoreRecord<StrainData>[] = [];
   let selectedProduct: FirestoreRecord<ProductData> | null = null;
-  let productActivity: FirestoreRecord<SettingsActivityData>[] = [];
 
   if (showEditProductDialog) {
-    [brands, products, selectedProduct, productActivity] = await Promise.all([
+    [brands, products, activeStrains, selectedProduct] = await Promise.all([
       listBrands(),
       listProducts(),
+      listStrains(),
       findProduct(productParam),
-      listProductActivity(productParam),
     ]);
   } else {
-    [brands, products] = await Promise.all([
+    [brands, products, activeStrains] = await Promise.all([
       listBrands(),
       listProducts(),
+      listStrains(),
     ]);
   }
 
+  const strains = await includeReferencedStrains(activeStrains, products);
   const serializedBrands = brands.map(serializeBrand);
+  const serializedStrains = strains.map(serializeStrain);
   const serializedProduct = selectedProduct ? serializeProduct(selectedProduct) : null;
-  const serializedActivity = productActivity.map(serializeActivity);
 
   return (
     <div>
@@ -112,16 +126,9 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
           </Link>
         }
       />
-      <Card>
-        <CardHeader>
-          <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Products</h2>
-        </CardHeader>
-        <CardContent>
-          <ProductTable products={products} brands={brands} selectedProductId={selectedProduct?.id} hrefBase={productsHref} />
-        </CardContent>
-      </Card>
-      {showCreateProductDialog ? <ProductDialog mode="create" brands={serializedBrands} activity={[]} closeHref={productsHref} /> : null}
-      {showEditProductDialog && serializedProduct ? <ProductDialog mode="edit" product={serializedProduct} brands={serializedBrands} activity={serializedActivity} closeHref={productsHref} /> : null}
+      <ProductTable products={products} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={productsHref} />
+      {showCreateProductDialog ? <ProductDialog mode="create" brands={serializedBrands} strains={serializedStrains} closeHref={productsHref} /> : null}
+      {showEditProductDialog && serializedProduct ? <ProductDialog mode="edit" product={serializedProduct} brands={serializedBrands} strains={serializedStrains} closeHref={productsHref} /> : null}
     </div>
   );
 }

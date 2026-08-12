@@ -29,8 +29,9 @@ function parseMillis(value: unknown): number | null {
   return null;
 }
 
-function groupKey(item: string, sourcePackages: string): string {
-  return createHash("sha1").update(`${item.toLowerCase()}\u001f${sourcePackages.toLowerCase()}`).digest("hex");
+function groupKey(productId: string, item: string, sourcePackages: string): string {
+  const productKey = productId.trim().toLowerCase() || item.toLowerCase();
+  return createHash("sha1").update(`${productKey}\u001f${sourcePackages.toLowerCase()}`).digest("hex");
 }
 
 function dominantUnit(rows: FirestoreRecord<PackageData>[]): string {
@@ -72,8 +73,9 @@ export function groupInventory(packages: FirestoreRecord<PackageData>[]): Invent
 
   for (const packageRecord of packages) {
     const item = packageRecord.data.item.trim() || "—";
+    const productId = packageRecord.data.product_id?.trim() ?? "";
     const sourcePackages = packageRecord.data.source_packages.trim();
-    const key = groupKey(item, sourcePackages);
+    const key = groupKey(productId, item, sourcePackages);
     groups.set(key, [...(groups.get(key) ?? []), packageRecord]);
   }
 
@@ -107,6 +109,7 @@ export function groupInventory(packages: FirestoreRecord<PackageData>[]): Invent
 
       return {
         key,
+        product_id: firstNonEmpty(rows.map((row) => row.data.product_id ?? "")) || undefined,
         item,
         source_packages: sourcePackages,
         package_count: rows.length,

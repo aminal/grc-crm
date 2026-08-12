@@ -228,11 +228,11 @@ function PrimaryContactMethod({ label, value, icon, href }: {
             </div>
             <div className='min-w-0'>
                 <p className='text-xs/5 font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400'>{label}</p>
-                <p className='mt-0.5 break-words text-md/6 font-medium text-zinc-950 dark:text-white'>{value}</p>
+                <p className='mt-0.5 break-words text-md/6 font-medium text-zinc-950 dark:text-white hover:text-purple-400'>{value}</p>
             </div>
         </>
     );
-    const className = 'flex bg-zinc-950/40 p-2.5 rounded-xl gap-3 transition hover:bg-zinc-950/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500';
+    const className = 'flex gap-3';
 
     return href ? <a href={href} className={className}>{content}</a> : <div className={className}>{content}</div>;
 }

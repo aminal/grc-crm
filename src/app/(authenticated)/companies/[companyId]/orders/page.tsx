@@ -20,12 +20,12 @@ export default async function CompanyOrdersPage({ params }: { params: Promise<{ 
 
       <div className="space-y-4">
         {orders.map((order) => (
-          <Link key={order.id} href={`/sales/${order.id}`} className="group block overflow-hidden rounded-2xl bg-white shadow-xs transition hover:bg-zinc-50 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-900">
+          <Link key={order.id} href={`/sales/${order.id}`} className="group block overflow-hidden rounded-2xl bg-white shadow-xs transition hover:bg-zinc-50 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950/75">
             <div className="p-5 sm:p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-3">
-                    <h2 className="text-2xl/8 font-semibold tracking-tight text-zinc-950 group-hover:text-purple-700 sm:text-2xl/7 dark:text-white dark:group-hover:text-purple-300 uppercase">Order #{order.data.order_number}</h2>
+                    <h2 className="text-2xl/8 font-semibold tracking-tight text-zinc-950 group-hover:text-purple-700 sm:text-2xl/7 dark:text-white dark:group-hover:text-purple-400 uppercase">Order #{order.data.order_number}</h2>
                     <StatusBadge status={order.data.status} />
                   </div>
                   <div className="mt-4 flex flex-wrap gap-3 text-sm/6 text-zinc-600 dark:text-zinc-400">
@@ -33,9 +33,9 @@ export default async function CompanyOrdersPage({ params }: { params: Promise<{ 
                     <span className="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 font-medium dark:bg-white/5">Created {formatDateTime(order.data.created_at)}</span>
                   </div>
                 </div>
-                <div className="rounded-xl bg-zinc-50 px-4 py-3 text-left sm:text-right dark:bg-white/5">
-                  <p className="text-xs/5 font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Total</p>
-                  <p className="mt-1 text-xl/7 font-semibold text-zinc-950 dark:text-white">{formatMoney(order.data.total_cents)}</p>
+                <div className="">
+                  <p className="text-base/7 text-zinc-950 sm:text-sm/6 font-medium dark:text-zinc-500 uppercase">Total</p>
+                  <p className="mt-1 text-2xl/7 font-semibold text-zinc-950 dark:text-white">{formatMoney(order.data.total_cents)}</p>
                 </div>
               </div>
             </div>

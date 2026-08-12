@@ -57,6 +57,11 @@ export function compactNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value);
 }
 
+export function formatInventoryCategory(value: string | null | undefined): string {
+  const category = value?.trim() ?? "";
+  return category.toLowerCase() === "bud/flower - each" ? "Flower" : category;
+}
+
 export function orderStatusLabel(status: OrderStatus | string | null | undefined): string {
   switch (status) {
     case "pending":

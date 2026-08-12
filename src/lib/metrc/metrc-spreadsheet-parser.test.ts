@@ -9,6 +9,28 @@ function workbookBuffer(rows: unknown[][]): Buffer {
   return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
+function workbookBufferWithDimensionRef(rows: unknown[][], ref: string): Buffer {
+  const workbook = XLSX.utils.book_new();
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  const originalRef = sheet["!ref"];
+  XLSX.utils.book_append_sheet(workbook, sheet, "Active Packages");
+  const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx", compression: false }) as Buffer;
+  if (!originalRef) {
+    return buffer;
+  }
+
+  const from = Buffer.from(`dimension ref="${originalRef}"`);
+  const to = Buffer.from(`dimension ref="${ref}"`);
+  const index = buffer.indexOf(from);
+  if (index === -1 || from.length !== to.length) {
+    return buffer;
+  }
+
+  const patched = Buffer.from(buffer);
+  to.copy(patched, index);
+  return patched;
+}
+
 describe("METRC spreadsheet parser", () => {
   it("maps basic columns and skips blank package rows", () => {
     const packages = parseMetrcWorkbook(workbookBuffer([
@@ -19,6 +41,32 @@ describe("METRC spreadsheet parser", () => {
 
     expect(packages).toHaveLength(1);
     expect(packages[0]).toMatchObject({ package_tag: "pkg-a", item: "Blue Dream", quantity: 1234.5 });
+  });
+
+  it("reads METRC columns even when workbook metadata range only includes tags", () => {
+    const packages = parseMetrcWorkbook(workbookBufferWithDimensionRef([
+      ["Tag", "Item", "Category", "Quantity"],
+      ["pkg-a", "3.5g Flower - Animal Tsunami", "Bud/Flower - Each", 16],
+    ], "A1:A2"));
+
+    expect(packages[0]).toMatchObject({
+      package_tag: "pkg-a",
+      item: "3.5g Flower - Animal Tsunami",
+      category: "Bud/Flower - Each",
+      quantity: 16,
+    });
+  });
+
+  it("supports tag-only active package exports", () => {
+    const packages = parseMetrcWorkbook(workbookBuffer([
+      ["Tag"],
+      ["1A4120300001AA4000000105"],
+      ["1A4120300001AA4000000106"],
+    ]));
+
+    expect(packages).toHaveLength(2);
+    expect(packages.map((packageRecord) => packageRecord.package_tag)).toEqual(["1A4120300001AA4000000105", "1A4120300001AA4000000106"]);
+    expect(packages[0]).toMatchObject({ item: "", category: "", quantity: 0 });
   });
 
   it("supports alternate aliases", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companySchema, createOrderSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, profileSchema } from "./schemas";
+import { companySchema, createOrderSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, profileSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
@@ -33,6 +33,23 @@ describe("domain schemas", () => {
   it("requires check number for check payments", () => {
     expect(() => paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "" })).toThrow();
     expect(paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "123" }).amount).toBe(1000);
+  });
+
+  it("parses product pricing and case quantity", () => {
+    const parsed = productCreateSchema.parse({
+      name: "Product",
+      brand_id: "brand-1",
+      strain_ids: ["strain-1"],
+      unit_base_price_cents: "12.34",
+      case_quantity: "24",
+    });
+
+    expect(parsed.unit_base_price_cents).toBe(1234);
+    expect(parsed.case_quantity).toBe(24);
+    expect(productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"] })).toMatchObject({
+      unit_base_price_cents: 0,
+      case_quantity: 0,
+    });
   });
 
   it("extracts order package tags and prices from form data", () => {

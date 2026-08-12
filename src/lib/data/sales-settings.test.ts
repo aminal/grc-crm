@@ -1,13 +1,55 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const firestoreMocks = vi.hoisted(() => ({
+  getDocument: vi.fn(),
+  listCollection: vi.fn(),
+  now: vi.fn(() => "server-now"),
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/firebase/admin", () => ({
   db: {},
 }));
+vi.mock("./firestore", () => ({
+  getDocument: firestoreMocks.getDocument,
+  listCollection: firestoreMocks.listCollection,
+  millis: (value: unknown) => {
+    if (!value) {
+      return 0;
+    }
 
-import { buildFieldChanges, buildSettingsActivityData } from "./sales-settings";
+    if (value instanceof Date) {
+      return value.getTime();
+    }
+
+    if (typeof value === "string") {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    if (typeof value === "object" && "toMillis" in value && typeof value.toMillis === "function") {
+      return value.toMillis();
+    }
+
+    return 0;
+  },
+  normalizedText: (value: unknown) => String(value ?? "").trim(),
+  now: firestoreMocks.now,
+}));
+
+import {
+  buildFieldChanges,
+  buildSettingsActivityData,
+  listStrains,
+  productActivityFields,
+  strainActivityFields,
+} from "./sales-settings";
 
 describe("sales settings data helpers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("records only changed fields using normalized values", () => {
     expect(buildFieldChanges(
       {
@@ -51,6 +93,107 @@ describe("sales settings data helpers", () => {
         next_value: "First note",
       },
     ]);
+  });
+
+  it("serializes product strain IDs in stable order for activity diffs", () => {
+    const previous = productActivityFields({
+      name: "Gummy",
+      brand_id: "brand-1",
+      strain_ids: ["strain-b", "strain-a", "strain-b"],
+      category: "Edible",
+      sku: "SKU-1",
+      notes: "",
+    });
+    const next = productActivityFields({
+      name: "Gummy",
+      brand_id: "brand-1",
+      strain_ids: [" strain-a ", "strain-b"],
+      category: "Edible",
+      sku: "SKU-1",
+      notes: "",
+    });
+
+    expect(previous.strain_ids).toBe("[\"strain-a\",\"strain-b\"]");
+    expect(buildFieldChanges(previous, next)).toEqual([]);
+  });
+
+  it("serializes strain composition for activity diffs", () => {
+    const previous = strainActivityFields({
+      name: "Blue Dream",
+      sativa_percentage: 50,
+      notes: "Balanced",
+    });
+    const next = strainActivityFields({
+      name: "Blue Dream",
+      sativa_percentage: 60,
+      notes: "Balanced",
+    });
+
+    expect(previous.sativa_percentage).toBe("50");
+    expect(buildFieldChanges(previous, next)).toEqual([
+      {
+        field: "sativa_percentage",
+        previous_value: "50",
+        next_value: "60",
+      },
+    ]);
+  });
+
+  it("infers strain composition from legacy type values", () => {
+    expect(strainActivityFields({ type: "Sativa" }).sativa_percentage).toBe("100");
+    expect(strainActivityFields({ type: "Indica" }).sativa_percentage).toBe("0");
+    expect(strainActivityFields({ type: "Hybrid" }).sativa_percentage).toBe("50");
+    expect(strainActivityFields({ type: "Indica/Sativa" }).sativa_percentage).toBe("50");
+  });
+
+  it("hides soft-deleted strains from active strain lists", async () => {
+    firestoreMocks.listCollection.mockResolvedValueOnce([
+      {
+        id: "strain-deleted",
+        data: {
+          name: "Deleted Strain",
+          type: "Hybrid",
+          notes: "Hidden",
+          deleted_at: "2026-08-10T12:00:00.000Z",
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "strain-z",
+        data: {
+          name: "Zeta Strain",
+          type: "Sativa",
+          notes: "",
+          deleted_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "strain-a",
+        data: {
+          name: "Alpha Strain",
+          type: "Indica",
+          notes: "",
+          deleted_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+    ]);
+
+    await expect(listStrains()).resolves.toMatchObject([
+      {
+        id: "strain-a",
+        data: { name: "Alpha Strain", sativa_percentage: 0, deleted_at: null },
+      },
+      {
+        id: "strain-z",
+        data: { name: "Zeta Strain", sativa_percentage: 100, deleted_at: null },
+      },
+    ]);
+    expect(firestoreMocks.listCollection).toHaveBeenCalledWith("strains");
   });
 
   it("stores actor fallbacks and a normalized reason in activity data", () => {

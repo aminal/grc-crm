@@ -4,6 +4,7 @@ import * as Headless from "@headlessui/react";
 import {
   ArchiveBoxIcon,
   BanknotesIcon,
+  BeakerIcon,
   BuildingOffice2Icon,
   CubeIcon,
   HomeIcon,
@@ -46,6 +47,12 @@ const navItems = [
     label: "Brands",
     icon: TagIcon,
     isCurrent: (pathname: string) => pathname === "/brands" || pathname.startsWith("/brands/"),
+  },
+  {
+    href: "/strains",
+    label: "Strains",
+    icon: BeakerIcon,
+    isCurrent: (pathname: string) => pathname === "/strains" || pathname.startsWith("/strains/"),
   },
   {
     href: "/products",

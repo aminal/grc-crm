@@ -1,20 +1,31 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { BrandData, FirestoreRecord } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
 
-export function BrandTable({
-  brands,
-  selectedBrandId,
-  hrefBase = "/brands",
+export type StrainTableStrain = {
+  id: string;
+  data: {
+    name: string;
+    sativa_percentage: number;
+  };
+};
+
+function formatComposition(sativaPercentage: number): string {
+  return `${100 - sativaPercentage}% Indica / ${sativaPercentage}% Sativa`;
+}
+
+export function StrainTable({
+  strains,
+  selectedStrainId,
+  hrefBase = "/strains",
 }: {
-  brands: FirestoreRecord<BrandData>[];
-  selectedBrandId?: string;
+  strains: StrainTableStrain[];
+  selectedStrainId?: string;
   hrefBase?: string;
 }): React.ReactElement {
-  if (brands.length === 0) {
-    return <EmptyState title="No brands yet" description="Create a brand to start building your sales catalog." />;
+  if (strains.length === 0) {
+    return <EmptyState title="No strains yet" description="Create a strain before adding products to the sales catalog." />;
   }
 
   return (
@@ -22,28 +33,28 @@ export function BrandTable({
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Website</TableHead>
+          <TableHead>Composition</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {brands.map((brand) => {
+        {strains.map((strain) => {
           const separator = hrefBase.includes("?") ? "&" : "?";
-          const href = `${hrefBase}${separator}brand=${brand.id}`;
-          const label = `Edit ${brand.data.name}`;
+          const href = `${hrefBase}${separator}strain=${strain.id}`;
+          const label = `Edit ${strain.data.name}`;
 
           return (
-            <TableRow key={brand.id} className={cn("group cursor-pointer", selectedBrandId === brand.id && "bg-zinc-950/2.5 dark:bg-white/5")}>
+            <TableRow key={strain.id} className={cn("group cursor-pointer", selectedStrainId === strain.id && "bg-zinc-950/2.5 dark:bg-white/5")}>
               <TableCell>
                 <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
                   <span className="absolute inset-0" />
-                  {brand.data.name}
+                  {strain.data.name}
                 </Link>
               </TableCell>
               <TableCell className="max-w-sm truncate">
                 <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
                   <span className="sr-only">{label}</span>
                 </Link>
-                {brand.data.website || "—"}
+                {formatComposition(strain.data.sativa_percentage)}
               </TableCell>
             </TableRow>
           );

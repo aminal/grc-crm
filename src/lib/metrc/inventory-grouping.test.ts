@@ -51,6 +51,16 @@ describe("inventory grouping", () => {
     expect(groups.find((group) => group.source_packages === "source-2")?.package_count).toBe(1);
   });
 
+  it("keeps product-mapped packages separate when names match", () => {
+    const groups = groupInventory([
+      packageRecord("pkg-a", { product_id: "product-a", item: "Flower", source_packages: "source-1" }),
+      packageRecord("pkg-b", { product_id: "product-b", item: "Flower", source_packages: "source-1" }),
+    ]);
+
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.product_id).sort()).toEqual(["product-a", "product-b"]);
+  });
+
   it("collapses missing source packages per item", () => {
     const groups = groupInventory([
       packageRecord("pkg-a", { item: "Flower", source_packages: "" }),
