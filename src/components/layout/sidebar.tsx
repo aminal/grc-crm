@@ -95,9 +95,8 @@ export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElemen
             </TouchTarget>
           </Headless.Button>
         </div>
-        <div className="min-w-0 flex-1">
-          <nav className="flex flex-1 items-center gap-4 py-2.5">
-            <div aria-hidden="true" className="-ml-4 flex-1" />
+        <div className="min-w-0">
+          <nav className="flex items-center gap-4 py-2.5">
             <Brand compact />
           </nav>
         </div>

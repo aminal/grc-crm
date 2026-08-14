@@ -1,7 +1,7 @@
 import { ChatBubbleLeftRightIcon, DocumentTextIcon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/20/solid';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     FacebookIcon,
     InstagramIcon,
@@ -69,10 +69,7 @@ export default async function CompanyDetailsPage({ params }: {
                 <Card>
                     <CardHeader>
                         <div className='flex items-start justify-between gap-4'>
-                            <h2 className='text-base/7 uppercase font-medium text-zinc-950 sm:text-xl/7 dark:text-white'>
-                                Company Details
-                            </h2>
-
+                            <CardTitle>Company Details</CardTitle>
                             <EditCompanyDialog companyId={companyId} company={companyFormValues} />
                         </div>
                     </CardHeader>
@@ -141,9 +138,7 @@ export default async function CompanyDetailsPage({ params }: {
 
                     <Card>
                         <CardHeader>
-                            <h2 className='mt-1 text-xl/7 font-semibold uppercase text-zinc-950 sm:text-xl/7 dark:text-white'>
-                                Primary Contact
-                            </h2>
+                            <CardTitle>Primary Contact</CardTitle>
                         </CardHeader>
                         <CardContent className='pt-0'>
                             {primary ? (

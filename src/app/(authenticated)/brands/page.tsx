@@ -51,7 +51,7 @@ export default async function BrandsPage({ searchParams }: { searchParams: Promi
     <div>
       <PageHeader
         title="Brands"
-        description="Manage the brands used throughout the sales workflow."
+        description="Keep track of our in-house brands and manage our white-label partnerships all in one place."
         actions={
           <Link href={`${brandsHref}?brand=new`} className={buttonClasses()}>
             <Plus data-slot="icon" aria-hidden="true" />

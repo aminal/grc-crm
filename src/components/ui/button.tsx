@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "plain";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonSize = "xs" | "sm" | "md" | "lg";
 
 type ButtonClassesOptions = {
   variant?: ButtonVariant;
@@ -17,6 +17,9 @@ const baseClasses = [
 ];
 
 const sizeClasses: Record<ButtonSize, string[]> = {
+  xs: [
+    "px-[calc(--spacing(2.5)+1px)]! py-[calc(--spacing(2)-4px)]! text-xs/5! sm:px-[calc(--spacing(2)+0px)]! sm:pt-[calc(--spacing(2)-4px)]! sm:text-[0.76rem]! tracking-wide!",
+  ],
   sm: [
     "px-[calc(--spacing(2.5)+1px)]! py-[calc(--spacing(2)-3px)]! text-xs/5! sm:px-[calc(--spacing(2)+1px)]! sm:pt-[calc(--spacing(2)-3px)]! sm:text-[0.86rem]! tracking-wide!",
   ],
@@ -45,8 +48,8 @@ const variantClasses: Record<ButtonVariant, string[]> = {
     "[--btn-icon:var(--color-white)] hover:[--btn-icon:var(--color-white)] active:[--btn-icon:var(--color-zinc-300)]",
   ],
   secondary: [
-    "border-zinc-950/10 text-zinc-950 hover:bg-zinc-950/2.5 active:bg-zinc-950/2.5",
-    "dark:border-white/15 dark:text-white dark:[--btn-bg:transparent] dark:hover:bg-white/5 dark:active:bg-white/5",
+    "border-0 bg-emerald-400/75 text-zinc-950 hover:bg-emerald-400 active:bg-emerald-400",
+    "dark:text-white/90 dark:hover:bg-emerald-400 dark:hover:text-white dark:active:bg-emerald-400",
     "[--btn-icon:var(--color-zinc-500)] hover:[--btn-icon:var(--color-zinc-700)] active:[--btn-icon:var(--color-zinc-700)] dark:hover:[--btn-icon:var(--color-zinc-400)] dark:active:[--btn-icon:var(--color-zinc-400)]",
   ],
   danger: [

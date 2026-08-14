@@ -6,6 +6,10 @@ import { getDocument, listCollection, now } from "./firestore";
 
 const USERS = "users";
 
+function userProfileLabel(profile: FirestoreRecord<UserProfileData>): string {
+  return profile.data.display_name?.trim() || profile.data.email?.trim() || profile.id;
+}
+
 export async function getUserProfile(uid: string): Promise<FirestoreRecord<UserProfileData> | null> {
   return getDocument<UserProfileData>(`${USERS}/${uid}`);
 }
@@ -56,9 +60,14 @@ export async function updateUserProfile(user: AuthenticatedUser, fields: { displ
   ]);
 }
 
+export async function listUsers(): Promise<FirestoreRecord<UserProfileData>[]> {
+  const profiles = await listCollection<UserProfileData>(USERS);
+  return profiles.sort((a, b) => userProfileLabel(a).localeCompare(userProfileLabel(b)));
+}
+
 export async function userDirectory(): Promise<Record<string, { name: string | null; picture: string | null }>> {
   const directory: Record<string, { name: string | null; picture: string | null }> = {};
-  const profiles = await listCollection<UserProfileData>(USERS);
+  const profiles = await listUsers();
 
   for (const profile of profiles) {
     const name = profile.data.display_name?.trim() ?? "";

@@ -13,7 +13,7 @@ describe("order status rules", () => {
     expect(canTransition("delivered", "paid")).toBe(true);
     expect(canTransition("rejected", "approved")).toBe(true);
     expect(canTransition("rejected", "pending")).toBe(true);
-    expect(canTransition("cancelled", "pending")).toBe(false);
+    expect(canTransition("cancelled", "pending")).toBe(true);
     expect(canTransition("paid", "delivered")).toBe(false);
     expect(canTransition("delivery_rejected", "approved")).toBe(false);
   });
@@ -23,7 +23,7 @@ describe("order status rules", () => {
     expect(availableOrderActions("rejected")).toEqual(["approve", "unapprove"]);
     expect(availableOrderActions("approved")).toEqual(["deliver", "delivery_reject", "unapprove"]);
     expect(availableOrderActions("delivered")).toEqual(["undeliver", "pay"]);
-    expect(availableOrderActions("cancelled")).toEqual([]);
+    expect(availableOrderActions("cancelled")).toEqual(["mark_pending"]);
     expect(availableOrderActions("paid")).toEqual([]);
     expect(availableOrderActions("delivery_rejected")).toEqual([]);
   });

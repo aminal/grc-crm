@@ -1,9 +1,9 @@
 import type { FieldValue, Timestamp } from "firebase-admin/firestore";
 import type {
-  DUE_TERMS,
   FACILITY_TYPES,
   INTERACTION_METHODS,
   ORDER_STATUSES,
+  ORDER_TERMS,
   PAYMENT_METHODS,
   PREFERRED_COMMUNICATION_METHODS,
 } from "./constants";
@@ -13,7 +13,7 @@ export type FacilityType = (typeof FACILITY_TYPES)[number];
 export type InteractionMethod = (typeof INTERACTION_METHODS)[number];
 export type PreferredCommunicationMethod = (typeof PREFERRED_COMMUNICATION_METHODS)[number];
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
-export type DueTerms = keyof typeof DUE_TERMS;
+export type OrderTerms = (typeof ORDER_TERMS)[number];
 export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 
 export type FirestoreRecord<T> = {
@@ -236,9 +236,6 @@ export type InvoiceData = {
   company_id: string;
   company_name: string;
   status: "unpaid" | "paid" | "partial" | "void";
-  due_terms: DueTerms;
-  due_terms_label: string;
-  due_days: number;
   due_date: string | null;
   delivery_confirmed_at: FirestoreDate;
   delivered_at?: FirestoreDate;
@@ -262,6 +259,11 @@ export type OrderData = {
   company_name: string;
   company_license_number: string;
   facility_type: FacilityType;
+  salesperson: ActorSnapshot;
+  delivery_date: string;
+  delivery_date_tbd: boolean;
+  terms: OrderTerms;
+  terms_notes: string;
   status: OrderStatus;
   items: OrderItem[];
   total_cents: number;

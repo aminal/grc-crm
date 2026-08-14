@@ -11,6 +11,11 @@ function order(id: string, status: OrderStatus, packageTags: string[]): Firestor
       company_name: "Company",
       company_license_number: "LIC",
       facility_type: "Dispensary",
+      salesperson: { uid: "user-1", email: "user@greenroomcannabis.com", name: "User", picture: "" },
+      delivery_date: "",
+      delivery_date_tbd: true,
+      terms: "NET-30",
+      terms_notes: "",
       status,
       items: packageTags.map((packageTag) => ({
         package_id: packageTag,

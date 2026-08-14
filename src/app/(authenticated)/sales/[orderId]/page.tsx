@@ -1,37 +1,28 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/page-header";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatusBadge } from "@/components/ui/badge";
 import { Button, buttonClasses } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field, Input, Select } from "@/components/ui/field";
 import { PackagePicker } from "@/components/sales/package-picker";
-import { DUE_TERMS, PAYMENT_METHODS } from "@/lib/domain/constants";
+import { PAYMENT_METHODS } from "@/lib/domain/constants";
 import { findCompany } from "@/lib/data/crm";
 import { listPackages } from "@/lib/data/inventory";
 import { availableOrderActions, findOrder, listActivity } from "@/lib/data/orders";
+import { listProducts } from "@/lib/data/sales-settings";
 import { companyPath } from "@/lib/domain/company-slug";
 import { compactNumber, formatDate, formatDateTime, formatMoney, invoiceStatusLabel } from "@/lib/domain/format";
-import {
-  addPackagesAction,
-  addPaymentAction,
-  approveOrderAction,
-  cancelOrderAction,
-  deletePaymentAction,
-  deliverOrderAction,
-  deliveryRejectOrderAction,
-  payOrderAction,
-  rejectOrderAction,
-  removePackagesAction,
-  undeliverOrderAction,
-  unapproveOrderAction,
-  updatePaymentAction,
-} from "../actions";
+import type { OrderItem, OrderTerms } from "@/lib/domain/types";
+import { MetrcPackageIdsDialog } from "./metrc-package-ids-dialog";
+import { OrderActionsMenu } from "./order-actions-menu";
+import { RecordPaymentDialog } from "./record-payment-dialog";
+import { addPackagesAction, deletePaymentAction, removePackagesAction, updatePaymentAction } from "../actions";
 
 export default async function OrderPage({ params }: { params: Promise<{ orderId: string }> }): Promise<React.ReactElement> {
   const { orderId } = await params;
-  const [order, activity, packages] = await Promise.all([findOrder(orderId), listActivity(orderId), listPackages(false)]);
+  const [order, activity, packages, products] = await Promise.all([findOrder(orderId), listActivity(orderId), listPackages(false), listProducts()]);
   if (!order) {
     notFound();
   }
@@ -39,9 +30,12 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
   const company = await findCompany(order.data.company_id);
   const companyHref = company ? companyPath(company) : `/companies/${order.data.company_id}`;
   const actions = availableOrderActions(order.data.status);
-  const invoice = order.data.invoice;
+  const invoice = order.data.invoice?.status === "void" ? null : order.data.invoice;
   const availablePackages = packages.filter((packageRecord) => packageRecord.data.package_status === "available");
   const existingSourcePrices = new Map(order.data.items.map((item) => [item.source_package_key, item.price_cents]));
+  const productPrices = new Map(products.map((product) => [product.id, product.data.unit_base_price_cents]));
+  const productNames = new Map(products.map((product) => [product.id, product.data.name]));
+  const packageGroups = groupOrderItemsByProduct(order.data.items, productNames);
   const addablePackageRows = availablePackages.map((packageRecord) => ({
     package_tag: packageRecord.data.package_tag,
     item: packageRecord.data.item,
@@ -53,19 +47,30 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
     expiration_date: packageRecord.data.expiration_date || null,
   }));
   const initialPackagePrices = Object.fromEntries(
-    addablePackageRows.flatMap((packageRecord) => {
-      const priceCents = existingSourcePrices.get(packageRecord.source_packages);
-      return priceCents ? [[packageRecord.package_tag, (priceCents / 100).toFixed(2)]] : [];
+    availablePackages.flatMap((packageRecord) => {
+      const sourcePackage = packageRecord.data.source_packages || packageRecord.data.original_source_package_label;
+      const sourcePriceCents = existingSourcePrices.get(sourcePackage);
+      const productPriceCents = packageRecord.data.product_id ? productPrices.get(packageRecord.data.product_id) : undefined;
+      const packagePriceCents = productPriceCents ? Math.round(productPriceCents * Number(packageRecord.data.quantity ?? 0)) : 0;
+      const priceCents = sourcePriceCents || packagePriceCents;
+      return priceCents ? [[packageRecord.data.package_tag, (priceCents / 100).toFixed(2)]] : [];
     }),
   );
   const editableItems = order.data.status === "pending";
+  const orderTermsLabel = order.data.terms === "Other" && order.data.terms_notes ? order.data.terms_notes : order.data.terms;
+  const approvalInvoice = {
+    invoiceNumber: `INV-${order.data.order_number}`,
+    dueDate: invoiceDueDateForApproval(order.data.terms),
+    termsLabel: orderTermsLabel,
+    totalLabel: formatMoney(order.data.total_cents),
+  };
 
   return (
     <div>
       <PageHeader
         title={`Order #${order.data.order_number}`}
         description={`${order.data.company_name} · ${order.data.items.length} packages · ${formatMoney(order.data.total_cents)}`}
-        actions={<Link href="/sales" className={buttonClasses("secondary")}>Back to Sales</Link>}
+        actions={<OrderActionsMenu orderId={orderId} actions={actions} approvalInvoice={approvalInvoice} />}
       />
 
       <div className="mb-6 flex flex-wrap items-center gap-3">
@@ -80,18 +85,26 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Packages</h2>
+              <CardTitle>Packages</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {order.data.items.map((item) => (
-                <div key={item.package_tag} className="rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900">
+              {packageGroups.map((group) => (
+                <div key={group.key} className="rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
-                      <p className="font-semibold text-zinc-950">{item.item || "Unknown Item"}</p>
-                      <p className="font-mono text-xs text-zinc-600">{item.package_tag}</p>
-                      <p className="mt-1 text-sm text-zinc-500">{item.strain || "No strain"} · {compactNumber(item.quantity)} {item.unit_of_measure} · Expires {formatDate(item.expiration_date)}</p>
+                      <p className="font-semibold text-zinc-950 dark:text-white">{group.productName}</p>
+                      <p className="mt-1 text-sm text-zinc-500">
+                        {group.caseCount} {group.caseCount === 1 ? "case" : "cases"} · {compactNumber(group.quantity)}{group.unitOfMeasure ? ` ${group.unitOfMeasure}` : ""}
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-500">{group.strains.length > 0 ? group.strains.join(", ") : "No strain"}</p>
                     </div>
-                    <p className="text-lg font-semibold text-zinc-950 dark:text-white">{formatMoney(item.price_cents)}</p>
+                    <div className="sm:text-right">
+                      <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Subtotal</p>
+                      <p className="mt-1 text-lg font-semibold text-zinc-950 dark:text-white">{formatMoney(group.subtotalCents)}</p>
+                      <div className="mt-3 flex sm:justify-end">
+                        <MetrcPackageIdsDialog productName={group.productName} packageTags={group.packageTags} />
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -120,12 +133,12 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Invoice & Payments</h2>
-            </CardHeader>
-            <CardContent>
-              {invoice ? (
+          {invoice ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Invoice & Payments</CardTitle>
+              </CardHeader>
+              <CardContent>
                 <div className="space-y-5">
                   <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <InvoiceStat label="Invoice" value={invoice.invoice_number} />
@@ -134,7 +147,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
                     <InvoiceStat label="Balance" value={formatMoney(invoice.balance_cents)} />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <InvoiceStat label="Terms" value={invoice.due_terms_label} />
+                    <InvoiceStat label="Terms" value={orderTermsLabel} />
                     <InvoiceStat label="Due Date" value={invoice.due_date ? formatDate(invoice.due_date) : "Set after delivery"} />
                   </div>
 
@@ -172,36 +185,18 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
                   </div>
 
                   {invoice.status !== "void" && invoice.balance_cents > 0 ? (
-                    <form action={addPaymentAction.bind(null, orderId)} className="grid gap-4 rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900 sm:grid-cols-2">
-                      <Field label="Amount">
-                        <Input name="amount" defaultValue={(invoice.balance_cents / 100).toFixed(2)} required />
-                      </Field>
-                      <Field label="Payment date">
-                        <Input name="paid_at" type="date" defaultValue={new Date().toISOString().slice(0, 10)} required />
-                      </Field>
-                      <Field label="Method">
-                        <Select name="method" defaultValue="ach">
-                          {Object.entries(PAYMENT_METHODS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
-                        </Select>
-                      </Field>
-                      <Field label="Check number">
-                        <Input name="check_number" />
-                      </Field>
-                      <div className="sm:col-span-2">
-                        <Button>Add Payment</Button>
-                      </div>
-                    </form>
+                    <div className="flex justify-end">
+                      <RecordPaymentDialog orderId={orderId} balanceCents={invoice.balance_cents} defaultPaidAt={new Date().toISOString().slice(0, 10)} />
+                    </div>
                   ) : null}
                 </div>
-              ) : (
-                <p className="text-sm text-zinc-600">Approve the order to create an invoice.</p>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>
-              <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Activity</h2>
+              <CardTitle>Activity</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {activity.map((entry) => (
@@ -217,40 +212,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Order Actions</h2>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {actions.includes("approve") ? (
-                <form action={approveOrderAction.bind(null, orderId)} className="space-y-3 rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900">
-                  <Field label="Invoice terms">
-                    <Select name="due_terms" defaultValue="net_30_after_delivery">
-                      {Object.entries(DUE_TERMS).map(([key, value]) => <option key={key} value={key}>{value.label}</option>)}
-                    </Select>
-                  </Field>
-                  <Button>Approve & Invoice</Button>
-                </form>
-              ) : null}
-              {actions.includes("reject") ? <ActionForm action={rejectOrderAction.bind(null, orderId)} label="Reject Order" variant="danger" /> : null}
-              {actions.includes("cancel") ? <ActionForm action={cancelOrderAction.bind(null, orderId)} label="Cancel Order" variant="danger" /> : null}
-              {actions.includes("unapprove") ? <ActionForm action={unapproveOrderAction.bind(null, orderId)} label="Move Back to Pending" variant="secondary" /> : null}
-              {actions.includes("deliver") ? (
-                <form action={deliverOrderAction.bind(null, orderId)} className="space-y-3 rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900">
-                  <Field label="Delivered at">
-                    <Input name="delivered_at" type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
-                  </Field>
-                  <Button>Mark Delivered</Button>
-                </form>
-              ) : null}
-              {actions.includes("undeliver") ? <ActionForm action={undeliverOrderAction.bind(null, orderId)} label="Move Back to Approved" variant="secondary" /> : null}
-              {actions.includes("delivery_reject") ? <ActionForm action={deliveryRejectOrderAction.bind(null, orderId)} label="Delivery Rejected" variant="danger" /> : null}
-              {actions.includes("pay") ? <ActionForm action={payOrderAction.bind(null, orderId)} label="Mark Paid" variant="primary" /> : null}
-              {actions.length === 0 ? <p className="text-sm text-zinc-600">No actions are available for this status.</p> : null}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <h2 className="text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white">Company</h2>
+              <CardTitle>Company</CardTitle>
             </CardHeader>
             <CardContent>
               <Link href={companyHref} className="text-base/7 font-semibold text-zinc-950 hover:text-zinc-700 sm:text-sm/6 dark:text-white dark:hover:text-zinc-300">{order.data.company_name}</Link>
@@ -264,6 +226,10 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
   );
 }
 
+function invoiceDueDateForApproval(terms: OrderTerms): string {
+  return terms === "NET-30" || terms === "NET-60" ? "" : new Date().toISOString().slice(0, 10);
+}
+
 function InvoiceStat({ label, value }: { label: string; value: string }): React.ReactElement {
   return (
     <div className="rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900">
@@ -273,10 +239,72 @@ function InvoiceStat({ label, value }: { label: string; value: string }): React.
   );
 }
 
-function ActionForm({ action, label, variant }: { action: () => void | Promise<void>; label: string; variant: "primary" | "secondary" | "danger" }): React.ReactElement {
-  return (
-    <form action={action}>
-      <button className={buttonClasses(variant, "w-full")}>{label}</button>
-    </form>
-  );
+type PackageGroup = {
+  key: string;
+  productName: string;
+  caseCount: number;
+  quantity: number;
+  unitOfMeasure: string;
+  subtotalCents: number;
+  packageTags: string[];
+  strains: string[];
+};
+
+type MutablePackageGroup = Omit<PackageGroup, "strains"> & {
+  strainSet: Set<string>;
+  unitSet: Set<string>;
+};
+
+function groupOrderItemsByProduct(items: OrderItem[], productNames: Map<string, string>): PackageGroup[] {
+  const groups = new Map<string, MutablePackageGroup>();
+
+  for (const item of items) {
+    const productName = (item.product_id ? productNames.get(item.product_id) : "") || item.item || "Unknown Product";
+    const key = item.product_id ? `product:${item.product_id}` : `item:${productName.trim().toLowerCase()}`;
+    let group = groups.get(key);
+
+    if (!group) {
+      group = {
+        key,
+        productName,
+        caseCount: 0,
+        quantity: 0,
+        unitOfMeasure: "",
+        subtotalCents: 0,
+        packageTags: [],
+        strainSet: new Set<string>(),
+        unitSet: new Set<string>(),
+      };
+      groups.set(key, group);
+    }
+
+    const unitOfMeasure = item.unit_of_measure || "";
+    group.caseCount += 1;
+    group.quantity += Number(item.quantity ?? 0);
+    group.subtotalCents += Number(item.price_cents ?? 0);
+    group.packageTags.push(item.package_tag);
+
+    if (item.strain) {
+      group.strainSet.add(item.strain);
+    }
+
+    if (unitOfMeasure) {
+      group.unitSet.add(unitOfMeasure);
+    }
+  }
+
+  return Array.from(groups.values()).map((group) => {
+    const units = Array.from(group.unitSet);
+    return {
+      key: group.key,
+      productName: group.productName,
+      caseCount: group.caseCount,
+      quantity: group.quantity,
+      unitOfMeasure: units.length > 1 ? "mixed units" : units[0] ?? "",
+      subtotalCents: group.subtotalCents,
+      packageTags: group.packageTags,
+      strains: Array.from(group.strainSet).sort((a, b) => a.localeCompare(b)),
+    };
+  });
 }
+

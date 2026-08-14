@@ -5,7 +5,7 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   approved: ["delivered", "delivery_rejected", "pending"],
   delivered: ["approved", "paid"],
   rejected: ["approved", "pending"],
-  cancelled: [],
+  cancelled: ["pending"],
   paid: [],
   delivery_rejected: [],
 };
@@ -27,6 +27,8 @@ export function availableOrderActions(status: OrderStatus): string[] {
       return ["deliver", "delivery_reject", "unapprove"];
     case "delivered":
       return ["undeliver", "pay"];
+    case "cancelled":
+      return ["mark_pending"];
     default:
       return [];
   }

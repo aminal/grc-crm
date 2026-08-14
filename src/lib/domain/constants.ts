@@ -83,11 +83,7 @@ export const ORDER_STATUSES = [
   "delivery_rejected",
 ] as const;
 
-export const DUE_TERMS = {
-  net_30_after_delivery: { label: "NET 30", due_days: 30 },
-  cod_check: { label: "COD - Check", due_days: 0 },
-  cod_ach: { label: "COD - ACH", due_days: 0 },
-} as const;
+export const ORDER_TERMS = ["CIA", "COD - Check", "COD - ACH", "COD - Cash", "NET-30", "NET-60", "EOM", "15 MFI", "Other"] as const;
 
 export const PAYMENT_METHODS = {
   ach: "ACH",

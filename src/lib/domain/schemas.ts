@@ -1,8 +1,8 @@
 import { z } from "zod";
 import {
-  DUE_TERMS,
   FACILITY_TYPES,
   INTERACTION_METHODS,
+  ORDER_TERMS,
   PAYMENT_METHODS,
   PREFERRED_COMMUNICATION_METHODS,
   US_STATE_ABBREVIATIONS,
@@ -138,9 +138,30 @@ export const profileSchema = z.object({
 
 export const createOrderSchema = z.object({
   company_id: requiredString,
+  salesperson_user_id: requiredString,
+  delivery_date_status: z.enum(["date", "tbd"]),
+  delivery_date: optionalString,
+  terms: z.enum(ORDER_TERMS),
+  terms_notes: optionalLongString,
   package_tags: z.array(requiredString).min(1, "Choose at least one package."),
   package_prices: z.record(z.string(), centsFromMoney),
 }).superRefine((value, context) => {
+  if (value.delivery_date_status === "date" && !value.delivery_date) {
+    context.addIssue({
+      code: "custom",
+      path: ["delivery_date"],
+      message: "Choose a delivery date or set delivery date to TBD.",
+    });
+  }
+
+  if (value.delivery_date_status === "date" && value.delivery_date && !/^\d{4}-\d{2}-\d{2}$/.test(value.delivery_date)) {
+    context.addIssue({
+      code: "custom",
+      path: ["delivery_date"],
+      message: "Enter a valid delivery date.",
+    });
+  }
+
   for (const tag of value.package_tags) {
     if (value.package_prices[tag] === undefined) {
       context.addIssue({
@@ -152,8 +173,17 @@ export const createOrderSchema = z.object({
   }
 });
 
-export const dueTermsSchema = z.object({
-  due_terms: z.enum(Object.keys(DUE_TERMS) as [keyof typeof DUE_TERMS, ...(keyof typeof DUE_TERMS)[]]),
+export const createInvoiceSchema = z.object({
+  invoice_number: requiredShortString,
+  due_date: optionalString,
+}).superRefine((value, context) => {
+  if (value.due_date && !/^\d{4}-\d{2}-\d{2}$/.test(value.due_date)) {
+    context.addIssue({
+      code: "custom",
+      path: ["due_date"],
+      message: "Enter a valid due date.",
+    });
+  }
 });
 
 export const deliverySchema = z.object({

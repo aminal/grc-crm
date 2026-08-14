@@ -71,7 +71,7 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
     <div>
       <PageHeader
         title="Strains"
-        description="Manage cannabis strains that products reference."
+        description="Track all our cultivars and raw strain genetics before they get turned into finished products."
         actions={
           <Link href={`${strainsHref}?strain=new`} className={buttonClasses()}>
             <Plus data-slot="icon" aria-hidden="true" />

@@ -147,7 +147,7 @@ export function InventoryControls({ query, sort, direction, showSold }: Inventor
           <option value="asc">Asc</option>
           <option value="desc">Desc</option>
         </Select>
-        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-transparent bg-white px-3 py-2 text-sm/6 font-medium text-zinc-950 shadow-sm dark:border-transparent dark:bg-white/5 dark:text-white">
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-sm/6 font-medium text-zinc-950 shadow-sm dark:bg-white/5 dark:text-white">
           <Checkbox name="show_sold" value="1" checked={showSoldValue} onChange={handleShowSoldChange} aria-label="Include sold packages" />
           Sold
         </label>

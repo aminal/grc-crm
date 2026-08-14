@@ -1,0 +1,62 @@
+"use client";
+
+import * as Headless from "@headlessui/react";
+import { X } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { Field, Input, Select } from "@/components/ui/field";
+import { PAYMENT_METHODS } from "@/lib/domain/constants";
+import { addPaymentAction } from "../actions";
+
+type RecordPaymentDialogProps = {
+  orderId: string;
+  balanceCents: number;
+  defaultPaidAt: string;
+};
+
+export function RecordPaymentDialog({ orderId, balanceCents, defaultPaidAt }: RecordPaymentDialogProps): React.ReactElement {
+  const [isOpen, setIsOpen] = useState(false);
+
+  function close(): void {
+    setIsOpen(false);
+  }
+
+  return (
+    <>
+      <Button type="button" onClick={() => setIsOpen(true)}>Record Payment</Button>
+      <Dialog size="lg" open={isOpen} onClose={close} className="relative">
+        <Headless.CloseButton
+          className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-950 p-2 text-white transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
+          aria-label="Close dialog"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </Headless.CloseButton>
+        <DialogTitle className="pr-10">Record Payment</DialogTitle>
+        <DialogDescription>Record a payment for this invoice.</DialogDescription>
+        <DialogBody>
+          <form action={addPaymentAction.bind(null, orderId)} className="grid gap-4 sm:grid-cols-2">
+            <Field label="Amount">
+              <Input name="amount" defaultValue={(balanceCents / 100).toFixed(2)} required />
+            </Field>
+            <Field label="Payment date">
+              <Input name="paid_at" type="date" defaultValue={defaultPaidAt} required />
+            </Field>
+            <Field label="Method">
+              <Select name="method" defaultValue="ach">
+                {Object.entries(PAYMENT_METHODS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+              </Select>
+            </Field>
+            <Field label="Check number">
+              <Input name="check_number" />
+            </Field>
+            <DialogActions className="sm:col-span-2">
+              <Button type="button" variant="plain" onClick={close}>Cancel</Button>
+              <Button type="submit">Record Payment</Button>
+            </DialogActions>
+          </form>
+        </DialogBody>
+      </Dialog>
+    </>
+  );
+}

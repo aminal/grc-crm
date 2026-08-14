@@ -21,9 +21,9 @@ import {
 } from "@/lib/data/orders";
 import {
   addPackagesSchema,
+  createInvoiceSchema,
   createOrderSchema,
   deliverySchema,
-  dueTermsSchema,
   packagePricesFromForm,
   packageTagsFromForm,
   paymentSchema,
@@ -34,10 +34,21 @@ export async function createOrderAction(formData: FormData): Promise<void> {
   const user = await requireUser();
   const input = createOrderSchema.parse({
     company_id: String(formData.get("company_id") ?? ""),
+    salesperson_user_id: formData.get("salesperson_user_id"),
+    delivery_date_status: formData.get("delivery_date_status"),
+    delivery_date: formData.get("delivery_date") ?? "",
+    terms: formData.get("terms"),
+    terms_notes: formData.get("terms_notes") ?? "",
     package_tags: packageTagsFromForm(formData),
     package_prices: packagePricesFromForm(formData),
   });
-  const order = await createOrder(input.company_id, input.package_tags, input.package_prices, user);
+  const order = await createOrder(input.company_id, input.package_tags, input.package_prices, user, {
+    salesperson_user_id: input.salesperson_user_id,
+    delivery_date: input.delivery_date_status === "date" ? input.delivery_date : "",
+    delivery_date_tbd: input.delivery_date_status === "tbd",
+    terms: input.terms,
+    terms_notes: input.terms === "Other" ? input.terms_notes : "",
+  });
   revalidatePath("/sales");
   revalidatePath("/inventory");
   redirect(`/sales/${order.id}`);
@@ -45,8 +56,11 @@ export async function createOrderAction(formData: FormData): Promise<void> {
 
 export async function approveOrderAction(orderId: string, formData: FormData): Promise<void> {
   const user = await requireUser();
-  const input = dueTermsSchema.parse({ due_terms: formData.get("due_terms") });
-  await approveOrder(orderId, user, input.due_terms);
+  const input = createInvoiceSchema.parse({
+    invoice_number: formData.get("invoice_number") ?? "",
+    due_date: formData.get("due_date") ?? "",
+  });
+  await approveOrder(orderId, user, input);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }

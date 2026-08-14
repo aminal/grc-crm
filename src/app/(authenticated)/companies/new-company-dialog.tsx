@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { DeleteConfirmationDialog, Dialog, DialogBody, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { createCompanyAction, deleteCompanyAction, updateCompanyAction } from './actions';
 
-export function NewCompanyDialog(): React.ReactElement {
-    const [isOpen, setIsOpen] = useState(false);
+export function NewCompanyDialog({ initialOpen = false }: { initialOpen?: boolean }): React.ReactElement {
+    const [isOpen, setIsOpen] = useState(initialOpen);
 
     return (
         <>

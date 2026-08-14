@@ -1,1 +1,1 @@
-export { getUserProfile, syncProfileFromSignIn, updateUserProfile, userDirectory } from "@/lib/data/profiles";
+export { getUserProfile, listUsers, syncProfileFromSignIn, updateUserProfile, userDirectory } from "@/lib/data/profiles";

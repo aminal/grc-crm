@@ -1,18 +1,18 @@
 import "server-only";
 
 import { db } from "@/lib/firebase/admin";
-import { DUE_TERMS, PAYMENT_METHODS } from "@/lib/domain/constants";
+import { PAYMENT_METHODS } from "@/lib/domain/constants";
 import type {
   ActivityData,
   ActorSnapshot,
   AuthenticatedUser,
-  DueTerms,
   FirestoreRecord,
   InvoiceData,
   InvoicePayment,
   OrderData,
   OrderItem,
   OrderStatus,
+  OrderTerms,
   PackageData,
   PaymentMethod,
 } from "@/lib/domain/types";
@@ -22,6 +22,7 @@ import { assertSameSourcePrice, sourcePackageKey } from "@/lib/sales/pricing";
 import { canTransition, RELEASING_ORDER_STATUSES } from "@/lib/sales/order-status";
 import { findCompany } from "./crm";
 import { docIdFromTag, getDocument, listCollection, millis, now } from "./firestore";
+import { getUserProfile } from "./profiles";
 
 export { availableOrderActions, canTransition } from "@/lib/sales/order-status";
 
@@ -29,12 +30,34 @@ const ORDERS = "orders";
 const ACTIVITY = "activity";
 const FIRST_ORDER_NUMBER = 1501;
 
+type InvoiceApprovalInput = {
+  invoice_number: string;
+  due_date: string;
+};
+
 function actorMap(user: AuthenticatedUser): ActorSnapshot {
   return {
     uid: user.uid,
     email: user.email,
     name: user.name ?? user.email,
     picture: user.picture ?? "",
+  };
+}
+
+async function userActorMap(uid: string): Promise<ActorSnapshot> {
+  const profile = await getUserProfile(uid);
+  if (!profile) {
+    throw new Error("Salesperson not found.");
+  }
+
+  const email = profile.data.email?.trim() ?? "";
+  const name = profile.data.display_name?.trim() || email || uid;
+
+  return {
+    uid,
+    email,
+    name,
+    picture: profile.data.picture?.trim() ?? "",
   };
 }
 
@@ -144,25 +167,46 @@ function addDays(date: Date, days: number): Date {
   return next;
 }
 
-function invoiceForApproval(order: FirestoreRecord<OrderData>, user: AuthenticatedUser, dueTerms: DueTerms): InvoiceData {
-  const option = DUE_TERMS[dueTerms] ?? DUE_TERMS.net_30_after_delivery;
+function dueDaysForOrderTerms(terms: OrderTerms): number {
+  if (terms === "NET-30") {
+    return 30;
+  }
+
+  if (terms === "NET-60") {
+    return 60;
+  }
+
+  return 0;
+}
+
+function isDueAfterDelivery(terms: OrderTerms): boolean {
+  return terms === "NET-30" || terms === "NET-60";
+}
+
+function invoiceForApproval(order: FirestoreRecord<OrderData>, user: AuthenticatedUser, input: InvoiceApprovalInput): InvoiceData {
   const total = orderTotalCents(order.data);
-  const isCod = dueTerms !== "net_30_after_delivery";
   const today = new Date();
   const issuedBy = actorMap(user);
+  const invoiceNumber = input.invoice_number.trim();
+  const dueDate = input.due_date.trim();
+
+  if (!invoiceNumber) {
+    throw new Error("An invoice number is required to approve an order.");
+  }
+
+  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
+    throw new Error("Enter a valid due date.");
+  }
 
   return {
     id: `invoice-${order.data.order_number}`,
-    invoice_number: `INV-${order.data.order_number}`,
+    invoice_number: invoiceNumber,
     order_id: order.id,
     order_number: order.data.order_number,
     company_id: order.data.company_id,
     company_name: order.data.company_name,
     status: "unpaid",
-    due_terms: dueTerms,
-    due_terms_label: option.label,
-    due_days: option.due_days,
-    due_date: isCod ? dateOnly(today) : null,
+    due_date: dueDate || (isDueAfterDelivery(order.data.terms) ? null : dateOnly(today)),
     delivery_confirmed_at: null,
     subtotal_cents: total,
     total_cents: total,
@@ -179,8 +223,8 @@ function invoiceForApproval(order: FirestoreRecord<OrderData>, user: Authenticat
   };
 }
 
-function applyDeliveryToInvoice(invoice: InvoiceData, deliveredAt: Date): InvoiceData {
-  const dueDate = addDays(deliveredAt, invoice.due_days ?? 0);
+function applyDeliveryToInvoice(invoice: InvoiceData, deliveredAt: Date, terms: OrderTerms): InvoiceData {
+  const dueDate = addDays(deliveredAt, dueDaysForOrderTerms(terms));
   return {
     ...invoice,
     delivery_confirmed_at: deliveredAt,
@@ -190,12 +234,12 @@ function applyDeliveryToInvoice(invoice: InvoiceData, deliveredAt: Date): Invoic
   };
 }
 
-function removeDeliveryFromInvoice(invoice: InvoiceData): InvoiceData {
+function removeDeliveryFromInvoice(invoice: InvoiceData, terms: OrderTerms): InvoiceData {
   return {
     ...invoice,
     delivery_confirmed_at: null,
     delivered_at: null,
-    due_date: invoice.due_terms === "net_30_after_delivery" ? null : invoice.due_date,
+    due_date: isDueAfterDelivery(terms) ? null : invoice.due_date,
     updated_at: now(),
   };
 }
@@ -268,7 +312,7 @@ export async function listActivity(orderId: string): Promise<FirestoreRecord<Act
   return entries.sort((a, b) => millis(b.data.created_at) - millis(a.data.created_at));
 }
 
-export async function createOrder(companyId: string, packageTags: string[], packagePrices: Record<string, number>, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+export async function createOrder(companyId: string, packageTags: string[], packagePrices: Record<string, number>, user: AuthenticatedUser, termsInput: { salesperson_user_id: string; delivery_date: string; delivery_date_tbd: boolean; terms: OrderTerms; terms_notes: string }): Promise<FirestoreRecord<OrderData>> {
   const tags = normalizeTags(packageTags);
   if (tags.length === 0) {
     throw new Error("At least one package is required to create an order.");
@@ -279,6 +323,7 @@ export async function createOrder(companyId: string, packageTags: string[], pack
     throw new Error("Company not found.");
   }
 
+  const salesperson = termsInput.salesperson_user_id === user.uid ? actorMap(user) : await userActorMap(termsInput.salesperson_user_id);
   const result: { order: FirestoreRecord<OrderData> | null } = { order: null };
 
   await db.runTransaction(async (transaction) => {
@@ -319,6 +364,11 @@ export async function createOrder(companyId: string, packageTags: string[], pack
       company_name: company.data.company_name,
       company_license_number: company.data.license_number,
       facility_type: company.data.facility_type,
+      salesperson,
+      delivery_date: termsInput.delivery_date_tbd ? "" : termsInput.delivery_date,
+      delivery_date_tbd: termsInput.delivery_date_tbd,
+      terms: termsInput.terms,
+      terms_notes: termsInput.terms === "Other" ? termsInput.terms_notes : "",
       status: "pending",
       items,
       total_cents: orderTotalCents({ items }),
@@ -431,10 +481,10 @@ async function transitionAndVoidInvoiceWithoutPayments(orderId: string, to: Orde
   return updated;
 }
 
-export async function approveOrder(orderId: string, user: AuthenticatedUser, dueTerms: DueTerms): Promise<FirestoreRecord<OrderData>> {
+export async function approveOrder(orderId: string, user: AuthenticatedUser, input: InvoiceApprovalInput): Promise<FirestoreRecord<OrderData>> {
   const result: { invoice: InvoiceData | null } = { invoice: null };
   const updated = await transitionOrderWithUpdate(orderId, "approved", user, "approved", (order) => {
-    result.invoice = invoiceForApproval(order, user, dueTerms);
+    result.invoice = invoiceForApproval(order, user, input);
     return { invoice: result.invoice };
   });
 
@@ -475,7 +525,7 @@ export async function deliverOrder(orderId: string, user: AuthenticatedUser, del
     const invoice = invoiceFromOrder(order.data);
     return {
       delivered_at: deliveredAt,
-      ...(invoice ? { invoice: applyDeliveryToInvoice(invoice, deliveredAt) } : {}),
+      ...(invoice ? { invoice: applyDeliveryToInvoice(invoice, deliveredAt, order.data.terms) } : {}),
     };
   });
   return markPaidIfSettled(delivered, user);
@@ -486,7 +536,7 @@ export async function undeliverOrder(orderId: string, user: AuthenticatedUser): 
     const invoice = invoiceFromOrder(order.data);
     return {
       delivered_at: null,
-      ...(invoice ? { invoice: removeDeliveryFromInvoice(invoice) } : {}),
+      ...(invoice ? { invoice: removeDeliveryFromInvoice(invoice, order.data.terms) } : {}),
     };
   });
 }
@@ -540,7 +590,7 @@ export async function addPayment(orderId: string, paymentData: { amount: number;
       paid_at: paymentData.paid_at,
       check_number: paymentData.method === "check" ? paymentData.check_number.trim() : "",
       recorded_by: actorMap(user),
-      created_at: now(),
+      created_at: new Date(),
     };
 
     const updatedInvoice = recalculateInvoice({ ...invoice, payments: [...payments, result.payment] });
@@ -610,7 +660,7 @@ export async function updatePayment(orderId: string, paymentId: string, paymentD
             paid_at: paymentData.paid_at,
             check_number: paymentData.method === "check" ? paymentData.check_number.trim() : "",
             updated_by: actorMap(user),
-            updated_at: now(),
+            updated_at: new Date(),
           }
         : row,
     );

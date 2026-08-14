@@ -47,7 +47,7 @@ export function StrainDialog({ mode, strain, closeHref }: StrainDialogProps): Re
     router.replace(closeHref, { scroll: false });
   }
 
-  const title = mode === "create" ? "Add Strain" : "Edit Brand";
+  const title = mode === "create" ? "Add Strain" : "Edit Strain";
   const description = mode === "create"
     ? "Add a cannabis strain that products can reference."
     : "Update strain details.";

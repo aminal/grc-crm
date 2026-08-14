@@ -12,8 +12,8 @@ export default async function SalesPage({ searchParams }: {
     searchParams: Promise<{ status?: string }>
 }): Promise<React.ReactElement> {
     const params = await searchParams;
-    const status = params.status ?? '';
-    const orders = (await listOrders()).filter((order) => !status || order.data.status === status || (status === 'rejected' && order.data.status === 'delivery_rejected'));
+    const status = params.status || 'pending';
+    const orders = (await listOrders()).filter((order) => status === 'all' || order.data.status === status || (status === 'rejected' && order.data.status === 'delivery_rejected'));
 
     return (
         <div>
@@ -25,15 +25,15 @@ export default async function SalesPage({ searchParams }: {
 
             <SectionTabs
                 items={[
-                    { key: 'all', label: 'All', href: '/sales' },
-                    { key: 'pending', label: 'Pending', href: '/sales?status=pending' },
+                    { key: 'pending', label: 'Pending', href: '/sales' },
                     { key: 'approved', label: 'Approved', href: '/sales?status=approved' },
                     { key: 'delivered', label: 'Delivered', href: '/sales?status=delivered' },
                     { key: 'paid', label: 'Paid', href: '/sales?status=paid' },
                     { key: 'rejected', label: 'Rejected', href: '/sales?status=rejected' },
                     { key: 'cancelled', label: 'Cancelled', href: '/sales?status=cancelled' },
+                    { key: 'all', label: 'All', href: '/sales?status=all' },
                 ]}
-                activeKey={status || 'all'}
+                activeKey={status}
             />
 
             <div>
@@ -43,7 +43,7 @@ export default async function SalesPage({ searchParams }: {
                             <TableRow>
                                 <TableHead>Order</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead>Created</TableHead>
+                                <TableHead className='hidden sm:table-cell'>Created</TableHead>
                                 <TableHead className='text-right'>Pkgs</TableHead>
                                 <TableHead className='text-right'>Total</TableHead>
                             </TableRow>
@@ -67,7 +67,7 @@ export default async function SalesPage({ searchParams }: {
                                             </Link>
                                             <StatusBadge status={order.data.status} />
                                         </TableCell>
-                                        <TableCell>
+                                        <TableCell className='hidden sm:table-cell'>
                                             <Link href={href} aria-hidden tabIndex={-1} className='absolute inset-0 z-10'>
                                                 <span className='sr-only'>{label}</span>
                                             </Link>

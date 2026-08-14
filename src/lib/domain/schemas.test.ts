@@ -62,6 +62,11 @@ describe("domain schemas", () => {
 
     const parsed = createOrderSchema.parse({
       company_id: String(formData.get("company_id")),
+      salesperson_user_id: "user-1",
+      delivery_date_status: "tbd",
+      delivery_date: "",
+      terms: "NET-30",
+      terms_notes: "",
       package_tags: packageTagsFromForm(formData),
       package_prices: packagePricesFromForm(formData),
     });

@@ -37,10 +37,10 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Brand</TableHead>
-          <TableHead>Strains</TableHead>
-          <TableHead>Category</TableHead>
           <TableHead>SKU</TableHead>
+          <TableHead>Brand</TableHead>
+          <TableHead>Strain</TableHead>
+          <TableHead>Category</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -61,6 +61,12 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
                 <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
                   <span className="sr-only">{label}</span>
                 </Link>
+                {product.data.sku || "—"}
+              </TableCell>
+              <TableCell>
+                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                  <span className="sr-only">{label}</span>
+                </Link>
                 {brandNames.get(product.data.brand_id) ?? "Unknown Brand"}
               </TableCell>
               <TableCell>
@@ -74,12 +80,6 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
                   <span className="sr-only">{label}</span>
                 </Link>
                 {product.data.category || "—"}
-              </TableCell>
-              <TableCell>
-                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                  <span className="sr-only">{label}</span>
-                </Link>
-                {product.data.sku || "—"}
               </TableCell>
             </TableRow>
           );
