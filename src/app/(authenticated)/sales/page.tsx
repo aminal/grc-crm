@@ -3,9 +3,9 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { SectionTabs } from '@/components/ui/section-tabs';
-import { formatDateTime, formatMoney } from '@/lib/domain/format';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { formatDate, formatMoney } from '@/lib/domain/format';
 import { listOrders } from '@/lib/data/orders';
 
 export default async function SalesPage({ searchParams }: {
@@ -13,7 +13,7 @@ export default async function SalesPage({ searchParams }: {
 }): Promise<React.ReactElement> {
     const params = await searchParams;
     const status = params.status ?? '';
-    const orders = (await listOrders()).filter((order) => !status || order.data.status === status);
+    const orders = (await listOrders()).filter((order) => !status || order.data.status === status || (status === 'rejected' && order.data.status === 'delivery_rejected'));
 
     return (
         <div>
@@ -30,34 +30,69 @@ export default async function SalesPage({ searchParams }: {
                     { key: 'approved', label: 'Approved', href: '/sales?status=approved' },
                     { key: 'delivered', label: 'Delivered', href: '/sales?status=delivered' },
                     { key: 'paid', label: 'Paid', href: '/sales?status=paid' },
+                    { key: 'rejected', label: 'Rejected', href: '/sales?status=rejected' },
+                    { key: 'cancelled', label: 'Cancelled', href: '/sales?status=cancelled' },
                 ]}
                 activeKey={status || 'all'}
             />
 
-            <div className='space-y-3'>
-                {orders.map((order) => (
-                    <Link key={order.id} href={`/sales/${order.id}`} className='block rounded-lg bg-white shadow-xs ring-1 ring-zinc-950/5 p-5 transition hover:border-zinc-950/20 hover:bg-zinc-50 dark:bg-zinc-950/40 dark:hover:bg-zinc-900'>
-                        <div className='flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between'>
-                            <div>
-                                <div className='flex flex-wrap items-center gap-2'>
-                                    <h2 className='text-base/7 font-semibold text-zinc-950 sm:text-sm/6 dark:text-white'>Order
-                                        #{order.data.order_number}</h2>
-                                    <StatusBadge status={order.data.status} />
-                                </div>
-                                <p className='mt-2 text-sm text-zinc-700'>{order.data.company_name}</p>
-                                <p className='text-sm text-zinc-500'>{order.data.items.length} packages ·
-                                    Created {formatDateTime(order.data.created_at)}</p>
-                            </div>
-                            <div className='text-left lg:text-right'>
-                                <p className='text-lg font-semibold text-zinc-950 dark:text-white'>{formatMoney(order.data.total_cents)}</p>
-                                <p className='text-sm text-zinc-600'>Invoice
-                                    balance {formatMoney(order.data.invoice?.balance_cents ?? 0)}</p>
-                            </div>
-                        </div>
-                    </Link>
-                ))}
-                {orders.length === 0 ? <Card><CardContent><p className='text-sm text-zinc-600'>No orders found.</p>
-                </CardContent></Card> : null}
+            <div>
+                {orders.length > 0 ? (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Order</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Created</TableHead>
+                                <TableHead className='text-right'>Pkgs</TableHead>
+                                <TableHead className='text-right'>Total</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {orders.map((order) => {
+                                const href = `/sales/${order.id}`;
+                                const label = `View order ${order.data.order_number}`;
+
+                                return (
+                                    <TableRow key={order.id} className='group cursor-pointer'>
+                                        <TableCell>
+                                            <Link href={href} className='flex flex-col items-start gap-1 text-zinc-950 group-hover:text-purple-700 dark:text-white dark:group-hover:text-purple-400'>
+                                                <div className='font-semibold text-lg'>Order #{order.data.order_number}</div>
+                                                <div className='font-medium text-zinc-500 dark:text-zinc-400'>{order.data.company_name}</div>
+                                            </Link>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Link href={href} aria-hidden tabIndex={-1} className='absolute inset-0 z-10'>
+                                                <span className='sr-only'>{label}</span>
+                                            </Link>
+                                            <StatusBadge status={order.data.status} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <Link href={href} aria-hidden tabIndex={-1} className='absolute inset-0 z-10'>
+                                                <span className='sr-only'>{label}</span>
+                                            </Link>
+                                            <span className='font-medium text-zinc-500 dark:text-zinc-300'>{formatDate(order.data.created_at)}</span>
+                                        </TableCell>
+                                        <TableCell className='text-right font-medium text-purple-400'>
+                                            <Link href={href} aria-hidden tabIndex={-1} className='absolute inset-0 z-10'>
+                                                <span className='sr-only'>{label}</span>
+                                            </Link>
+                                            {order.data.items.length}
+                                        </TableCell>
+                                        <TableCell className='text-right font-medium text-zinc-950 dark:text-white'>
+                                            <Link href={href} aria-hidden tabIndex={-1} className='absolute inset-0 z-10'>
+                                                <span className='sr-only'>{label}</span>
+                                            </Link>
+                                            {formatMoney(order.data.total_cents)}
+                                        </TableCell>
+                                    </TableRow>
+                                );
+                            })}
+                        </TableBody>
+                    </Table>
+                ) : (
+                    <p className='py-12 text-sm/6 text-center font-semibold uppercase text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950/20 rounded-xl'>No matching orders</p>
+                )}
             </div>
         </div>
     );

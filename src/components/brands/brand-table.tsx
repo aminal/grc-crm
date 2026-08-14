@@ -22,6 +22,7 @@ export function BrandTable({
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
+          <TableHead>Acronym</TableHead>
           <TableHead>Website</TableHead>
         </TableRow>
       </TableHeader>
@@ -38,6 +39,12 @@ export function BrandTable({
                   <span className="absolute inset-0" />
                   {brand.data.name}
                 </Link>
+              </TableCell>
+              <TableCell>
+                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                  <span className="sr-only">{label}</span>
+                </Link>
+                {brand.data.acronym || "—"}
               </TableCell>
               <TableCell className="max-w-sm truncate">
                 <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">

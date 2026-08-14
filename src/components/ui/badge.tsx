@@ -28,7 +28,7 @@ export function Badge({ color = "zinc", className, ...props }: React.HTMLAttribu
   return <span className={cn("inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-bold sm:text-sm/5 uppercase forced-colors:outline", colors[color], className)} {...props} />;
 }
 
-export function StatusBadge({ status }: { status: OrderStatus | "available" | "sold" | "inactive" | "partial" | "unpaid" | "void" }): React.ReactElement {
+export function StatusBadge({ status, prefix }: { status: OrderStatus | "available" | "sold" | "inactive" | "partial" | "unpaid" | "void"; prefix?: string }): React.ReactElement {
   const statusColors = {
     pending: "amber",
     rejected: "red",
@@ -47,5 +47,5 @@ export function StatusBadge({ status }: { status: OrderStatus | "available" | "s
   const color = statusColors[status];
   const label = status.replaceAll("_", " ").replace(/\b\w/g, (char) => char.toUpperCase());
 
-  return <Badge color={color}>{label}</Badge>;
+  return <Badge color={color}>{prefix ? `${prefix} ${label}` : label}</Badge>;
 }

@@ -13,7 +13,7 @@ export function Avatar({ name, picture, className }: AvatarProps): React.ReactEl
   return (
     <span
       aria-label={label}
-      className={cn("inline-grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-zinc-100 text-sm font-medium text-zinc-700 ring-1 ring-zinc-950/10", className)}
+      className={cn("inline-grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-100 text-sm font-medium text-zinc-700 dark:bg-white/5 dark:text-zinc-300", className)}
       style={picture ? { backgroundImage: `url(${picture})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
     >
       {picture ? <span className="sr-only">{label}</span> : initial}

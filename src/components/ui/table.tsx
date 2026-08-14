@@ -21,7 +21,7 @@ export function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTabl
 }
 
 export function TableRow({ className, ...props }: React.HTMLAttributes<HTMLTableRowElement>): React.ReactElement {
-  return <tr className={cn("hover:bg-zinc-950/2.5 dark:hover:bg-white/2.5", className)} {...props} />;
+  return <tr className={cn("group", className)} {...props} />;
 }
 
 export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>): React.ReactElement {
@@ -29,5 +29,5 @@ export function TableHead({ className, ...props }: React.ThHTMLAttributes<HTMLTa
 }
 
 export function TableCell({ className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>): React.ReactElement {
-  return <td className={cn("relative border-b border-zinc-950/5 px-4 py-4 align-top text-zinc-700 first:pl-2.5 last:pr-(--gutter,--spacing(2)) sm:last:pr-1 dark:border-white/5 dark:text-zinc-300", className)} {...props} />;
+  return <td className={cn("relative border-b border-zinc-950/5 px-4 py-4 align-top text-zinc-700 first:pl-2.5 last:pr-(--gutter,--spacing(2)) sm:last:pr-1 dark:border-white/5 dark:text-zinc-300 group-hover:bg-zinc-950/2.5 dark:group-hover:bg-white/2.5", className)} {...props} />;
 }

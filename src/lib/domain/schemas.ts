@@ -196,6 +196,7 @@ export const removePackagesSchema = z.object({
 
 export const brandCreateSchema = z.object({
   name: requiredShortString,
+  acronym: optionalShortString,
   website: optionalUrl,
   notes: optionalLongString,
 });

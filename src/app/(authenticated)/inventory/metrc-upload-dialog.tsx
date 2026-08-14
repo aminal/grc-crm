@@ -1,7 +1,7 @@
 "use client";
 
 import * as Headless from "@headlessui/react";
-import { Upload, X } from "lucide-react";
+import { Upload, X, RefreshCcwDotIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -14,8 +14,8 @@ export function MetrcUploadDialog(): React.ReactElement {
   return (
     <>
       <Button type="button" onClick={() => setIsOpen(true)}>
-        <Upload data-slot="icon" aria-hidden="true" />
-        METRC Upload
+        <RefreshCcwDotIcon data-slot="icon" aria-hidden="true" />
+        Sync Inventory
       </Button>
       <Dialog size="lg" open={isOpen} onClose={setIsOpen} className="relative">
         <Headless.CloseButton
@@ -24,7 +24,7 @@ export function MetrcUploadDialog(): React.ReactElement {
         >
           <X className="size-4" aria-hidden="true" />
         </Headless.CloseButton>
-        <DialogTitle className="pr-10">METRC Upload</DialogTitle>
+        <DialogTitle className="pr-10">Inventory Sync</DialogTitle>
         <DialogDescription>Upload a METRC active-package .xlsx export to sync inventory.</DialogDescription>
         <DialogBody>
           <form action={uploadInventoryAction} className="space-y-4">

@@ -1,14 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const firestoreMocks = vi.hoisted(() => ({
-  getDocument: vi.fn(),
-  listCollection: vi.fn(),
-  now: vi.fn(() => "server-now"),
-}));
+const firestoreMocks = vi.hoisted(() => {
+  const batchSet = vi.fn();
+  const batchCommit = vi.fn(() => Promise.resolve());
+
+  return {
+    batch: vi.fn(() => ({ set: batchSet, commit: batchCommit })),
+    batchCommit,
+    batchSet,
+    doc: vi.fn((path: string) => ({ path })),
+    getDocument: vi.fn(),
+    listCollection: vi.fn(),
+    now: vi.fn(() => "server-now"),
+  };
+});
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/firebase/admin", () => ({
-  db: {},
+  db: {
+    batch: firestoreMocks.batch,
+    doc: firestoreMocks.doc,
+  },
 }));
 vi.mock("./firestore", () => ({
   getDocument: firestoreMocks.getDocument,
@@ -40,6 +52,7 @@ vi.mock("./firestore", () => ({
 import {
   buildFieldChanges,
   buildSettingsActivityData,
+  listBrands,
   listStrains,
   productActivityFields,
   strainActivityFields,
@@ -93,6 +106,45 @@ describe("sales settings data helpers", () => {
         next_value: "First note",
       },
     ]);
+  });
+
+  it("backfills missing brand acronyms when listing brands", async () => {
+    firestoreMocks.listCollection.mockResolvedValueOnce([
+      {
+        id: "brand-custom",
+        data: {
+          name: "Custom Acronym Brand",
+          acronym: "CABX",
+          website: "",
+          notes: "",
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "brand-missing",
+        data: {
+          name: "Green Room Cannabis",
+          website: "",
+          notes: "",
+          created_at: null,
+          updated_at: null,
+        },
+      },
+    ]);
+
+    await expect(listBrands()).resolves.toMatchObject([
+      {
+        id: "brand-custom",
+        data: { name: "Custom Acronym Brand", acronym: "CABX" },
+      },
+      {
+        id: "brand-missing",
+        data: { name: "Green Room Cannabis", acronym: "GRC" },
+      },
+    ]);
+    expect(firestoreMocks.batchSet).toHaveBeenCalledWith({ path: "brands/brand-missing" }, { acronym: "GRC" }, { merge: true });
+    expect(firestoreMocks.batchCommit).toHaveBeenCalledTimes(1);
   });
 
   it("serializes product strain IDs in stable order for activity diffs", () => {

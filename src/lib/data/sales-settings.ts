@@ -11,6 +11,7 @@ import type {
   SettingsActivityData,
   StrainData,
 } from "@/lib/domain/types";
+import { brandAcronymFromName } from "@/lib/domain/brand";
 import { getDocument, listCollection, millis, normalizedText, now } from "./firestore";
 
 const ACTIVITY = "activity";
@@ -18,16 +19,21 @@ const BRANDS = "brands";
 const PRODUCTS = "products";
 const STRAINS = "strains";
 
-type BrandInput = Pick<BrandData, "name" | "website" | "notes">;
+type BrandInput = Pick<BrandData, "name" | "website" | "notes"> & Partial<Pick<BrandData, "acronym">>;
+type BrandFields = Pick<BrandData, "name" | "acronym" | "website" | "notes">;
 type StrainInput = Pick<StrainData, "name" | "breeder" | "genetics" | "sativa_percentage" | "notes">;
 type StrainActivityFields = Omit<StrainInput, "sativa_percentage"> & { sativa_percentage: string };
 type ProductInput = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
 type ProductActivityFields = Omit<ProductInput, "strain_ids" | "unit_base_price_cents" | "case_quantity"> & { strain_ids: string; unit_base_price_cents: string; case_quantity: string };
 type SettingsCollection = typeof BRANDS | typeof PRODUCTS | typeof STRAINS;
 
-function brandFields(data: Partial<BrandInput>): BrandInput {
+function brandFields(data: Partial<BrandInput>): BrandFields {
+  const name = normalizedText(data.name);
+  const acronym = normalizedText(data.acronym) || brandAcronymFromName(name);
+
   return {
-    name: normalizedText(data.name),
+    name,
+    acronym,
     website: normalizedText(data.website),
     notes: normalizedText(data.notes),
   };
@@ -111,6 +117,25 @@ function brandWithDefaults(data: Partial<BrandData>): BrandData {
     created_at: data.created_at ?? null,
     updated_at: data.updated_at ?? null,
   };
+}
+
+async function backfillBrandAcronymRecords(brands: FirestoreRecord<BrandData>[]): Promise<void> {
+  const updates = brands.flatMap((brand) => {
+    if (normalizedText(brand.data.acronym)) {
+      return [];
+    }
+
+    const acronym = brandFields(brand.data).acronym;
+    return acronym ? [{ id: brand.id, acronym }] : [];
+  });
+
+  for (let index = 0; index < updates.length; index += 500) {
+    const batch = db.batch();
+    for (const update of updates.slice(index, index + 500)) {
+      batch.set(db.doc(`${BRANDS}/${update.id}`), { acronym: update.acronym }, { merge: true });
+    }
+    await batch.commit();
+  }
 }
 
 function strainWithDefaults(data: Partial<StrainData>): StrainData {
@@ -239,6 +264,7 @@ async function requireStrainsAvailable(strainIds: string[], existingStrainIds: s
 
 export async function listBrands(): Promise<FirestoreRecord<BrandData>[]> {
   const brands = await listCollection<BrandData>(BRANDS);
+  await backfillBrandAcronymRecords(brands);
   return brands
     .map((brand) => ({
       id: brand.id,
@@ -252,6 +278,8 @@ export async function findBrand(brandId: string): Promise<FirestoreRecord<BrandD
   if (!brand) {
     return null;
   }
+
+  await backfillBrandAcronymRecords([brand]);
 
   return {
     id: brand.id,

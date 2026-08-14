@@ -21,9 +21,45 @@ export function dateFromFirestore(value: FirestoreDate | undefined): Date | null
   return null;
 }
 
+function ordinalSuffix(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) {
+    return "th";
+  }
+
+  switch (day % 10) {
+    case 1:
+      return "st";
+    case 2:
+      return "nd";
+    case 3:
+      return "rd";
+    default:
+      return "th";
+  }
+}
+
+function formatDateWithOrdinal(date: Date, options: Intl.DateTimeFormatOptions): string {
+  const parts = new Intl.DateTimeFormat("en-US", options).formatToParts(date);
+
+  return parts
+    .map((part, index) => {
+      if (part.type === "literal" && parts[index - 1]?.type === "day" && parts[index + 1]?.type === "year") {
+        return part.value.replace(",", "");
+      }
+
+      if (part.type !== "day") {
+        return part.value;
+      }
+
+      const day = Number(part.value);
+      return Number.isNaN(day) ? part.value : `${day}${ordinalSuffix(day)}`;
+    })
+    .join("");
+}
+
 export function formatDate(value: FirestoreDate | undefined, options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", year: "numeric" }): string {
   const date = dateFromFirestore(value);
-  return date ? new Intl.DateTimeFormat("en-US", options).format(date) : "—";
+  return date ? formatDateWithOrdinal(date, options) : "—";
 }
 
 export function formatDateTime(value: FirestoreDate | undefined): string {
@@ -50,7 +86,7 @@ export function formatCompanySubheading(company: Pick<CompanyData, "address" | "
     .join(", ");
   const licenseNumber = company.license_number.trim();
 
-  return `${location || "No address on file"} · ${licenseNumber || "No license number"}`;
+  return [location, licenseNumber || "No license number"].filter(Boolean).join(" · ");
 }
 
 export function compactNumber(value: number): string {

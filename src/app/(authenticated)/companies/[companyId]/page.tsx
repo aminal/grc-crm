@@ -60,8 +60,9 @@ export default async function CompanyDetailsPage({ params }: {
             <PageHeader
                 title={company.data.company_name}
                 description={formatCompanySubheading(company.data)}
-                actions={<FacilityBadge facilityType={company.data.facility_type} />}
-            />
+            >
+                <FacilityBadge facilityType={company.data.facility_type} />
+            </PageHeader>
             <CompanyTabs companySlug={companySlug} active='details' />
 
             <div className='grid gap-6 xl:grid-cols-[1.2fr_0.8fr]'>
@@ -147,20 +148,15 @@ export default async function CompanyDetailsPage({ params }: {
                         <CardContent className='pt-0'>
                             {primary ? (
                                 <div className='rounded-xl bg-zinc-50/80 p-4 dark:bg-zinc-900'>
-                                    <div className='flex items-start gap-4'>
-                                        <div className='flex size-12 shrink-0 items-center justify-center rounded-lg bg-purple-100 text-base font-semibold uppercase text-purple-700 ring-1 ring-purple-200 dark:bg-purple-500/15 dark:text-purple-200 dark:ring-purple-400/20'>
-                                            {primary.data.name.trim().slice(0, 1) || '?'}
-                                        </div>
-                                        <div className='min-w-0 flex-1'>
-                                            <div className='flex items-center justify-between gap-3'>
-                                                <p className='truncate text-xl/7 font-semibold text-zinc-950 dark:text-white'>{primary.data.name}</p>
-                                                <div className='inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 shadow-xs dark:bg-white/5 dark:text-zinc-400'>
-                                                    <ChatBubbleLeftRightIcon className='size-4 shrink-0 text-purple-500 dark:text-purple-500/85' aria-hidden='true' />
-                                                    <span className='truncate'>Prefers {primary.data.preferred_communication}</span>
-                                                </div>
+                                    <div className='min-w-0'>
+                                        <div className='flex items-center justify-between gap-3'>
+                                            <p className='truncate text-xl/7 font-semibold text-zinc-950 dark:text-white'>{primary.data.name}</p>
+                                            <div className='inline-flex max-w-full shrink-0 items-center gap-1.5 rounded-md bg-white px-2.5 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 shadow-xs dark:bg-white/5 dark:text-zinc-400'>
+                                                <ChatBubbleLeftRightIcon className='size-4 shrink-0 text-purple-500 dark:text-purple-500/85' aria-hidden='true' />
+                                                <span className='truncate'>Prefers {primary.data.preferred_communication}</span>
                                             </div>
-                                            <p className='mt-0.5 text-sm/6 font-medium text-zinc-500 dark:text-zinc-400 uppercase'>{primary.data.title || 'No title'}</p>
                                         </div>
+                                        <p className='mt-0.5 text-sm/6 font-medium text-zinc-500 dark:text-zinc-400 uppercase'>{primary.data.title || 'No title'}</p>
                                     </div>
                                     <div className='flex flex-col gap-3 mt-4'>
                                         {primaryEmail ? (
@@ -185,8 +181,8 @@ export default async function CompanyDetailsPage({ params }: {
                                     </div>
                                 </div>
                             ) : (
-                                <div className='rounded-lg border border-dashed border-zinc-950/10 bg-zinc-50 px-4 py-6 text-center dark:border-white/10 dark:bg-white/[0.03]'>
-                                    <p className='text-sm/6 font-medium text-zinc-600 dark:text-zinc-400'>No primary contact selected.</p>
+                                <div className='rounded-lg bg-zinc-50 px-4 py-6 text-center dark:bg-white/[0.03]'>
+                                    <p className='text-sm/6 font-bold text-zinc-600 dark:text-zinc-400 uppercase'>No contacts yet</p>
                                 </div>
                             )}
                         </CardContent>
@@ -260,8 +256,8 @@ function DetailItem({ label, value, href }: {
 
     return (
         <div className='px-5 py-5 sm:grid sm:grid-cols-3 sm:gap-4'>
-            <dt className='text-sm/6 font-medium text-zinc-950 dark:text-white'>{label}</dt>
-            <dd className='mt-1 break-words text-sm/6 text-zinc-700 sm:col-span-2 sm:mt-0 dark:text-zinc-300'>
+            <dt className='text-sm/6 font-medium uppercase text-zinc-950 dark:text-white'>{label}</dt>
+            <dd className='mt-1 break-words text-base/6 font-medium text-zinc-700 sm:col-span-2 sm:mt-0 dark:text-zinc-300'>
                 {href ?
                     <a href={href} target='_blank' rel='noreferrer' className='font-medium text-purple-700 hover:text-purple-900 dark:text-purple-300 dark:hover:text-purple-200'>{displayValue}</a> : displayValue}
             </dd>

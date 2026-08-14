@@ -12,7 +12,7 @@ const brandsHref = "/brands";
 
 type BrandDialogBrand = {
   id: string;
-  data: Pick<BrandData, "name" | "website" | "notes">;
+  data: Pick<BrandData, "name" | "acronym" | "website" | "notes">;
 };
 
 function serializeBrand(record: FirestoreRecord<BrandData>): BrandDialogBrand {
@@ -20,6 +20,7 @@ function serializeBrand(record: FirestoreRecord<BrandData>): BrandDialogBrand {
     id: record.id,
     data: {
       name: record.data.name,
+      acronym: record.data.acronym,
       website: record.data.website,
       notes: record.data.notes,
     },

@@ -1,10 +1,10 @@
 "use client";
 
 import * as Headless from "@headlessui/react";
-import { ArrowRightStartOnRectangleIcon, Bars3Icon, ChevronUpIcon, UserCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
+import { ArrowRightStartOnRectangleIcon, Bars3Icon, ChevronUpIcon, MoonIcon, UserCircleIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import type { AuthenticatedUser } from "@/lib/domain/types";
 import { TouchTarget } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
@@ -26,6 +26,39 @@ const navbarItemClasses = cn(
   "dark:data-hover:bg-white/5 dark:data-hover:*:data-[slot=icon]:fill-white",
   "dark:data-active:bg-white/5 dark:data-active:*:data-[slot=icon]:fill-white",
 );
+
+const themeStorageKey = "theme";
+
+function getPreferredDarkMode(): boolean {
+  try {
+    const storedTheme = window.localStorage.getItem(themeStorageKey);
+
+    if (storedTheme === "dark") {
+      return true;
+    }
+
+    if (storedTheme === "light") {
+      return false;
+    }
+
+    return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  } catch {
+    return false;
+  }
+}
+
+function applyThemePreference(isDarkMode: boolean): void {
+  document.documentElement.classList.toggle("dark", isDarkMode);
+  document.documentElement.style.colorScheme = isDarkMode ? "dark" : "light";
+}
+
+function saveThemePreference(isDarkMode: boolean): void {
+  try {
+    window.localStorage.setItem(themeStorageKey, isDarkMode ? "dark" : "light");
+  } catch {
+    return;
+  }
+}
 
 export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElement {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -79,7 +112,7 @@ export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElemen
 
 function SidebarContent({ user, logoutAction, onNavigate }: { user: AuthenticatedUser; logoutAction: () => Promise<void>; onNavigate?: () => void }): React.ReactElement {
   return (
-    <nav className="flex h-full min-h-0 flex-col bg-white dark:bg-zinc-950">
+    <nav className="flex h-full min-h-0 flex-col bg-zinc-100 dark:bg-zinc-950">
       <div className="flex flex-col border-b border-zinc-950/5 p-4 dark:border-white/5 [&>[data-slot=section]+[data-slot=section]]:mt-2.5">
         <div data-slot="section" className="flex flex-col gap-0.5">
           <Brand />
@@ -130,6 +163,45 @@ function Brand({ compact = false }: { compact?: boolean }): React.ReactElement {
 }
 
 function UserPanel({ user, logoutAction, onNavigate }: { user: AuthenticatedUser; logoutAction: () => Promise<void>; onNavigate?: () => void }): React.ReactElement {
+  const themeMenuItemId = useId();
+  const [isDarkMode, setIsDarkMode] = useState(getPreferredDarkMode);
+
+  useEffect(() => {
+    applyThemePreference(isDarkMode);
+  }, [isDarkMode]);
+
+  const toggleThemePreference = useCallback(() => {
+    const nextIsDarkMode = !isDarkMode;
+    setIsDarkMode(nextIsDarkMode);
+    applyThemePreference(nextIsDarkMode);
+    saveThemePreference(nextIsDarkMode);
+  }, [isDarkMode]);
+
+  const handleThemeClick = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      toggleThemePreference();
+    },
+    [toggleThemePreference],
+  );
+
+  const handleThemeMenuKeyDownCapture = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (event.key !== "Enter" && event.key !== " " && event.key !== "Spacebar") {
+        return;
+      }
+
+      if (event.currentTarget.getAttribute("aria-activedescendant") !== themeMenuItemId) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      toggleThemePreference();
+    },
+    [themeMenuItemId, toggleThemePreference],
+  );
+
   return (
     <div data-slot="section" className="flex flex-col gap-0.5">
       <Dropdown>
@@ -145,10 +217,23 @@ function UserPanel({ user, logoutAction, onNavigate }: { user: AuthenticatedUser
             <ChevronUpIcon data-slot="icon" aria-hidden="true" />
           </TouchTarget>
         </DropdownButton>
-        <DropdownMenu className="min-w-56" anchor="top start">
+        <DropdownMenu className="min-w-56" anchor="top start" onKeyDownCapture={handleThemeMenuKeyDownCapture}>
           <DropdownItem href="/profile" onClick={onNavigate}>
             <UserCircleIcon data-slot="icon" aria-hidden="true" />
             <DropdownLabel>My profile</DropdownLabel>
+          </DropdownItem>
+          <DropdownItem id={themeMenuItemId} aria-label={`Dark Mode ${isDarkMode ? "on" : "off"}`} onClick={handleThemeClick}>
+            <MoonIcon data-slot="icon" aria-hidden="true" />
+            <DropdownLabel>Dark Mode</DropdownLabel>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "col-start-5 row-start-1 flex h-5 w-9 justify-self-end rounded-full p-0.5 transition-colors group-data-focus:bg-white/25",
+                isDarkMode ? "bg-purple-500" : "bg-zinc-200 dark:bg-zinc-700",
+              )}
+            >
+              <span className={cn("size-4 rounded-full bg-white shadow-xs ring-1 ring-zinc-950/10 transition-transform", isDarkMode && "translate-x-4")} />
+            </span>
           </DropdownItem>
           <DropdownDivider />
           <form action={logoutAction} className="contents">

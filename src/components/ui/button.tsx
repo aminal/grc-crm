@@ -1,14 +1,32 @@
 import { cn } from "@/lib/utils";
 
 export type ButtonVariant = "primary" | "secondary" | "danger" | "plain";
+export type ButtonSize = "sm" | "md" | "lg";
+
+type ButtonClassesOptions = {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+};
 
 const baseClasses = [
-  "relative cursor-pointer isolate inline-flex items-baseline justify-center gap-x-2 rounded-lg border text-base/6 font-semibold",
-  "px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] sm:px-[calc(--spacing(3)+3px)] sm:py-[calc(--spacing(2))] sm:text-md uppercase",
+  "relative cursor-pointer isolate inline-flex items-baseline justify-center gap-x-2 rounded-lg border font-semibold uppercase",
   "focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
   "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-  "*:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-5 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) sm:*:data-[slot=icon]:my-1 sm:*:data-[slot=icon]:size-4 forced-colors:[--btn-icon:ButtonText]",
+  "*:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-5 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) sm:*:data-[slot=icon]:mt-0.5 sm:*:data-[slot=icon]:size-4 forced-colors:[--btn-icon:ButtonText]",
 ];
+
+const sizeClasses: Record<ButtonSize, string[]> = {
+  sm: [
+    "px-[calc(--spacing(2.5)+1px)]! py-[calc(--spacing(2)-3px)]! text-xs/5! sm:px-[calc(--spacing(2)+1px)]! sm:pt-[calc(--spacing(2)-3px)]! sm:text-[0.86rem]! tracking-wide!",
+  ],
+  md: [
+    "px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] text-base/6 sm:px-[calc(--spacing(3)+3px)] sm:pt-[calc(--spacing(2))] sm:pb-[calc(--spacing(2)-2px)] sm:text-md",
+  ],
+  lg: [
+    "px-[calc(--spacing(4.5)-1px)] py-[calc(--spacing(3.5)-1px)] text-lg/7 sm:px-[calc(--spacing(4)+3px)] sm:pt-[calc(--spacing(2.5))] sm:pb-[calc(--spacing(2.5)-2px)] sm:text-lg",
+  ],
+};
 
 const solidClasses = [
   "border-transparent bg-(--btn-border) dark:bg-(--btn-bg)",
@@ -43,8 +61,14 @@ const variantClasses: Record<ButtonVariant, string[]> = {
   ],
 };
 
-export function buttonClasses(variant: ButtonVariant = "primary", className?: string): string {
-  return cn(baseClasses, variantClasses[variant], className);
+export function buttonClasses(options?: ButtonClassesOptions): string;
+export function buttonClasses(variant?: ButtonVariant, className?: string): string;
+export function buttonClasses(variantOrOptions: ButtonVariant | ButtonClassesOptions = "primary", className?: string): string {
+  const options = typeof variantOrOptions === "string" ? { variant: variantOrOptions, className } : variantOrOptions;
+  const variant = options?.variant ?? "primary";
+  const size = options?.size ?? "md";
+
+  return cn(baseClasses, sizeClasses[size], variantClasses[variant], options?.className);
 }
 
 export function TouchTarget({ children }: { children: React.ReactNode }): React.ReactElement {
@@ -56,13 +80,14 @@ export function TouchTarget({ children }: { children: React.ReactNode }): React.
   );
 }
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+export type ButtonProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "size"> & {
   variant?: ButtonVariant;
+  size?: ButtonSize;
 };
 
-export function Button({ className, variant = "primary", children, ...props }: ButtonProps): React.ReactElement {
+export function Button({ className, variant = "primary", size = "md", children, ...props }: ButtonProps): React.ReactElement {
   return (
-    <button className={buttonClasses(variant, className)} {...props}>
+    <button className={buttonClasses({ variant, size, className })} {...props}>
       <TouchTarget>{children}</TouchTarget>
     </button>
   );

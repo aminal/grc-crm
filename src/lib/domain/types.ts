@@ -291,6 +291,7 @@ export type ActivityData = {
 
 export type BrandData = {
   name: string;
+  acronym: string;
   website: string;
   notes: string;
   created_at: FirestoreDate;
