@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { FacilityBadge } from '@/components/company/facility-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { StatusBadge } from '@/components/ui/badge';
+import { Badge, StatusBadge } from '@/components/ui/badge';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Field, Input, Select } from '@/components/ui/field';
@@ -19,7 +19,6 @@ import {
     compactNumber,
     dateFromFirestore,
     formatDate,
-    formatDateTime,
     formatMoney,
     invoiceStatusLabel
 } from '@/lib/domain/format';
@@ -114,19 +113,23 @@ export default async function OrderPage({ params }: {
         termsLabel: orderTermsLabel,
         totalLabel: formatMoney(order.data.total_cents),
     };
+    const showClosedBadge = order.data.status === 'paid' && orderState === 'closed';
 
     return (
         <div>
             <PageHeader
                 title={`Order #${order.data.order_number}`}
-                description={`${order.data.company_name} · ${order.data.items.length} packages · ${formatMoney(order.data.total_cents)}`}
+                description={order.data.company_name}
                 actions={
                     <OrderActionsMenu orderId={orderId} orderNumber={order.data.order_number} actions={actions} approvalInvoice={approvalInvoice} canManage={canManage} canDelete={canDeleteOrder} hasInvoice={Boolean(order.data.invoice)} canRecordPayment={canRecordPayment} recordPaymentBalanceCents={invoice?.balance_cents ?? 0} defaultPaidAt={defaultPaidAt} />}
             >
-                <StatusBadge status={order.data.status} />
+                <div className='flex flex-wrap gap-2'>
+                    <StatusBadge status={order.data.status} />
+                    {showClosedBadge ? <Badge color='zinc'>Closed</Badge> : null}
+                </div>
             </PageHeader>
 
-            <div className='mb-6 flex justify-center'>
+            <div className='mb-4 flex justify-center'>
                 <OrderProgressBar status={order.data.status} />
             </div>
 
@@ -135,6 +138,7 @@ export default async function OrderPage({ params }: {
                     <Card>
                         <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
                             <CardTitle>Packages</CardTitle>
+                            <p>{order.data.items.length} package{order.data.items.length !== 1 ? 's' : ''} for {formatMoney(order.data.total_cents)}</p>
                             {editableItems ?
                                 <EditPackagesDialog orderId={orderId} packages={editPackageRows} initialSelectedTags={initialSelectedTags} initialPackagePrices={initialPackagePrices} /> : null}
                         </CardHeader>
@@ -252,35 +256,6 @@ export default async function OrderPage({ params }: {
                 </div>
 
                 <div className='space-y-6'>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Status</CardTitle>
-                        </CardHeader>
-                        <CardContent className='space-y-4'>
-                            <div className='rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900'>
-                                <p className='text-xs uppercase tracking-[0.2em] text-zinc-500'>Order</p>
-                                <div className='mt-2'>
-                                    <StatusBadge status={order.data.status} />
-                                </div>
-                                <p className='mt-2 text-sm text-zinc-500'>Updated {formatDateTime(order.data.status_changed_at)}</p>
-                            </div>
-                            <div className='rounded-lg border border-zinc-950/10 bg-zinc-50 p-4 dark:bg-zinc-900'>
-                                <p className='text-xs uppercase tracking-[0.2em] text-zinc-500'>Invoice</p>
-                                {order.data.invoice ? (
-                                    <>
-                                        <div className='mt-2'>
-                                            <StatusBadge status={order.data.invoice.status} />
-                                        </div>
-                                        <p className='mt-2 text-sm text-zinc-500'>{invoiceStatusLabel(order.data.invoice.status)} ·
-                                            Balance {formatMoney(order.data.invoice.balance_cents)}</p>
-                                    </>
-                                ) : (
-                                    <p className='mt-2 font-semibold text-zinc-950 dark:text-white'>Not created</p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
                     <Card>
                         <CardHeader>
                             <CardTitle>Company</CardTitle>
@@ -406,6 +381,10 @@ function orderProgressStepsForStatus(status: OrderStatus): ProgressBarStep[] {
         return failedOrderProgressSteps(0, 'Cancelled');
     }
 
+    if (status === 'rejected') {
+        return failedOrderProgressSteps(0, 'Rejected');
+    }
+
     if (status === 'delivery_rejected') {
         return failedOrderProgressSteps(2, 'Rejected');
     }
@@ -419,12 +398,12 @@ function orderProgressStepsForStatus(status: OrderStatus): ProgressBarStep[] {
 }
 
 function failedOrderProgressSteps(completedThroughIndex: number, failureName: string): ProgressBarStep[] {
-    const steps: ProgressBarStep[] = ORDER_PROGRESS_STEPS.map((name, index) => ({
+    const steps: ProgressBarStep[] = ORDER_PROGRESS_STEPS.slice(0, completedThroughIndex + 1).map((name) => ({
         name,
-        status: index <= completedThroughIndex ? 'complete' : 'upcoming',
+        status: 'complete',
     }));
 
-    steps.splice(completedThroughIndex + 1, 0, { name: failureName, status: 'failed' });
+    steps.push({ name: failureName, status: 'failed' });
 
     return steps;
 }

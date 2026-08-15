@@ -145,7 +145,7 @@ type ActivityMethodIconConfig = {
 };
 
 const activityMethodIconConfig: Record<InteractionMethod, ActivityMethodIconConfig> = {
-    Email: { Icon: EnvelopeIcon, className: 'text-blue-600' },
+    Email: { Icon: EnvelopeIcon, className: 'text-purple-600' },
     Text: { Icon: ChatBubbleLeftRightIcon, className: 'text-green-600' },
     Phone: { Icon: PhoneIcon, className: 'text-purple-600' },
     'In-Person': { Icon: UserGroupIcon, className: 'text-zinc-600' },

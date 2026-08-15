@@ -126,7 +126,7 @@ export function SearchableSelect({
           {filteredOptions.length === 0 ? <div className="px-3.5 py-3 text-sm text-zinc-500 dark:text-zinc-400">{emptyMessage}</div> : null}
           {footerAction ? (
             <div className="mt-1 border-t border-zinc-950/5 pt-1 dark:border-white/10">
-              <Link href={footerAction.href} onMouseDown={(event) => event.preventDefault()} className="block rounded-lg px-3.5 py-3 text-base/6 font-semibold text-purple-600 hover:bg-purple-50 focus:bg-blue-500 focus:text-white focus:outline-hidden sm:px-3 sm:py-2 sm:text-sm/6 dark:text-purple-300 dark:hover:bg-purple-500/10">
+              <Link href={footerAction.href} onMouseDown={(event) => event.preventDefault()} className="block rounded-lg px-3.5 py-3 text-base/6 font-semibold text-purple-600 hover:bg-purple-50 focus:bg-purple-500 focus:text-white focus:outline-hidden sm:px-3 sm:py-2 sm:text-sm/6 dark:text-purple-300 dark:hover:bg-purple-500/10">
                 {footerAction.label}
               </Link>
             </div>

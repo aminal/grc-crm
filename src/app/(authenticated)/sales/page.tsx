@@ -1,8 +1,9 @@
-import { Plus } from 'lucide-react';
+import { Check, ChevronDown, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { StatusBadge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
+import { Dropdown, DropdownButton, DropdownItem, DropdownLabel, DropdownMenu } from '@/components/ui/dropdown';
 import { TableSearch } from '@/components/ui/table-search';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDate, formatMoney, orderStatusLabel } from '@/lib/domain/format';
@@ -82,6 +83,7 @@ export default async function SalesPage({ searchParams }: {
     const statusOrders = (await listOrders()).filter((order) => matchesStatus(order, status));
     const orders = filterOrders(statusOrders, query);
     const preservedParams = status === 'all' ? undefined : { status };
+    const activeSalesTab = salesTabs.find((tab) => tab.key === status) ?? salesTabs[0];
 
     return (
         <div>
@@ -91,9 +93,26 @@ export default async function SalesPage({ searchParams }: {
                     New Order
                 </Link>} />
 
-            <div className='mb-5 flex gap-2 overflow-x-auto rounded-lg bg-zinc-50 p-2.5 dark:bg-zinc-950/40'>
+            <div className='mb-5 sm:hidden'>
+                <Dropdown>
+                    <DropdownButton className={buttonClasses('plain', 'w-full justify-between bg-zinc-50 dark:bg-zinc-950/40')}>
+                        {activeSalesTab.label}
+                        <ChevronDown data-slot='icon' aria-hidden='true' />
+                    </DropdownButton>
+                    <DropdownMenu anchor='bottom start' className='min-w-64'>
+                        {salesTabs.map((tab) => (
+                            <DropdownItem key={tab.key} href={salesHref(tab.key, query)} aria-current={status === tab.key ? 'page' : undefined}>
+                                {status === tab.key ? <Check data-slot='icon' aria-hidden='true' /> : null}
+                                <DropdownLabel>{tab.label}</DropdownLabel>
+                            </DropdownItem>
+                        ))}
+                    </DropdownMenu>
+                </Dropdown>
+            </div>
+
+            <div className='mb-5 hidden gap-2 overflow-x-auto rounded-lg bg-zinc-50 p-2.5 dark:bg-zinc-950/40 sm:flex'>
                 {salesTabs.map((tab) => (
-                    <Link key={tab.key} href={salesHref(tab.key, query)} className={cn('rounded-lg px-6 py-2.5 uppercase text-sm font-semibold text-zinc-600 transition hover:text-zinc-950/95 dark:hover:text-white', status === tab.key && ' bg-zinc-300 dark:bg-zinc-950 text-zinc-950/65 dark:text-white')}>
+                    <Link key={tab.key} href={salesHref(tab.key, query)} aria-current={status === tab.key ? 'page' : undefined} className={cn('rounded-lg px-6 py-2.5 uppercase text-sm font-semibold text-zinc-600 transition hover:text-zinc-950/95 dark:hover:text-white', status === tab.key && ' bg-zinc-300 dark:bg-zinc-950 text-zinc-950/65 dark:text-white')}>
                         {tab.label}
                     </Link>
                 ))}

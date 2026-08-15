@@ -118,7 +118,7 @@ export function ProductForm({
           {archivedSelectedStrains.map((strain) => <input key={`hidden-${strain.id}`} type="hidden" name="strain_ids" value={strain.id} />)}
           <Headless.ListboxButton
             type="button"
-            className="group relative block w-full cursor-pointer rounded-lg border border-zinc-950/10 bg-white px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] text-left text-base/6 font-medium text-zinc-950 shadow-sm hover:border-zinc-950/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:border-zinc-950/20 disabled:bg-zinc-950/5 disabled:opacity-50 sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)] sm:text-base/6 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:border-white/20 dark:disabled:border-white/15 dark:disabled:bg-white/2.5"
+            className="group relative block w-full cursor-pointer rounded-lg border border-zinc-950/10 bg-white px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] text-left text-base/6 font-medium text-zinc-950 shadow-sm hover:border-zinc-950/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-purple-500 disabled:cursor-default disabled:border-zinc-950/20 disabled:bg-zinc-950/5 disabled:opacity-50 sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)] sm:text-base/6 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:border-white/20 dark:disabled:border-white/15 dark:disabled:bg-white/2.5"
           >
             <span className={cn("block truncate pr-8", selectedStrainNames.length === 0 && "text-zinc-500")}>{strainSelectionLabel}</span>
             <ChevronUpDownIcon className="pointer-events-none absolute top-1/2 right-3 size-5 -translate-y-1/2 text-zinc-500 sm:size-4 dark:text-zinc-400" aria-hidden="true" />
@@ -131,9 +131,9 @@ export function ProductForm({
               <Headless.ListboxOption
                 key={strain.id}
                 value={strain.id}
-                className="group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm/6 font-medium text-zinc-950 select-none data-focus:bg-blue-500 data-focus:text-white dark:text-white"
+                className="group flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm/6 font-medium text-zinc-950 select-none data-focus:bg-purple-500 data-focus:text-white dark:text-white"
               >
-                <CheckIcon className="invisible size-4 shrink-0 text-blue-600 group-data-selected:visible group-data-focus:text-white dark:text-blue-400" aria-hidden="true" />
+                <CheckIcon className="invisible size-4 shrink-0 text-purple-600 group-data-selected:visible group-data-focus:text-white dark:text-purple-400" aria-hidden="true" />
                 <span className="truncate">{strain.name}</span>
               </Headless.ListboxOption>
             ))}

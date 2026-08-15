@@ -86,22 +86,15 @@ export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElemen
                 />
                 <Headless.DialogPanel
                     transition
-                    className='fixed inset-y-0 w-full max-w-80 p-2 transition duration-300 ease-in-out data-closed:-translate-x-full'
+                    className='fixed inset-y-0 w-full max-w-80 transition duration-300 ease-in-out data-closed:-translate-x-full'
                 >
-                    <div className='flex h-full flex-col rounded-lg bg-white shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-950 dark:ring-white/10'>
-                        <div className='-mb-3 px-4 pt-3'>
-                            <Headless.CloseButton className={navbarItemClasses} aria-label='Close navigation'>
-                                <TouchTarget>
-                                    <XMarkIcon data-slot='icon' aria-hidden='true' />
-                                </TouchTarget>
-                            </Headless.CloseButton>
-                        </div>
-                        <SidebarContent user={user} logoutAction={logoutAction} onNavigate={() => setShowSidebar(false)} />
+                    <div className='flex h-full flex-col rounded-lg bg-zinc-100 shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-950 dark:ring-white/10'>
+                        <SidebarContent user={user} logoutAction={logoutAction} onNavigate={() => setShowSidebar(false)} showCloseButton />
                     </div>
                 </Headless.DialogPanel>
             </Headless.Dialog>
 
-            <header className='flex items-center px-4 lg:hidden'>
+            <header className='flex items-center px-4 lg:hidden bg-zinc-100 border-b border-zinc-200/50 dark:bg-zinc-950/60 dark:border-zinc-900/50'>
                 <div className='py-2.5'>
                     <Headless.Button type='button' className={navbarItemClasses} onClick={() => setShowSidebar(true)} aria-label='Open navigation'>
                         <TouchTarget>
@@ -110,7 +103,7 @@ export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElemen
                     </Headless.Button>
                 </div>
                 <div className='min-w-0'>
-                    <nav className='flex items-center gap-4 py-2.5'>
+                    <nav className='flex items-center gap-4 py-2'>
                         <Brand compact />
                     </nav>
                 </div>
@@ -123,16 +116,24 @@ export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElemen
     );
 }
 
-function SidebarContent({ user, logoutAction, onNavigate }: {
+function SidebarContent({ user, logoutAction, onNavigate, showCloseButton = false }: {
     user: AuthenticatedUser;
     logoutAction: () => Promise<void>;
-    onNavigate?: () => void
+    onNavigate?: () => void;
+    showCloseButton?: boolean;
 }): React.ReactElement {
     return (
         <nav className='flex h-full min-h-0 flex-col bg-zinc-100 dark:bg-zinc-950'>
             <div className='flex flex-col border-b border-zinc-950/5 p-4 dark:border-white/5 [&>[data-slot=section]+[data-slot=section]]:mt-2.5'>
-                <div data-slot='section' className='flex flex-col gap-0.5'>
+                <div data-slot='section' className={cn('flex gap-0.5', showCloseButton ? 'items-start' : 'flex-col')}>
                     <Brand />
+                    {showCloseButton ? (
+                        <Headless.CloseButton className={cn(navbarItemClasses, 'shrink-0')} aria-label='Close navigation'>
+                            <TouchTarget>
+                                <XMarkIcon data-slot='icon' aria-hidden='true' />
+                            </TouchTarget>
+                        </Headless.CloseButton>
+                    ) : null}
                 </div>
             </div>
             <div className='flex flex-1 flex-col overflow-y-auto p-4 [&>[data-slot=section]+[data-slot=section]]:mt-8'>
@@ -155,13 +156,12 @@ function Brand({ compact = false }: { compact?: boolean }): React.ReactElement {
                 alt=''
                 width={192}
                 height={192}
-                className='size-12 shrink-0 rounded-lg sm:size-10!'
+                className='size-10 shrink-0 rounded-lg'
             />
             <span className='min-w-0'>
-        <span className='block truncate text-lg/5 font-semibold text-zinc-950 dark:text-white uppercase'>Green Room</span>
-                {!compact ?
-                    <span className='block truncate text-sm/5 font-semibold text-zinc-500 dark:text-zinc-400'>CRM</span> : null}
-      </span>
+                <span className='block truncate text-lg/5 font-semibold text-zinc-950 dark:text-white uppercase'>Green Room</span>
+                <span className='block truncate text-sm/5 font-semibold text-zinc-500 dark:text-zinc-400'>CRM</span>
+            </span>
         </TouchTarget>
     );
 

@@ -11,23 +11,23 @@ type ButtonClassesOptions = {
 
 const baseClasses = [
   "relative cursor-pointer isolate inline-flex items-baseline justify-center gap-x-2 rounded-lg border font-semibold uppercase",
-  "focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500",
+  "focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500",
   "disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50",
-  "*:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-5 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) sm:*:data-[slot=icon]:mt-0.5 sm:*:data-[slot=icon]:size-4 forced-colors:[--btn-icon:ButtonText]",
+  "*:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-4 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) forced-colors:[--btn-icon:ButtonText]",
 ];
 
 const sizeClasses: Record<ButtonSize, string[]> = {
   xs: [
-    "px-[calc(--spacing(2.5)+1px)]! py-[calc(--spacing(2)-4px)]! text-xs/5! sm:px-[calc(--spacing(2)+0px)]! sm:pt-[calc(--spacing(2)-4px)]! sm:text-[0.76rem]! tracking-wide!",
+    "px-[calc(--spacing(2)+0px)]! py-[calc(--spacing(2)-4px)]! text-[0.76rem]/5! tracking-wide!",
   ],
   sm: [
-    "px-[calc(--spacing(2.5)+1px)]! py-[calc(--spacing(2)-3px)]! text-xs/5! sm:px-[calc(--spacing(2)+1px)]! sm:pt-[calc(--spacing(2)-3px)]! sm:text-[0.86rem]! tracking-wide!",
+    "px-[calc(--spacing(2)+1px)]! py-[calc(--spacing(2)-3px)]! text-[0.86rem]/5! tracking-wide!",
   ],
   md: [
-    "px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] text-base/6 sm:px-[calc(--spacing(3)+3px)] sm:pt-[calc(--spacing(2))] sm:pb-[calc(--spacing(2)-2px)] sm:text-md",
+    "px-[calc(--spacing(3)+3px)] pt-[calc(--spacing(2))] pb-[calc(--spacing(2)-2px)] text-md",
   ],
   lg: [
-    "px-[calc(--spacing(4.5)-1px)] py-[calc(--spacing(3.5)-1px)] text-lg/7 sm:px-[calc(--spacing(4)+3px)] sm:pt-[calc(--spacing(2.5))] sm:pb-[calc(--spacing(2.5)-2px)] sm:text-lg",
+    "px-[calc(--spacing(4)+3px)] pt-[calc(--spacing(2.5))] pb-[calc(--spacing(2.5)-2px)] text-lg",
   ],
 };
 

@@ -8,19 +8,18 @@ export function PageHeader({ title, description, actions, children }: {
 }): React.ReactElement {
     return (
         <div className={cn(
-            'flex flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:justify-between',
             description ? 'mb-4' : 'mb-6',
         )}>
-            <div className='min-w-0 sm:flex-1'>
-                <div className='flex min-w-0 flex-wrap items-center gap-2'>
-                    <h1 className='min-w-0 break-words text-4xl/8 font-semibold text-zinc-950 sm:text-3xl/10 dark:text-white uppercase'>{title}</h1>
-                    {children ? <div className='shrink-0'>{children}</div> : null}
+            <div className='flex flex-wrap items-start justify-between gap-4 sm:flex-nowrap'>
+                <div className='min-w-0 max-w-full sm:flex-1'>
+                    <h1 className='min-w-0 break-words text-3xl/8 pt-1 font-semibold text-zinc-950 sm:text-3xl/10 dark:text-white uppercase'>{title}</h1>
+                    {description ?
+                        <p className='mt-2 max-w-2xl break-words text-base/6 text-zinc-500 sm:text-base/6 dark:text-zinc-400 font-medium'>{description}</p> : null}
+                    {children ? <div className='mt-2 shrink-0'>{children}</div> : null}
                 </div>
-                {description ?
-                    <p className='mt-2 max-w-2xl break-words text-base/6 text-zinc-500 sm:text-base/6 dark:text-zinc-400 font-medium'>{description}</p> : null}
+                {actions ?
+                    <div className='flex max-w-full flex-wrap gap-2 sm:shrink-0 sm:justify-end'>{actions}</div> : null}
             </div>
-            {actions ?
-                <div className='flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0 sm:justify-end'>{actions}</div> : null}
         </div>
     );
 }

@@ -39,11 +39,14 @@ type OrderActionsMenuProps = {
     defaultPaidAt: string;
 };
 
+type ConfirmableOrderAction = 'reject' | 'cancel' | 'close';
+
 export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoice, canManage, canDelete, hasInvoice, canRecordPayment, recordPaymentBalanceCents, defaultPaidAt }: OrderActionsMenuProps): React.ReactElement {
     const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
     const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRecordPaymentDialogOpen, setIsRecordPaymentDialogOpen] = useState(false);
+    const [confirmationAction, setConfirmationAction] = useState<ConfirmableOrderAction | null>(null);
     const visibleActions = canManage ? actions : actions.filter((action) => action === 'reject' || action === 'cancel' || action === 'close' || action === 'reopen');
     const canShowRecordPayment = canManage && canRecordPayment;
 
@@ -57,6 +60,10 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
 
     function closeDeleteDialog(): void {
         setIsDeleteDialogOpen(false);
+    }
+
+    function closeConfirmationDialog(): void {
+        setConfirmationAction(null);
     }
 
     function closeRecordPaymentDialog(): void {
@@ -82,10 +89,14 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                         </DropdownItem>
                     ) : null}
                     {visibleActions.includes('reject') ? (
-                        <MenuActionForm action={rejectOrderAction.bind(null, orderId)} label='Mark as Rejected' />
+                        <DropdownItem onClick={() => setConfirmationAction('reject')}>
+                            <DropdownLabel>Mark as Rejected</DropdownLabel>
+                        </DropdownItem>
                     ) : null}
                     {visibleActions.includes('cancel') ? (
-                        <MenuActionForm action={cancelOrderAction.bind(null, orderId)} label='Mark as Cancelled' />
+                        <DropdownItem onClick={() => setConfirmationAction('cancel')}>
+                            <DropdownLabel>Mark as Cancelled</DropdownLabel>
+                        </DropdownItem>
                     ) : null}
                     {visibleActions.includes('unapprove') ? (
                         <MenuActionForm action={unapproveOrderAction.bind(null, orderId)} label='Mark as Pending' />
@@ -102,7 +113,9 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                         <MenuActionForm action={deliveryRejectOrderAction.bind(null, orderId)} label='Mark as Delivery Rejected' />
                     ) : null}
                     {visibleActions.includes('close') ? (
-                        <MenuActionForm action={closeOrderAction.bind(null, orderId)} label='Close Order' />
+                        <DropdownItem onClick={() => setConfirmationAction('close')}>
+                            <DropdownLabel>Close Order</DropdownLabel>
+                        </DropdownItem>
                     ) : null}
                     {visibleActions.includes('reopen') ? (
                         <MenuActionForm action={reopenOrderAction.bind(null, orderId)} label='Reopen Order' />
@@ -192,6 +205,10 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                 </DialogBody>
             </Dialog>
 
+            {confirmationAction ? (
+                <ConfirmOrderActionDialog actionType={confirmationAction} orderId={orderId} orderNumber={orderNumber} onClose={closeConfirmationDialog} />
+            ) : null}
+
             {canShowRecordPayment ? (
                 <RecordPaymentDialog
                     orderId={orderId}
@@ -213,6 +230,69 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
             />
         </>
     );
+}
+
+function ConfirmOrderActionDialog({ actionType, orderId, orderNumber, onClose }: { actionType: ConfirmableOrderAction; orderId: string; orderNumber: number; onClose: () => void }): React.ReactElement {
+    const details = confirmationDetailsForAction(actionType, orderNumber);
+
+    return (
+        <Dialog size='md' open onClose={onClose} className='relative'>
+            <div className='flex items-start justify-between'>
+                <DialogTitle className='pr-10'>{details.title}</DialogTitle>
+                <button
+                    type='button'
+                    onClick={onClose}
+                    className='relative -top-1 cursor-pointer rounded-lg bg-zinc-950 p-2 text-white transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950'
+                    aria-label='Close dialog'
+                >
+                    <XMarkIcon className='size-4' aria-hidden='true' />
+                </button>
+            </div>
+            <DialogDescription>{details.description}</DialogDescription>
+            <DialogBody>
+                <form action={confirmationServerAction(actionType, orderId)}>
+                    <DialogActions>
+                        <Button type='button' variant='plain' onClick={onClose}>Cancel</Button>
+                        <Button type='submit' variant='danger'>{details.submitLabel}</Button>
+                    </DialogActions>
+                </form>
+            </DialogBody>
+        </Dialog>
+    );
+}
+
+function confirmationDetailsForAction(actionType: ConfirmableOrderAction, orderNumber: number): { title: string; description: string; submitLabel: string } {
+    switch (actionType) {
+        case 'reject':
+            return {
+                title: 'Mark Order as Rejected',
+                description: `This will mark Order #${orderNumber} as rejected. Are you sure you want to continue?`,
+                submitLabel: 'Mark as Rejected',
+            };
+        case 'cancel':
+            return {
+                title: 'Mark Order as Cancelled',
+                description: `This will mark Order #${orderNumber} as cancelled. Are you sure you want to continue?`,
+                submitLabel: 'Mark as Cancelled',
+            };
+        case 'close':
+            return {
+                title: 'Close Order',
+                description: `This will close Order #${orderNumber}. Are you sure you want to continue?`,
+                submitLabel: 'Close Order',
+            };
+    }
+}
+
+function confirmationServerAction(actionType: ConfirmableOrderAction, orderId: string): (formData?: FormData) => Promise<void> {
+    switch (actionType) {
+        case 'reject':
+            return rejectOrderAction.bind(null, orderId);
+        case 'cancel':
+            return cancelOrderAction.bind(null, orderId);
+        case 'close':
+            return closeOrderAction.bind(null, orderId);
+    }
 }
 
 function MenuActionForm({ action, label }: { action: (formData: FormData) => void | Promise<void>; label: string }): React.ReactElement {

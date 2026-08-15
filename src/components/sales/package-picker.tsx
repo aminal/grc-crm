@@ -218,7 +218,7 @@ export function PackagePicker({
                         {filteredPackages.map((packageRecord) => {
                             const selected = selectedTags.has(packageRecord.package_tag);
                             return (
-                                <div key={packageRecord.package_tag} className={`cursor-pointer rounded-lg p-4 transition-colors ${selected ? 'bg-purple-50 dark:bg-purple-500/50' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/70'}`} onClick={() => togglePackage(packageRecord, !selected)}>
+                                <div key={packageRecord.package_tag} className={`cursor-pointer rounded-lg p-4 transition-colors ${selected ? 'bg-purple-500 text-zinc-800 dark:bg-purple-500/50' : 'bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/70'}`} onClick={() => togglePackage(packageRecord, !selected)}>
                                     <div className='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
                                         <div className='flex gap-3'>
                                             <Checkbox checked={selected} onClick={(event) => event.stopPropagation()} onChange={(event) => togglePackage(packageRecord, event.target.checked)} className='mt-1' />
@@ -229,49 +229,49 @@ export function PackagePicker({
                                                     <div className='uppercase font-semibold'>{compactNumber(packageRecord.quantity)} Units</div>
                                                 </div>
 
-                                                <div className='grid grid-cols-2 space-x-8 space-y-2 mt-1.5'>
+                                                <div className='grid sm:grid-cols-2 space-x-8 space-y-2 mt-1.5'>
                                                     <div>
                                                         <div className={cn(
                                                             'text-sm font-semibold uppercase',
-                                                            selected ? 'text-white dark:text-black/50' : 'text-white dark:text-black/50',
+                                                            selected ? 'text-zinc-50 dark:text-black/50' : 'text-zinc-500 dark:text-black/50',
                                                         )}>Pacakge ID
                                                         </div>
                                                         <div className={cn(
                                                             'text-sm font-semibold',
-                                                            selected ? 'text-white dark:text-purple-400' : 'text-white dark:text-white/20',
+                                                            selected ? 'text-purple-900 dark:text-purple-400' : 'text-zinc-700 dark:text-white/20',
                                                         )}>{packageRecord.package_tag}</div>
                                                     </div>
                                                     <div>
                                                         <div className={cn(
                                                             'text-sm font-semibold uppercase',
-                                                            selected ? 'text-white dark:text-black/50' : 'text-white dark:text-black/50',
+                                                            selected ? 'text-zinc-50 dark:text-black/50' : 'text-zinc-500 dark:text-black/50',
                                                         )}>Strain
                                                         </div>
                                                         <div className={cn(
                                                             'text-sm font-semibold',
-                                                            selected ? 'text-white dark:text-purple-400' : 'text-white dark:text-white/20',
+                                                            selected ? 'text-purple-900 dark:text-purple-400' : 'text-zinc-700 dark:text-white/20',
                                                         )}>{packageRecord.strain || 'No strain'}</div>
                                                     </div>
                                                     <div>
                                                         <div className={cn(
                                                             'text-sm font-semibold uppercase',
-                                                            selected ? 'text-white dark:text-black/50' : 'text-white dark:text-black/50',
+                                                            selected ? 'text-zinc-50 dark:text-black/50' : 'text-zinc-500 dark:text-black/50',
                                                         )}>Source ID
                                                         </div>
                                                         <div className={cn(
                                                             'text-sm font-semibold',
-                                                            selected ? 'text-white dark:text-purple-400' : 'text-white dark:text-white/20',
+                                                            selected ? 'text-purple-900 dark:text-purple-400' : 'text-zinc-700 dark:text-white/20',
                                                         )}>{packageRecord.source_packages || 'No source package'}</div>
                                                     </div>
                                                     <div>
                                                         <div className={cn(
                                                             'text-sm font-semibold uppercase',
-                                                            selected ? 'text-white dark:text-black/50' : 'text-white dark:text-black/50',
+                                                            selected ? 'text-zinc-50 dark:text-black/50' : 'text-zinc-500 dark:text-black/50',
                                                         )}>Expires
                                                         </div>
                                                         <div className={cn(
                                                             'text-sm font-semibold',
-                                                            selected ? 'text-white dark:text-purple-400' : 'text-white dark:text-white/20',
+                                                            selected ? 'text-purple-900 dark:text-purple-400' : 'text-zinc-700 dark:text-white/20',
                                                         )}>{formatDate(packageRecord.expiration_date)}</div>
                                                     </div>
                                                 </div>

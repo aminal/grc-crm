@@ -61,7 +61,7 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
       </Button>
       <Dialog size="md" open={isOpen} onClose={setIsOpen} className="relative">
         <Headless.CloseButton
-          className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-950 p-2 text-white transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
+          className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
           aria-label="Close dialog"
         >
           <X className="size-4" aria-hidden="true" />
@@ -77,7 +77,7 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
                   <span className="relative shrink-0">
                     <button
                       type="button"
-                      className="rounded-md p-1.5 cursor-pointer text-zinc-500 transition hover:bg-zinc-950/5 hover:text-zinc-950 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
+                      className="rounded-md p-1.5 cursor-pointer text-zinc-500 transition hover:bg-zinc-950/5 hover:text-zinc-950 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
                       onClick={() => void copyPackageTag(packageTag)}
                       aria-label={`Copy ${packageTag}`}
                     >
