@@ -15,7 +15,7 @@ type StrainFormProps = {
   error: string | null;
   showReason: boolean;
   onCancel: () => void;
-  onDelete?: () => void;
+  onArchive?: () => void;
 };
 
 export function StrainForm({
@@ -27,7 +27,7 @@ export function StrainForm({
   error,
   showReason,
   onCancel,
-  onDelete,
+  onArchive,
 }: StrainFormProps): React.ReactElement {
   return (
     <form action={action} className="space-y-4">
@@ -53,7 +53,7 @@ export function StrainForm({
         </Field>
       ) : null}
       <DialogActions>
-        {onDelete ? <Button type="button" variant="danger" className="sm:mr-auto" onClick={onDelete} disabled={pending}>Delete</Button> : null}
+        {onArchive ? <Button type="button" variant="danger" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" variant="plain" onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button disabled={pending}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>

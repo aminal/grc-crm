@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">): React.ReactElement {
   return (
     <html lang="en" className={`${jost.variable} h-full antialiased`} suppressHydrationWarning>
-      <body className="min-h-full bg-zinc-100 font-sans text-zinc-950 dark:bg-zinc-950 dark:text-white">
+      <body className="min-h-full bg-zinc-100 font-sans font-medium text-zinc-950 dark:bg-zinc-950 dark:text-white">
         <Script id="theme-preference" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
       </body>

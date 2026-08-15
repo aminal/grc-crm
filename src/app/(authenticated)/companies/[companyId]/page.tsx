@@ -12,6 +12,7 @@ import {
 import { CompanyTabs } from '@/components/company/company-tabs';
 import { FacilityBadge } from '@/components/company/facility-badge';
 import { EditCompanyDialog } from '../new-company-dialog';
+import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
 import { listContacts } from '@/lib/data/crm';
 import { listOrdersForCompany } from '@/lib/data/orders';
 import { loadCompanyRoute } from './company-route';
@@ -20,6 +21,9 @@ import { formatCompanySubheading, formatMoney } from '@/lib/domain/format';
 export default async function CompanyDetailsPage({ params }: {
     params: Promise<{ companyId: string }>
 }): Promise<React.ReactElement> {
+    const user = await requireNonGuest();
+    const canManage = canManageRestrictedResources(user);
+
     const { companyId: routeSegment } = await params;
     const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment);
     const [contacts, orders] = await Promise.all([listContacts(companyId), listOrdersForCompany(companyId)]);
@@ -70,7 +74,7 @@ export default async function CompanyDetailsPage({ params }: {
                     <CardHeader>
                         <div className='flex items-start justify-between gap-4'>
                             <CardTitle>Company Details</CardTitle>
-                            <EditCompanyDialog companyId={companyId} company={companyFormValues} />
+                            {canManage ? <EditCompanyDialog companyId={companyId} company={companyFormValues} /> : null}
                         </div>
                     </CardHeader>
                     <CardContent className='p-0'>
@@ -176,7 +180,7 @@ export default async function CompanyDetailsPage({ params }: {
                                     </div>
                                 </div>
                             ) : (
-                                <div className='rounded-lg bg-zinc-50 px-4 py-6 text-center dark:bg-white/[0.03]'>
+                                <div className='rounded-lg bg-zinc-50 px-4 py-6 mt-4 text-center dark:bg-white/[0.03]'>
                                     <p className='text-sm/6 font-bold text-zinc-600 dark:text-zinc-400 uppercase'>No contacts yet</p>
                                 </div>
                             )}

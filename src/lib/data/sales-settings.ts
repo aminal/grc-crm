@@ -5,6 +5,7 @@ import type {
   AuthenticatedUser,
   BrandData,
   FieldChange,
+  FirestoreDate,
   FirestoreRecord,
   ProductData,
   SettingsActivityAction,
@@ -26,6 +27,17 @@ type StrainActivityFields = Omit<StrainInput, "sativa_percentage"> & { sativa_pe
 type ProductInput = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
 type ProductActivityFields = Omit<ProductInput, "strain_ids" | "unit_base_price_cents" | "case_quantity"> & { strain_ids: string; unit_base_price_cents: string; case_quantity: string };
 type SettingsCollection = typeof BRANDS | typeof PRODUCTS | typeof STRAINS;
+type ListSettingsOptions = { includeArchived?: boolean };
+type ArchivableData = { archived_at?: FirestoreDate; deleted_at?: FirestoreDate };
+
+function archivedAt(data: ArchivableData): FirestoreDate {
+  return data.archived_at ?? data.deleted_at ?? null;
+}
+
+function isArchived(data: ArchivableData): boolean {
+  const value = archivedAt(data);
+  return value !== null && value !== undefined;
+}
 
 function brandFields(data: Partial<BrandInput>): BrandFields {
   const name = normalizedText(data.name);
@@ -114,6 +126,7 @@ export function productActivityFields(data: Partial<ProductInput>): ProductActiv
 function brandWithDefaults(data: Partial<BrandData>): BrandData {
   return {
     ...brandFields(data),
+    archived_at: data.archived_at ?? null,
     created_at: data.created_at ?? null,
     updated_at: data.updated_at ?? null,
   };
@@ -139,10 +152,13 @@ async function backfillBrandAcronymRecords(brands: FirestoreRecord<BrandData>[])
 }
 
 function strainWithDefaults(data: Partial<StrainData>): StrainData {
+  const archived = archivedAt(data);
+
   return {
     ...strainFields(data),
     type: normalizedText(data.type),
-    deleted_at: data.deleted_at ?? null,
+    archived_at: archived,
+    deleted_at: archived,
     created_at: data.created_at ?? null,
     updated_at: data.updated_at ?? null,
   };
@@ -151,6 +167,7 @@ function strainWithDefaults(data: Partial<StrainData>): StrainData {
 function productWithDefaults(data: Partial<ProductData>): ProductData {
   return {
     ...productFields(data),
+    archived_at: data.archived_at ?? null,
     created_at: data.created_at ?? null,
     updated_at: data.updated_at ?? null,
   };
@@ -158,7 +175,7 @@ function productWithDefaults(data: Partial<ProductData>): ProductData {
 
 function activityWithDefaults(data: Partial<SettingsActivityData>): SettingsActivityData {
   return {
-    action: data.action === "updated" || data.action === "deleted" ? data.action : "created",
+    action: data.action === "updated" || data.action === "archived" || data.action === "deleted" ? data.action : "created",
     reason: normalizedText(data.reason),
     actor_user_id: normalizedText(data.actor_user_id),
     actor_email: normalizedText(data.actor_email),
@@ -226,15 +243,11 @@ async function listSettingsActivity(collection: SettingsCollection, documentId: 
     .sort((a, b) => millis(b.data.created_at) - millis(a.data.created_at));
 }
 
-async function requireBrandExists(brandId: string): Promise<void> {
+async function requireBrandAvailable(brandId: string): Promise<void> {
   const brand = await findBrand(brandId);
-  if (!brand) {
+  if (!brand || isArchived(brand.data)) {
     throw new Error("Brand not found.");
   }
-}
-
-function isStrainDeleted(strain: StrainData): boolean {
-  return strain.deleted_at !== null && strain.deleted_at !== undefined;
 }
 
 function validateStrains(strains: FirestoreRecord<StrainData>[], strainIds: string[], existingStrainIds: string[]): void {
@@ -247,7 +260,7 @@ function validateStrains(strains: FirestoreRecord<StrainData>[], strainIds: stri
       throw new Error("Strain not found.");
     }
 
-    if (isStrainDeleted(strain) && !existing.has(strainId)) {
+    if (isArchived(strain) && !existing.has(strainId)) {
       throw new Error("Strain not found.");
     }
   }
@@ -262,7 +275,7 @@ async function requireStrainsAvailable(strainIds: string[], existingStrainIds: s
   validateStrains(strains.filter((strain): strain is FirestoreRecord<StrainData> => strain !== null), strainIds, existingStrainIds);
 }
 
-export async function listBrands(): Promise<FirestoreRecord<BrandData>[]> {
+export async function listBrands(options: ListSettingsOptions = {}): Promise<FirestoreRecord<BrandData>[]> {
   const brands = await listCollection<BrandData>(BRANDS);
   await backfillBrandAcronymRecords(brands);
   return brands
@@ -270,6 +283,7 @@ export async function listBrands(): Promise<FirestoreRecord<BrandData>[]> {
       id: brand.id,
       data: brandWithDefaults(brand.data),
     }))
+    .filter((brand) => options.includeArchived || !isArchived(brand.data))
     .sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
@@ -294,6 +308,7 @@ export async function createBrand(input: BrandInput, user: AuthenticatedUser): P
 
   batch.create(ref, {
     ...data,
+    archived_at: null,
     created_at: now(),
     updated_at: now(),
   } satisfies BrandData);
@@ -320,6 +335,10 @@ export async function updateBrand(brandId: string, input: BrandInput, user: Auth
     }
 
     const current = brandWithDefaults(snapshot.data() as BrandData);
+    if (isArchived(current)) {
+      throw new Error("Brand not found.");
+    }
+
     const next = brandFields(input);
     const changes = buildFieldChanges(brandFields(current), next);
     if (changes.length === 0) {
@@ -330,6 +349,29 @@ export async function updateBrand(brandId: string, input: BrandInput, user: Auth
     transaction.create(
       db.collection(activityCollectionPath(BRANDS, brandId)).doc(),
       buildSettingsActivityData("updated", user, changes, reason, now()),
+    );
+  });
+}
+
+export async function archiveBrand(brandId: string, user: AuthenticatedUser, reason: string): Promise<void> {
+  const ref = db.doc(`${BRANDS}/${brandId}`);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) {
+      throw new Error("Brand not found.");
+    }
+
+    const current = brandWithDefaults(snapshot.data() as BrandData);
+    if (isArchived(current)) {
+      throw new Error("Brand not found.");
+    }
+
+    const archived = now();
+    transaction.set(ref, { archived_at: archived, updated_at: now() }, { merge: true });
+    transaction.create(
+      db.collection(activityCollectionPath(BRANDS, brandId)).doc(),
+      buildSettingsActivityData("archived", user, buildFieldChanges(brandFields(current), {}), reason, now()),
     );
   });
 }
@@ -345,7 +387,7 @@ export async function listStrains(): Promise<FirestoreRecord<StrainData>[]> {
       id: strain.id,
       data: strainWithDefaults(strain.data),
     }))
-    .filter((strain) => !isStrainDeleted(strain.data))
+    .filter((strain) => !isArchived(strain.data))
     .sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
@@ -368,6 +410,7 @@ export async function createStrain(input: StrainInput, user: AuthenticatedUser):
 
   batch.create(ref, {
     ...data,
+    archived_at: null,
     deleted_at: null,
     created_at: now(),
     updated_at: now(),
@@ -395,7 +438,7 @@ export async function updateStrain(strainId: string, input: StrainInput, user: A
     }
 
     const current = strainWithDefaults(snapshot.data() as StrainData);
-    if (isStrainDeleted(current)) {
+    if (isArchived(current)) {
       throw new Error("Strain not found.");
     }
 
@@ -413,7 +456,7 @@ export async function updateStrain(strainId: string, input: StrainInput, user: A
   });
 }
 
-export async function deleteStrain(strainId: string, user: AuthenticatedUser, reason: string): Promise<void> {
+export async function archiveStrain(strainId: string, user: AuthenticatedUser, reason: string): Promise<void> {
   const ref = db.doc(`${STRAINS}/${strainId}`);
 
   await db.runTransaction(async (transaction) => {
@@ -423,14 +466,15 @@ export async function deleteStrain(strainId: string, user: AuthenticatedUser, re
     }
 
     const current = strainWithDefaults(snapshot.data() as StrainData);
-    if (isStrainDeleted(current)) {
+    if (isArchived(current)) {
       throw new Error("Strain not found.");
     }
 
-    transaction.set(ref, { deleted_at: now(), updated_at: now() }, { merge: true });
+    const archived = now();
+    transaction.set(ref, { archived_at: archived, deleted_at: archived, updated_at: now() }, { merge: true });
     transaction.create(
       db.collection(activityCollectionPath(STRAINS, strainId)).doc(),
-      buildSettingsActivityData("deleted", user, buildFieldChanges(strainActivityFields(current), {}), reason, now()),
+      buildSettingsActivityData("archived", user, buildFieldChanges(strainActivityFields(current), {}), reason, now()),
     );
   });
 }
@@ -439,13 +483,14 @@ export async function listStrainActivity(strainId: string): Promise<FirestoreRec
   return listSettingsActivity(STRAINS, strainId);
 }
 
-export async function listProducts(): Promise<FirestoreRecord<ProductData>[]> {
+export async function listProducts(options: ListSettingsOptions = {}): Promise<FirestoreRecord<ProductData>[]> {
   const products = await listCollection<ProductData>(PRODUCTS);
   return products
     .map((product) => ({
       id: product.id,
       data: productWithDefaults(product.data),
     }))
+    .filter((product) => options.includeArchived || !isArchived(product.data))
     .sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
@@ -464,7 +509,7 @@ export async function findProduct(productId: string): Promise<FirestoreRecord<Pr
 export async function createProduct(input: ProductInput, user: AuthenticatedUser): Promise<FirestoreRecord<ProductData>> {
   const data = productFields(input);
   await Promise.all([
-    requireBrandExists(data.brand_id),
+    requireBrandAvailable(data.brand_id),
     requireStrainsAvailable(data.strain_ids),
   ]);
 
@@ -473,6 +518,7 @@ export async function createProduct(input: ProductInput, user: AuthenticatedUser
 
   batch.create(ref, {
     ...data,
+    archived_at: null,
     created_at: now(),
     updated_at: now(),
   } satisfies ProductData);
@@ -508,6 +554,15 @@ export async function updateProduct(productId: string, input: ProductInput, user
     }
 
     const current = productWithDefaults(productSnapshot.data() as ProductData);
+    if (isArchived(current)) {
+      throw new Error("Product not found.");
+    }
+
+    const brand = brandWithDefaults(brandSnapshot.data() as BrandData);
+    if (isArchived(brand) && next.brand_id !== current.brand_id) {
+      throw new Error("Brand not found.");
+    }
+
     if (next.strain_ids.length === 0) {
       throw new Error("Choose at least one strain.");
     }
@@ -530,6 +585,29 @@ export async function updateProduct(productId: string, input: ProductInput, user
     transaction.create(
       db.collection(activityCollectionPath(PRODUCTS, productId)).doc(),
       buildSettingsActivityData("updated", user, changes, reason, now()),
+    );
+  });
+}
+
+export async function archiveProduct(productId: string, user: AuthenticatedUser, reason: string): Promise<void> {
+  const ref = db.doc(`${PRODUCTS}/${productId}`);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) {
+      throw new Error("Product not found.");
+    }
+
+    const current = productWithDefaults(snapshot.data() as ProductData);
+    if (isArchived(current)) {
+      throw new Error("Product not found.");
+    }
+
+    const archived = now();
+    transaction.set(ref, { archived_at: archived, updated_at: now() }, { merge: true });
+    transaction.create(
+      db.collection(activityCollectionPath(PRODUCTS, productId)).doc(),
+      buildSettingsActivityData("archived", user, buildFieldChanges(productActivityFields(current), {}), reason, now()),
     );
   });
 }

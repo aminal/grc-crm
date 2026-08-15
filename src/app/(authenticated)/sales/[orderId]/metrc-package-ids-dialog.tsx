@@ -1,7 +1,7 @@
 "use client";
 
 import * as Headless from "@headlessui/react";
-import { Copy, X } from "lucide-react";
+import { Copy, Package, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -49,7 +49,16 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
 
   return (
     <>
-      <Button type="button" variant="secondary" size="xs" onClick={() => setIsOpen(true)}>Package Details</Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="xs"
+        className="[--btn-icon:var(--color-white)] hover:[--btn-icon:var(--color-white)] active:[--btn-icon:var(--color-white)] dark:hover:[--btn-icon:var(--color-white)] dark:active:[--btn-icon:var(--color-white)]"
+        onClick={() => setIsOpen(true)}
+        aria-label="Package details"
+      >
+        <Package data-slot="icon" aria-hidden="true" />
+      </Button>
       <Dialog size="md" open={isOpen} onClose={setIsOpen} className="relative">
         <Headless.CloseButton
           className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-950 p-2 text-white transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
@@ -57,7 +66,7 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
         >
           <X className="size-4" aria-hidden="true" />
         </Headless.CloseButton>
-        <DialogTitle className="pr-10">METRC Package IDs</DialogTitle>
+        <DialogTitle className="pr-10">Package Details</DialogTitle>
         <DialogDescription>{productName}</DialogDescription>
         <DialogBody>
           <div className="max-h-96 overflow-y-auto rounded-lg bg-zinc-50 p-4 dark:bg-zinc-950/40">

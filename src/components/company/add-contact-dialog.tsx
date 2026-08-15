@@ -62,6 +62,7 @@ type ViewContactDialogProps = {
     dialablePhone: string | null;
     callUrl: string | null;
     isPrimary: boolean;
+    canManageCompany?: boolean;
     closeHref: string;
 };
 
@@ -74,6 +75,7 @@ export function ViewContactDialog({
     dialablePhone,
     callUrl,
     isPrimary,
+    canManageCompany = true,
     closeHref
 }: ViewContactDialogProps): React.ReactElement {
     const router = useRouter();
@@ -96,7 +98,7 @@ export function ViewContactDialog({
                 <div className='flex items-start justify-between gap-4'>
                     <DialogTitle className='pr-10'>{isEditing ? 'Edit Contact' : 'View Contact'}</DialogTitle>
                     <div className='flex items-start gap-2'>
-                        {!isPrimary ? (
+                        {canManageCompany && !isPrimary ? (
                             <form action={setPrimaryContactAction.bind(null, companyId, contactId)}>
                                 <Button type='submit' variant='primary' size='sm'>Make Primary</Button>
                             </form>

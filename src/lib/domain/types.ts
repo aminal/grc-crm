@@ -3,6 +3,7 @@ import type {
   FACILITY_TYPES,
   INTERACTION_METHODS,
   ORDER_STATUSES,
+  ORDER_STATES,
   ORDER_TERMS,
   PAYMENT_METHODS,
   PREFERRED_COMMUNICATION_METHODS,
@@ -13,6 +14,7 @@ export type FacilityType = (typeof FACILITY_TYPES)[number];
 export type InteractionMethod = (typeof INTERACTION_METHODS)[number];
 export type PreferredCommunicationMethod = (typeof PREFERRED_COMMUNICATION_METHODS)[number];
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+export type OrderState = (typeof ORDER_STATES)[number];
 export type OrderTerms = (typeof ORDER_TERMS)[number];
 export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 
@@ -21,19 +23,23 @@ export type FirestoreRecord<T> = {
   data: T;
 };
 
+export type UserRole = "Guest" | "Employee" | "Manager" | "Admin";
+
 export type AuthenticatedUser = {
   uid: string;
   email: string;
   name: string | null;
   picture: string | null;
-  google_voice_number: string | null;
+  role: UserRole;
+  title: string | null;
 };
 
 export type UserProfileData = {
   email?: string;
   display_name?: string;
   picture?: string;
-  google_voice_number?: string;
+  role?: UserRole;
+  title?: string;
   updated_at?: FirestoreDate;
 };
 
@@ -228,6 +234,14 @@ export type InvoicePayment = {
   updated_at?: FirestoreDate;
 };
 
+export type InvoiceDiscount = {
+  type: "percent" | "amount";
+  value: number;
+  cents: number;
+  applied_by: ActorSnapshot;
+  applied_at: FirestoreDate;
+};
+
 export type InvoiceData = {
   id: string;
   invoice_number: string;
@@ -244,6 +258,7 @@ export type InvoiceData = {
   paid_cents: number;
   balance_cents: number;
   payments: InvoicePayment[];
+  discount?: InvoiceDiscount | null;
   paid_at?: FirestoreDate;
   issued_by?: ActorSnapshot;
   issued_at?: FirestoreDate;
@@ -257,7 +272,6 @@ export type OrderData = {
   order_number: number;
   company_id: string;
   company_name: string;
-  company_license_number: string;
   facility_type: FacilityType;
   salesperson: ActorSnapshot;
   delivery_date: string;
@@ -265,6 +279,7 @@ export type OrderData = {
   terms: OrderTerms;
   terms_notes: string;
   status: OrderStatus;
+  state: OrderState;
   items: OrderItem[];
   total_cents: number;
   invoice?: InvoiceData;
@@ -288,6 +303,7 @@ export type ActivityData = {
   invoice_total_cents?: number;
   payment_id?: string;
   payment_amount_cents?: number;
+  discount_cents?: number;
   created_at: FirestoreDate;
 };
 
@@ -296,6 +312,7 @@ export type BrandData = {
   acronym: string;
   website: string;
   notes: string;
+  archived_at?: FirestoreDate;
   created_at: FirestoreDate;
   updated_at: FirestoreDate;
 };
@@ -307,6 +324,7 @@ export type StrainData = {
   genetics: string;
   sativa_percentage: number;
   notes: string;
+  archived_at?: FirestoreDate;
   deleted_at: FirestoreDate;
   created_at: FirestoreDate;
   updated_at: FirestoreDate;
@@ -322,6 +340,7 @@ export type ProductData = {
   sku: string;
   upc: string;
   notes: string;
+  archived_at?: FirestoreDate;
   created_at: FirestoreDate;
   updated_at: FirestoreDate;
 };
@@ -332,7 +351,7 @@ export type FieldChange = {
   next_value: string;
 };
 
-export type SettingsActivityAction = "created" | "updated" | "deleted";
+export type SettingsActivityAction = "created" | "updated" | "archived" | "deleted";
 
 export type SettingsActivityData = {
   action: SettingsActivityAction;

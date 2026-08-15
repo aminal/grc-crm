@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { StrainForm, type StrainFormValues } from "@/components/strains/strain-form";
 import { DeleteConfirmationDialog, Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { createStrainFormAction, deleteStrainAction, updateStrainFormAction } from "@/app/(authenticated)/strains/actions";
+import { archiveStrainAction, createStrainFormAction, updateStrainFormAction } from "@/app/(authenticated)/strains/actions";
 
 type StrainDialogStrain = {
   id: string;
@@ -35,7 +35,7 @@ export function StrainDialog({ mode, strain, closeHref }: StrainDialogProps): Re
     ? updateStrainFormAction.bind(null, strain.id)
     : createStrainFormAction;
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [showArchiveConfirmation, setShowArchiveConfirmation] = useState(false);
 
   useEffect(() => {
     if (state.success) {
@@ -74,18 +74,19 @@ export function StrainDialog({ mode, strain, closeHref }: StrainDialogProps): Re
             error={state.error}
             showReason={mode === "edit"}
             onCancel={close}
-            onDelete={mode === "edit" && strain ? () => setShowDeleteConfirmation(true) : undefined}
+            onArchive={mode === "edit" && strain ? () => setShowArchiveConfirmation(true) : undefined}
           />
         </DialogBody>
       </Dialog>
       {mode === "edit" && strain ? (
         <DeleteConfirmationDialog
-          open={showDeleteConfirmation}
-          onClose={() => setShowDeleteConfirmation(false)}
-          title="Delete Strain"
-          description={<>This will hide {strain.data.name}. Products that already reference it will keep their reference. Type DELETE to confirm.</>}
-          action={deleteStrainAction.bind(null, strain.id)}
-          submitLabel="Delete Strain"
+          open={showArchiveConfirmation}
+          onClose={() => setShowArchiveConfirmation(false)}
+          title="Archive Strain"
+          description={<>This will archive {strain.data.name}. Products that already reference it will keep their reference. Type ARCHIVE to confirm.</>}
+          action={archiveStrainAction.bind(null, strain.id)}
+          submitLabel="Archive Strain"
+          confirmationValue="ARCHIVE"
         />
       ) : null}
     </>

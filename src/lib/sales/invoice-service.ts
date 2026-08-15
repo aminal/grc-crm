@@ -1,1 +1,1 @@
-export { addPayment, approveOrder, deletePayment, payOrder, updatePayment } from "@/lib/data/orders";
+export { addPayment, approveOrder, deletePayment, updatePayment } from "@/lib/data/orders";

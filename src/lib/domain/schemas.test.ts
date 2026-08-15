@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { companySchema, createOrderSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, profileSchema } from "./schemas";
+import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
@@ -24,12 +24,6 @@ describe("domain schemas", () => {
     });
   });
 
-  it("normalizes and clears profile phone numbers", () => {
-    const parsed = profileSchema.parse({ display_name: "Jane", google_voice_number: "(555) 123-4567" });
-    expect(parsed.google_voice_number).toBe("+15551234567");
-    expect(profileSchema.parse({ display_name: "Jane", google_voice_number: "" }).google_voice_number).toBe("");
-  });
-
   it("requires check number for check payments", () => {
     expect(() => paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "" })).toThrow();
     expect(paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "123" }).amount).toBe(1000);
@@ -50,6 +44,11 @@ describe("domain schemas", () => {
       unit_base_price_cents: 0,
       case_quantity: 0,
     });
+  });
+
+  it("treats zero discounts as no discount", () => {
+    expect(discountSchema.parse({ discount_type: "percent", discount_value: "0" })).toEqual({ type: null, value: 0 });
+    expect(discountSchema.parse({ discount_type: "amount", discount_value: "0.00" })).toEqual({ type: null, value: 0 });
   });
 
   it("extracts order package tags and prices from form data", () => {

@@ -16,6 +16,7 @@ type BrandFormProps = {
   error: string | null;
   showReason: boolean;
   onCancel: () => void;
+  onArchive?: () => void;
 };
 
 export function BrandForm({
@@ -27,6 +28,7 @@ export function BrandForm({
   error,
   showReason,
   onCancel,
+  onArchive,
 }: BrandFormProps): React.ReactElement {
   const initialName = brand?.name ?? "";
   const generatedInitialAcronym = brandAcronymFromName(initialName);
@@ -71,6 +73,7 @@ export function BrandForm({
         </Field>
       ) : null}
       <DialogActions>
+        {onArchive ? <Button type="button" variant="danger" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" variant="plain" onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button disabled={pending}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>

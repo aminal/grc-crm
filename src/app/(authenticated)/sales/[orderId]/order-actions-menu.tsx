@@ -3,19 +3,21 @@
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/20/solid';
 import { useState } from 'react';
 import { Button, buttonClasses } from '@/components/ui/button';
-import { Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from '@/components/ui/dialog';
-import { Dropdown, DropdownButton, DropdownItem, DropdownLabel, DropdownMenu } from '@/components/ui/dropdown';
+import { DeleteConfirmationDialog, Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownLabel, DropdownMenu } from '@/components/ui/dropdown';
 import { Field, Input } from '@/components/ui/field';
 import {
     approveOrderAction,
     cancelOrderAction,
+    closeOrderAction,
+    deleteOrderAction,
     deliverOrderAction,
     deliveryRejectOrderAction,
-    payOrderAction,
     rejectOrderAction,
+    reopenOrderAction,
     unapproveOrderAction,
-    undeliverOrderAction,
 } from '../actions';
+import { RecordPaymentDialog } from './record-payment-dialog';
 
 type InvoiceApprovalDefaults = {
     invoiceNumber: string;
@@ -26,13 +28,24 @@ type InvoiceApprovalDefaults = {
 
 type OrderActionsMenuProps = {
     orderId: string;
+    orderNumber: number;
     actions: string[];
     approvalInvoice: InvoiceApprovalDefaults;
+    canManage: boolean;
+    canDelete: boolean;
+    hasInvoice: boolean;
+    canRecordPayment: boolean;
+    recordPaymentBalanceCents: number;
+    defaultPaidAt: string;
 };
 
-export function OrderActionsMenu({ orderId, actions, approvalInvoice }: OrderActionsMenuProps): React.ReactElement {
+export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoice, canManage, canDelete, hasInvoice, canRecordPayment, recordPaymentBalanceCents, defaultPaidAt }: OrderActionsMenuProps): React.ReactElement {
     const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
     const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isRecordPaymentDialogOpen, setIsRecordPaymentDialogOpen] = useState(false);
+    const visibleActions = canManage ? actions : actions.filter((action) => action === 'reject' || action === 'cancel' || action === 'close' || action === 'reopen');
+    const canShowRecordPayment = canManage && canRecordPayment;
 
     function closeCreateInvoiceDialog(): void {
         setIsCreateInvoiceDialogOpen(false);
@@ -42,49 +55,70 @@ export function OrderActionsMenu({ orderId, actions, approvalInvoice }: OrderAct
         setIsDeliverDialogOpen(false);
     }
 
+    function closeDeleteDialog(): void {
+        setIsDeleteDialogOpen(false);
+    }
+
+    function closeRecordPaymentDialog(): void {
+        setIsRecordPaymentDialogOpen(false);
+    }
+
     return (
         <>
             <Dropdown>
-                <DropdownButton className={buttonClasses('secondary')}>
+                <DropdownButton className={buttonClasses('primary', '[--btn-icon:var(--color-white)] hover:[--btn-icon:var(--color-white)] active:[--btn-icon:var(--color-white)] dark:[--btn-icon:var(--color-white)] dark:hover:[--btn-icon:var(--color-white)] dark:active:[--btn-icon:var(--color-white)]')}>
                     Actions
                     <ChevronDownIcon data-slot='icon' aria-hidden='true' />
                 </DropdownButton>
                 <DropdownMenu anchor='bottom end' className='min-w-56'>
-                    {actions.length === 0 ? (
+                    {visibleActions.length === 0 && !canShowRecordPayment && !canDelete ? (
                         <div className='col-span-full px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400'>
                             No actions are available for this status.
                         </div>
                     ) : null}
-                    {actions.includes('approve') ? (
+                    {visibleActions.includes('approve') ? (
                         <DropdownItem onClick={() => setIsCreateInvoiceDialogOpen(true)}>
                             <DropdownLabel>Mark as Approved</DropdownLabel>
                         </DropdownItem>
                     ) : null}
-                    {actions.includes('reject') ? (
+                    {visibleActions.includes('reject') ? (
                         <MenuActionForm action={rejectOrderAction.bind(null, orderId)} label='Mark as Rejected' />
                     ) : null}
-                    {actions.includes('cancel') ? (
+                    {visibleActions.includes('cancel') ? (
                         <MenuActionForm action={cancelOrderAction.bind(null, orderId)} label='Mark as Cancelled' />
                     ) : null}
-                    {actions.includes('unapprove') ? (
+                    {visibleActions.includes('unapprove') ? (
                         <MenuActionForm action={unapproveOrderAction.bind(null, orderId)} label='Mark as Pending' />
                     ) : null}
-                    {actions.includes('mark_pending') ? (
+                    {visibleActions.includes('mark_pending') ? (
                         <MenuActionForm action={unapproveOrderAction.bind(null, orderId)} label='Mark as Pending' />
                     ) : null}
-                    {actions.includes('deliver') ? (
+                    {visibleActions.includes('deliver') ? (
                         <DropdownItem onClick={() => setIsDeliverDialogOpen(true)}>
                             <DropdownLabel>Mark Delivered</DropdownLabel>
                         </DropdownItem>
                     ) : null}
-                    {actions.includes('undeliver') ? (
-                        <MenuActionForm action={undeliverOrderAction.bind(null, orderId)} label='Mark as Approved' />
-                    ) : null}
-                    {actions.includes('delivery_reject') ? (
+                    {visibleActions.includes('delivery_reject') ? (
                         <MenuActionForm action={deliveryRejectOrderAction.bind(null, orderId)} label='Mark as Delivery Rejected' />
                     ) : null}
-                    {actions.includes('pay') ? (
-                        <MenuActionForm action={payOrderAction.bind(null, orderId)} label='Mark as Paid' />
+                    {visibleActions.includes('close') ? (
+                        <MenuActionForm action={closeOrderAction.bind(null, orderId)} label='Close Order' />
+                    ) : null}
+                    {visibleActions.includes('reopen') ? (
+                        <MenuActionForm action={reopenOrderAction.bind(null, orderId)} label='Reopen Order' />
+                    ) : null}
+                    {canShowRecordPayment ? (
+                        <DropdownItem onClick={() => setIsRecordPaymentDialogOpen(true)}>
+                            <DropdownLabel>Record Payment</DropdownLabel>
+                        </DropdownItem>
+                    ) : null}
+                    {canDelete ? (
+                        <>
+                            {visibleActions.length > 0 || canShowRecordPayment ? <DropdownDivider /> : null}
+                            <DropdownItem onClick={() => setIsDeleteDialogOpen(true)}>
+                                <DropdownLabel className='text-red-600 group-data-focus:text-white dark:text-red-400'>Delete</DropdownLabel>
+                            </DropdownItem>
+                        </>
                     ) : null}
                 </DropdownMenu>
             </Dropdown>
@@ -157,6 +191,26 @@ export function OrderActionsMenu({ orderId, actions, approvalInvoice }: OrderAct
                     </form>
                 </DialogBody>
             </Dialog>
+
+            {canShowRecordPayment ? (
+                <RecordPaymentDialog
+                    orderId={orderId}
+                    balanceCents={recordPaymentBalanceCents}
+                    defaultPaidAt={defaultPaidAt}
+                    open={isRecordPaymentDialogOpen}
+                    onClose={closeRecordPaymentDialog}
+                    showTrigger={false}
+                />
+            ) : null}
+
+            <DeleteConfirmationDialog
+                open={isDeleteDialogOpen}
+                onClose={closeDeleteDialog}
+                title='Delete Order'
+                description={<>This will permanently delete Order #{orderNumber}{hasInvoice ? ' and its invoice' : ''}. Type DELETE to confirm.</>}
+                action={deleteOrderAction.bind(null, orderId)}
+                submitLabel='Delete Order'
+            />
         </>
     );
 }

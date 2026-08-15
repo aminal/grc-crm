@@ -6,7 +6,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { DeliveryDateField } from '@/components/sales/delivery-date-field';
 import { PackagePicker } from '@/components/sales/package-picker';
 import { OrderTermsField } from '@/components/sales/order-terms-field';
-import { requireUser } from '@/lib/auth/session';
+import { requireNonGuest } from '@/lib/auth/session';
 import { listCompanies } from '@/lib/data/crm';
 import { listPackages } from '@/lib/data/inventory';
 import { listUsers } from '@/lib/data/profiles';
@@ -22,8 +22,9 @@ type CreateOrderSearchParams = {
 export default async function CreateOrderPage({ searchParams }: {
     searchParams: Promise<CreateOrderSearchParams>
 }): Promise<React.ReactElement> {
+    const user = await requireNonGuest();
     const params = await searchParams;
-    const [user, companies, packages, users, products] = await Promise.all([requireUser(), listCompanies(), listPackages(false), listUsers(), listProducts()]);
+    const [companies, packages, users, products] = await Promise.all([listCompanies(), listPackages(false), listUsers(), listProducts()]);
     const companyId = firstSearchParam(params.company_id);
     const companySlug = firstSearchParam(params.company_slug);
     const selectedCompanyId = companyId || companies.find((company) => companyUrlSegment(company) === companySlug)?.id || '';
@@ -63,6 +64,7 @@ export default async function CreateOrderPage({ searchParams }: {
         quantity: Number(packageRecord.data.quantity ?? 0),
         unit_of_measure: packageRecord.data.unit_of_measure,
         expiration_date: packageRecord.data.expiration_date || null,
+        unit_base_price_cents: packageRecord.data.product_id ? (productPrices.get(packageRecord.data.product_id) ?? 0) : 0,
     }));
 
     return (

@@ -1,8 +1,7 @@
 import { ChatBubbleLeftRightIcon, EnvelopeIcon, PhoneIcon, UserGroupIcon } from '@heroicons/react/20/solid';
-import { MoveRight } from 'lucide-react';
+import { ChevronRight, MoveRight } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
@@ -12,11 +11,14 @@ import { listInteractions } from '@/lib/data/crm';
 import { dateFromFirestore, formatCompanySubheading, formatDateTime } from '@/lib/domain/format';
 import type { FirestoreDate, InteractionMethod, InteractionRecord } from '@/lib/domain/types';
 import { loadCompanyRoute } from '../company-route';
+import { requireNonGuest } from '@/lib/auth/session';
 import { LogInteractionDialog } from './log-interaction-dialog';
 
 export default async function CompanyActivityPage({ params }: {
     params: Promise<{ companyId: string }>
 }): Promise<React.ReactElement> {
+    await requireNonGuest();
+
     const { companyId: routeSegment } = await params;
     const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, '/activity');
     const interactions = await listInteractions(companyId);
@@ -29,55 +31,65 @@ export default async function CompanyActivityPage({ params }: {
 
             <div className='flex flex-col gap-6 sm:flex-row'>
                 <div className='space-y-4 flex-1'>
-                    {interactions.map((interaction) => (
-                        <div key={interaction.id} className='bg-zinc-100 dark:bg-zinc-950/40 rounded-lg lg:max-w-4xl'>
-                            <div className='p-5'>
-                                <div className='flex items-start gap-0'>
-                                    <ActivityMethodIcon method={interaction.data.interaction_method} />
-                                    <div className='flex mr-2 size-9 shrink-0 items-center justify-center text-zinc-400 dark:text-zinc-500'>
-                                        <MoveRight className='size-5' aria-hidden='true' />
-                                    </div>
-                                    <div className='min-w-0 flex-1'>
-                                        <ActivityComment
-                                            className='min-w-0 flex-1'
-                                            date={interaction.data.contact_date_time}
-                                            name={interaction.data.salesperson_name}
-                                            picture={interaction.data.salesperson_picture}
-                                            note={interaction.data.discussion_notes}
-                                        />
+                    {interactions.map((interaction) => {
+                        const replyCount = interaction.entries.length;
+                        const replyLabel = `${replyCount} ${replyCount === 1 ? 'Reply' : 'Replies'}`;
 
-                                        <div className='ml-8'>
-                                            {interaction.entries.length > 0 ? (
-                                                <div className='mt-4 divide-y divide-zinc-950/5 rounded-lg bg-white px-6 py-4 dark:divide-white/5 dark:bg-zinc-950/40'>
-                                                    {interaction.entries.map((entry) => (
-                                                        <div key={entry.id} className='py-4 first:pt-0 last:pb-0'>
-                                                            <ActivityComment
-                                                                date={entry.data.contact_date_time}
-                                                                name={entry.data.salesperson_name}
-                                                                picture={entry.data.salesperson_picture}
-                                                                note={entry.data.discussion_notes}
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            ) : null}
-
-
-                                            <details className='mt-4 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900'>
-                                                <summary className='cursor-pointer text-md uppercase font-semibold text-zinc-400/75'>
-                                                    Add Reply
-                                                </summary>
-                                                <form action={createInteractionEntryAction.bind(null, companyId, interaction.id)} className='text-right mt-4 space-y-3 '>
-                                                    <Textarea name='discussion_notes' required placeholder='' />
-                                                    <Button variant='primary'>Add Reply</Button>
-                                                </form>
-                                            </details>
+                        return (
+                            <details key={interaction.id} className='group bg-zinc-100 dark:bg-zinc-950/40 rounded-lg lg:max-w-4xl'>
+                                <summary className='cursor-pointer list-none p-5 [&::-webkit-details-marker]:hidden'>
+                                    <div className='flex items-start gap-0'>
+                                        <ActivityMethodIcon method={interaction.data.interaction_method} />
+                                        <div className='flex mr-2 size-9 shrink-0 items-center justify-center text-zinc-400 dark:text-zinc-500'>
+                                            <MoveRight className='size-5' aria-hidden='true' />
+                                        </div>
+                                        <div className='min-w-0 flex-1'>
+                                            <ActivityComment
+                                                className='min-w-0 flex-1'
+                                                date={interaction.data.contact_date_time}
+                                                name={interaction.data.salesperson_name}
+                                                picture={interaction.data.salesperson_picture}
+                                                note={interaction.data.discussion_notes}
+                                            />
+                                            <div className='ml-12 mt-3 flex items-center gap-1 text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400'>
+                                                <ChevronRight className='size-4 transition-transform group-open:rotate-90' aria-hidden='true' />
+                                                {replyLabel}
+                                            </div>
                                         </div>
                                     </div>
+                                </summary>
+
+                                <div className='px-5 pb-5'>
+                                    <div className='ml-[4.25rem]'>
+                                        {replyCount > 0 ? (
+                                            <div className='divide-y divide-zinc-950/5 rounded-lg bg-white px-6 py-4 dark:divide-white/5 dark:bg-zinc-950/40'>
+                                                {interaction.entries.map((entry) => (
+                                                    <div key={entry.id} className='py-4 first:pt-0 last:pb-0'>
+                                                        <ActivityComment
+                                                            date={entry.data.contact_date_time}
+                                                            name={entry.data.salesperson_name}
+                                                            picture={entry.data.salesperson_picture}
+                                                            note={entry.data.discussion_notes}
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : null}
+
+                                        <details className='mt-4 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900'>
+                                            <summary className='cursor-pointer text-md uppercase font-semibold text-zinc-400/75'>
+                                                Add Reply
+                                            </summary>
+                                            <form action={createInteractionEntryAction.bind(null, companyId, interaction.id)} className='text-right mt-4 space-y-3 '>
+                                                <Textarea name='discussion_notes' required placeholder='' />
+                                                <Button variant='primary'>Add Reply</Button>
+                                            </form>
+                                        </details>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
+                            </details>
+                        );
+                    })}
 
                     {interactions.length === 0 ? <Card><CardContent>
                         <p className='text-base/6 uppercase font-semibold text-zinc-500 text-center py-12'>No activity

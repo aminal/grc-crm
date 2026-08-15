@@ -9,6 +9,7 @@ import {
   CubeIcon,
   HomeIcon,
   TagIcon,
+  UserGroupIcon,
 } from "@heroicons/react/20/solid";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -16,6 +17,7 @@ import { LayoutGroup, motion } from "motion/react";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { TouchTarget } from "@/components/ui/button";
+import type { AuthenticatedUser } from "@/lib/domain/types";
 
 const navItems = [
   {
@@ -60,7 +62,16 @@ const navItems = [
     icon: CubeIcon,
     isCurrent: (pathname: string) => pathname === "/products" || pathname.startsWith("/products/"),
   },
+  {
+    href: "/users",
+    label: "Users",
+    icon: UserGroupIcon,
+    isCurrent: (pathname: string) => pathname === "/users" || pathname.startsWith("/users/"),
+    allowedRoles: ["Manager", "Admin"] as readonly AuthenticatedUser["role"][],
+  },
 ] as const;
+
+const guestHiddenNavHrefs = new Set(["/sales", "/inventory", "/companies", "/brands", "/strains", "/products", "/users"]);
 
 const sidebarItemClasses = cn(
   "flex cursor-pointer w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5",
@@ -77,14 +88,17 @@ const sidebarItemClasses = cn(
   "dark:data-current:bg-white/5",
 );
 
-export function SidebarNav({ onNavigate }: { onNavigate?: () => void } = {}): React.ReactElement {
+export function SidebarNav({ user, onNavigate }: { user: AuthenticatedUser; onNavigate?: () => void }): React.ReactElement {
   const pathname = usePathname();
   const id = useId();
 
   return (
     <LayoutGroup id={id}>
       <div data-slot="section" className="flex flex-col gap-0.5">
-        {navItems.map((item) => {
+        {navItems
+          .filter((item) => user.role !== "Guest" || !guestHiddenNavHrefs.has(item.href))
+          .filter((item) => !("allowedRoles" in item) || item.allowedRoles.includes(user.role))
+          .map((item) => {
           const Icon = item.icon;
           const current = item.isCurrent(pathname);
 

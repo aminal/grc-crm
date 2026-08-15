@@ -2,21 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
+import { requireAdmin, requireManagerOrAdmin, requireNonGuest } from "@/lib/auth/session";
 import {
   addPackages,
   addPayment,
   approveOrder,
   cancelOrder,
+  closeOrder,
   createOrder,
+  deleteOrder,
   deletePayment,
   deliverOrder,
   deliveryRejectOrder,
-  payOrder,
   rejectOrder,
   removePackages,
-  undeliverOrder,
+  reopenOrder,
   unapproveOrder,
+  updateInvoiceDiscount,
+  updatePackages,
   updatePayment,
 } from "@/lib/data/orders";
 import {
@@ -24,6 +27,7 @@ import {
   createInvoiceSchema,
   createOrderSchema,
   deliverySchema,
+  discountSchema,
   packagePricesFromForm,
   packageTagsFromForm,
   paymentSchema,
@@ -31,7 +35,7 @@ import {
 } from "@/lib/domain/schemas";
 
 export async function createOrderAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   const input = createOrderSchema.parse({
     company_id: String(formData.get("company_id") ?? ""),
     salesperson_user_id: formData.get("salesperson_user_id"),
@@ -55,7 +59,7 @@ export async function createOrderAction(formData: FormData): Promise<void> {
 }
 
 export async function approveOrderAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = createInvoiceSchema.parse({
     invoice_number: formData.get("invoice_number") ?? "",
     due_date: formData.get("due_date") ?? "",
@@ -66,57 +70,68 @@ export async function approveOrderAction(orderId: string, formData: FormData): P
 }
 
 export async function rejectOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   await rejectOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function cancelOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   await cancelOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
+export async function closeOrderAction(orderId: string): Promise<void> {
+  const user = await requireNonGuest();
+  await closeOrder(orderId, user);
+  revalidateOrder(orderId);
+  redirect(`/sales/${orderId}`);
+}
+
+export async function reopenOrderAction(orderId: string): Promise<void> {
+  const user = await requireNonGuest();
+  await reopenOrder(orderId, user);
+  revalidateOrder(orderId);
+  redirect(`/sales/${orderId}`);
+}
+
+export async function deleteOrderAction(orderId: string, formData: FormData): Promise<void> {
+  await requireAdmin();
+  if (formData.get("confirmation") !== "DELETE") {
+    throw new Error("Type DELETE to confirm order deletion.");
+  }
+
+  await deleteOrder(orderId);
+  revalidateOrder(orderId);
+  redirect("/sales?status=cancelled");
+}
+
 export async function unapproveOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   await unapproveOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function deliverOrderAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = deliverySchema.parse({ delivered_at: formData.get("delivered_at") ?? "" });
   await deliverOrder(orderId, user, input.delivered_at);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
-export async function undeliverOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
-  await undeliverOrder(orderId, user);
-  revalidateOrder(orderId);
-  redirect(`/sales/${orderId}`);
-}
-
 export async function deliveryRejectOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   await deliveryRejectOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
-export async function payOrderAction(orderId: string): Promise<void> {
-  const user = await requireUser();
-  await payOrder(orderId, user);
-  revalidateOrder(orderId);
-  redirect(`/sales/${orderId}`);
-}
-
 export async function addPaymentAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = paymentSchema.parse({
     amount: formData.get("amount"),
     method: formData.get("method"),
@@ -129,7 +144,7 @@ export async function addPaymentAction(orderId: string, formData: FormData): Pro
 }
 
 export async function updatePaymentAction(orderId: string, paymentId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = paymentSchema.parse({
     amount: formData.get("amount"),
     method: formData.get("method"),
@@ -142,14 +157,25 @@ export async function updatePaymentAction(orderId: string, paymentId: string, fo
 }
 
 export async function deletePaymentAction(orderId: string, paymentId: string): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   await deletePayment(orderId, paymentId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
+export async function updateDiscountAction(orderId: string, formData: FormData): Promise<void> {
+  const user = await requireManagerOrAdmin();
+  const input = discountSchema.parse({
+    discount_type: formData.get("discount_type"),
+    discount_value: formData.get("discount_value") ?? "",
+  });
+  await updateInvoiceDiscount(orderId, input, user);
+  revalidateOrder(orderId);
+  redirect(`/sales/${orderId}`);
+}
+
 export async function addPackagesAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   const input = addPackagesSchema.parse({
     package_tags: packageTagsFromForm(formData),
     package_prices: packagePricesFromForm(formData),
@@ -159,8 +185,19 @@ export async function addPackagesAction(orderId: string, formData: FormData): Pr
   redirect(`/sales/${orderId}`);
 }
 
+export async function updatePackagesAction(orderId: string, formData: FormData): Promise<void> {
+  const user = await requireNonGuest();
+  const input = addPackagesSchema.parse({
+    package_tags: packageTagsFromForm(formData),
+    package_prices: packagePricesFromForm(formData),
+  });
+  await updatePackages(orderId, input.package_tags, input.package_prices, user);
+  revalidateOrder(orderId);
+  redirect(`/sales/${orderId}`);
+}
+
 export async function removePackagesAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   const input = removePackagesSchema.parse({
     package_tags: packageTagsFromForm(formData),
   });

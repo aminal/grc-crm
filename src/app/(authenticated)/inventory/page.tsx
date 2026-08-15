@@ -3,27 +3,26 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
+import { TableSearch } from '@/components/ui/table-search';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { InventoryControls } from '@/components/inventory/inventory-controls';
+import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { listProducts } from '@/lib/data/sales-settings';
 import { compactNumber, formatInventoryCategory, formatMoney } from '@/lib/domain/format';
 import {
     filterInventoryGroups,
     inventoryCounts,
-    type InventorySortField,
-    sortInventoryGroups
 } from '@/lib/metrc/inventory-grouping';
 import { MetrcUploadDialog } from './metrc-upload-dialog';
 
 export default async function InventoryPage({ searchParams }: {
-    searchParams: Promise<{ q?: string; show_sold?: string; sort?: string; direction?: string }>
+    searchParams: Promise<{ q?: string | string[] }>
 }): Promise<React.ReactElement> {
+    const user = await requireNonGuest();
+    const canManage = canManageRestrictedResources(user);
+
     const params = await searchParams;
-    const query = (params.q ?? '').toLowerCase().trim();
-    const showSold = params.show_sold === '1';
-    const sort = isInventorySortField(params.sort) ? params.sort : 'expiration_date';
-    const direction = params.direction === 'desc' ? 'desc' : 'asc';
+    const query = firstSearchParam(params.q).toLowerCase().trim();
     const [packages, products] = await Promise.all([listPackages(false), listProducts()]);
     const productsById = new Map(products.map((product) => [product.id, product.data]));
     const packageAvailabilityByGroup = new Map(groupInventory(packages).map((group) => [
@@ -33,8 +32,8 @@ export default async function InventoryPage({ searchParams }: {
             total: group.package_count,
         },
     ]));
-    const visiblePackages = showSold ? packages : packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
-    const groups = sortInventoryGroups(filterInventoryGroups(groupInventory(visiblePackages), query), sort, direction);
+    const visiblePackages = packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
+    const groups = filterInventoryGroups(groupInventory(visiblePackages), query);
     const counts = inventoryCounts(groups);
     const countText = `${counts.products} ${counts.products === 1 ? 'product' : 'products'} · ${counts.packages} ${counts.packages === 1 ? 'pkg' : 'pkgs'}`;
 
@@ -42,10 +41,9 @@ export default async function InventoryPage({ searchParams }: {
         <div>
             <PageHeader
                 title='Inventory'
-                description='Upload METRC active-package exports, track package status, and drill into product/source groups.'
                 actions={(
                     <>
-                        <MetrcUploadDialog />
+                        {canManage ? <MetrcUploadDialog /> : null}
                         <Link href='/sales/create' className={buttonClasses()}>
                             <Plus data-slot='icon' aria-hidden='true' />
                             New Order
@@ -55,7 +53,7 @@ export default async function InventoryPage({ searchParams }: {
             />
 
             <div className='space-y-2'>
-                <InventoryControls query={query} sort={sort} direction={direction} showSold={showSold} />
+                <TableSearch query={query} placeholder='Search inventory' />
                 <div className='dark:text-zinc-300 uppercase text-sm/6 font-semibold'>{countText}</div>
                 <div>
                     {groups.length > 0 ? (
@@ -151,6 +149,6 @@ function formatLabStatus(value: string): string {
         .trim();
 }
 
-function isInventorySortField(value: string | undefined): value is InventorySortField {
-    return value === 'expiration_date' || value === 'item' || value === 'package_count' || value === 'quantity';
+function firstSearchParam(value: string | string[] | undefined): string {
+    return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
 }

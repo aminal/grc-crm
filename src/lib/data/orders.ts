@@ -16,10 +16,10 @@ import type {
   PackageData,
   PaymentMethod,
 } from "@/lib/domain/types";
-import { assertPaymentDoesNotOverpay, hasInvoicePayments, invoicePayments, recalculateInvoice as recalculateInvoiceTotals } from "@/lib/sales/invoice";
+import { applyDiscountToInvoice, assertDiscountWithinSubtotal, assertPaymentDoesNotOverpay, discountCentsFor, hasInvoicePayments, invoicePayments, recalculateInvoice as recalculateInvoiceTotals } from "@/lib/sales/invoice";
 import { buildPackageStatusMap } from "@/lib/sales/package-status";
-import { assertSameSourcePrice, sourcePackageKey } from "@/lib/sales/pricing";
-import { canTransition, RELEASING_ORDER_STATUSES } from "@/lib/sales/order-status";
+import { assertSameSourcePrice, sourcePackageKey, type SourcePriceRecord } from "@/lib/sales/pricing";
+import { canTransition, CLOSABLE_ORDER_STATUSES, RELEASING_ORDER_STATUSES } from "@/lib/sales/order-status";
 import { findCompany } from "./crm";
 import { docIdFromTag, getDocument, listCollection, millis, now } from "./firestore";
 import { getUserProfile } from "./profiles";
@@ -33,6 +33,12 @@ const FIRST_ORDER_NUMBER = 1501;
 type InvoiceApprovalInput = {
   invoice_number: string;
   due_date: string;
+};
+
+type PaidActivityInput = {
+  action: string;
+  payment_id?: string;
+  payment_amount_cents?: number;
 };
 
 function actorMap(user: AuthenticatedUser): ActorSnapshot {
@@ -125,6 +131,7 @@ async function writeActivity(orderId: string, fields: Partial<ActivityData> & { 
     ...(fields.invoice_total_cents !== undefined ? { invoice_total_cents: fields.invoice_total_cents } : {}),
     ...(fields.payment_id ? { payment_id: fields.payment_id } : {}),
     ...(fields.payment_amount_cents !== undefined ? { payment_amount_cents: fields.payment_amount_cents } : {}),
+    ...(fields.discount_cents !== undefined ? { discount_cents: fields.discount_cents } : {}),
     created_at: now(),
   });
 }
@@ -149,6 +156,10 @@ function nextPaymentId(payments: InvoicePayment[]): string {
 
 function recalculateInvoice(invoice: InvoiceData): InvoiceData {
   return recalculateInvoiceTotals(invoice, now());
+}
+
+function paymentRecordedAction(invoice: InvoiceData): string {
+  return Number(invoice.balance_cents ?? 0) === 0 ? "full_payment_recorded" : "partial_payment_recorded";
 }
 
 function assertInvoiceHasNoPayments(invoice: InvoiceData, message: string): void {
@@ -234,16 +245,6 @@ function applyDeliveryToInvoice(invoice: InvoiceData, deliveredAt: Date, terms: 
   };
 }
 
-function removeDeliveryFromInvoice(invoice: InvoiceData, terms: OrderTerms): InvoiceData {
-  return {
-    ...invoice,
-    delivery_confirmed_at: null,
-    delivered_at: null,
-    due_date: isDueAfterDelivery(terms) ? null : invoice.due_date,
-    updated_at: now(),
-  };
-}
-
 function voidInvoice(invoice: InvoiceData): InvoiceData {
   return {
     ...invoice,
@@ -254,7 +255,7 @@ function voidInvoice(invoice: InvoiceData): InvoiceData {
   };
 }
 
-async function markPaidIfSettled(order: FirestoreRecord<OrderData>, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+async function markPaidIfSettled(order: FirestoreRecord<OrderData>, user: AuthenticatedUser, activity?: PaidActivityInput): Promise<FirestoreRecord<OrderData>> {
   const invoice = invoiceFromOrder(order.data);
   if (!invoice || order.data.status !== "delivered" || Number(invoice.balance_cents ?? 0) > 0) {
     return order;
@@ -268,7 +269,13 @@ async function markPaidIfSettled(order: FirestoreRecord<OrderData>, user: Authen
     },
     { merge: true },
   );
-  await writeActivity(order.id, { action: "paid", from_status: "delivered", to_status: "paid" }, user);
+  await writeActivity(order.id, {
+    action: activity?.action ?? "paid",
+    from_status: "delivered",
+    to_status: "paid",
+    ...(activity?.payment_id ? { payment_id: activity.payment_id } : {}),
+    ...(activity?.payment_amount_cents !== undefined ? { payment_amount_cents: activity.payment_amount_cents } : {}),
+  }, user);
   const updated = await findOrder(order.id);
   if (!updated) {
     throw new Error("Order not found after update.");
@@ -330,7 +337,7 @@ export async function createOrder(companyId: string, packageTags: string[], pack
     const orderSnapshot = await transaction.get(db.collection(ORDERS));
     const existingOrders = orderSnapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as OrderData }));
     const statuses = buildPackageStatusMap(existingOrders);
-    const sourcePrices = new Map<string, number>();
+    const sourcePrices = new Map<string, SourcePriceRecord>();
     const items: OrderItem[] = [];
 
     for (const tag of tags) {
@@ -362,7 +369,6 @@ export async function createOrder(companyId: string, packageTags: string[], pack
       order_number: orderNumber,
       company_id: companyId,
       company_name: company.data.company_name,
-      company_license_number: company.data.license_number,
       facility_type: company.data.facility_type,
       salesperson,
       delivery_date: termsInput.delivery_date_tbd ? "" : termsInput.delivery_date,
@@ -370,6 +376,7 @@ export async function createOrder(companyId: string, packageTags: string[], pack
       terms: termsInput.terms,
       terms_notes: termsInput.terms === "Other" ? termsInput.terms_notes : "",
       status: "pending",
+      state: "open",
       items,
       total_cents: orderTotalCents({ items }),
       created_by: actorMap(user),
@@ -511,6 +518,88 @@ export async function cancelOrder(orderId: string, user: AuthenticatedUser): Pro
   return transitionOrder(orderId, "cancelled", user, "cancelled");
 }
 
+export async function closeOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+  const orderRef = db.doc(`${ORDERS}/${orderId}`);
+  let status: OrderStatus = "pending";
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) {
+      throw new Error("Order not found.");
+    }
+
+    const orderData = snapshot.data() as OrderData;
+    status = orderData.status;
+    if ((orderData.state ?? "open") === "closed") {
+      throw new Error("Order is already closed.");
+    }
+
+    if (!CLOSABLE_ORDER_STATUSES.has(status)) {
+      throw new Error(`Order cannot be closed while ${status}.`);
+    }
+
+    transaction.set(orderRef, { state: "closed", updated_at: now() }, { merge: true });
+  });
+
+  await writeActivity(orderId, { action: "closed", from_status: status, to_status: status }, user);
+
+  const updated = await findOrder(orderId);
+  if (!updated) {
+    throw new Error("Order not found after update.");
+  }
+
+  return updated;
+}
+
+export async function reopenOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+  const orderRef = db.doc(`${ORDERS}/${orderId}`);
+  let status: OrderStatus = "pending";
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) {
+      throw new Error("Order not found.");
+    }
+
+    const orderData = snapshot.data() as OrderData;
+    status = orderData.status;
+    if ((orderData.state ?? "open") !== "closed") {
+      throw new Error("Order is already open.");
+    }
+
+    transaction.set(orderRef, { state: "open", updated_at: now() }, { merge: true });
+  });
+
+  await writeActivity(orderId, { action: "reopened", from_status: status, to_status: status }, user);
+
+  const updated = await findOrder(orderId);
+  if (!updated) {
+    throw new Error("Order not found after update.");
+  }
+
+  return updated;
+}
+
+export async function deleteOrder(orderId: string): Promise<void> {
+  const orderRef = db.doc(`${ORDERS}/${orderId}`);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) {
+      throw new Error("Order not found.");
+    }
+
+    const orderData = snapshot.data() as OrderData;
+    if (orderData.status !== "cancelled") {
+      throw new Error("Only cancelled orders can be deleted.");
+    }
+
+    transaction.delete(orderRef);
+  });
+
+  await db.recursiveDelete(orderRef);
+}
+
 export async function unapproveOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
   return transitionAndVoidInvoiceWithoutPayments(orderId, "pending", user, "unapproved", "Orders with invoice payments cannot be moved back to pending.");
 }
@@ -531,35 +620,14 @@ export async function deliverOrder(orderId: string, user: AuthenticatedUser, del
   return markPaidIfSettled(delivered, user);
 }
 
-export async function undeliverOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
-  return transitionOrderWithUpdate(orderId, "approved", user, "undelivered", (order) => {
-    const invoice = invoiceFromOrder(order.data);
-    return {
-      delivered_at: null,
-      ...(invoice ? { invoice: removeDeliveryFromInvoice(invoice, order.data.terms) } : {}),
-    };
-  });
-}
-
 export async function deliveryRejectOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
   return transitionAndVoidInvoiceWithoutPayments(orderId, "delivery_rejected", user, "delivery_rejected", "Orders with invoice payments cannot be marked delivery rejected.");
-}
-
-export async function payOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
-  return transitionOrderWithUpdate(orderId, "paid", user, "paid", (order) => {
-    const invoice = invoiceFromOrder(order.data);
-    if (!invoice || Number(invoice.balance_cents ?? 0) > 0) {
-      throw new Error("Add enough invoice payments before marking this order as paid.");
-    }
-
-    return {};
-  });
 }
 
 export async function addPayment(orderId: string, paymentData: { amount: number; method: PaymentMethod; check_number: string; paid_at: string }, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
   const orderRef = db.doc(`${ORDERS}/${orderId}`);
   let orderStatus: OrderStatus = "pending";
-  const result: { payment: InvoicePayment | null } = { payment: null };
+  const result: { payment: InvoicePayment | null; invoice: InvoiceData | null } = { payment: null, invoice: null };
 
   await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(orderRef);
@@ -593,29 +661,40 @@ export async function addPayment(orderId: string, paymentData: { amount: number;
       created_at: new Date(),
     };
 
-    const updatedInvoice = recalculateInvoice({ ...invoice, payments: [...payments, result.payment] });
+    result.invoice = recalculateInvoice({ ...invoice, payments: [...payments, result.payment] });
     transaction.set(
       orderRef,
       {
-        invoice: updatedInvoice,
+        invoice: result.invoice,
         updated_at: now(),
       },
       { merge: true },
     );
   });
 
-  if (!result.payment) {
+  if (!result.payment || !result.invoice) {
     throw new Error("Payment was not saved.");
   }
 
-  await writeActivity(orderId, { action: "payment_added", from_status: orderStatus, to_status: orderStatus, payment_id: result.payment.id, payment_amount_cents: result.payment.amount_cents }, user);
+  const paymentActivity = {
+    action: paymentRecordedAction(result.invoice),
+    from_status: orderStatus,
+    to_status: orderStatus,
+    payment_id: result.payment.id,
+    payment_amount_cents: result.payment.amount_cents,
+  };
 
   const updated = await findOrder(orderId);
   if (!updated) {
     throw new Error("Order not found after payment.");
   }
 
-  return markPaidIfSettled(updated, user);
+  if (paymentActivity.action === "full_payment_recorded" && updated.data.status === "delivered") {
+    return markPaidIfSettled(updated, user, paymentActivity);
+  }
+
+  await writeActivity(orderId, paymentActivity, user);
+  return updated;
 }
 
 export async function updatePayment(orderId: string, paymentId: string, paymentData: { amount: number; method: PaymentMethod; check_number: string; paid_at: string }, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
@@ -735,6 +814,59 @@ export async function deletePayment(orderId: string, paymentId: string, user: Au
   return updated;
 }
 
+export async function updateInvoiceDiscount(orderId: string, input: { type: "percent" | "amount" | null; value: number }, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+  const orderRef = db.doc(`${ORDERS}/${orderId}`);
+  let orderStatus: OrderStatus = "pending";
+  let discountRecord: InvoiceData["discount"] = null;
+  let invoiceTotalCents = 0;
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(orderRef);
+    if (!snapshot.exists) {
+      throw new Error("Order not found.");
+    }
+
+    const orderData = snapshot.data() as OrderData;
+    orderStatus = orderData.status;
+    if (orderStatus !== "approved" && orderStatus !== "delivered") {
+      throw new Error("Discounts can only be applied while an order is approved or delivered.");
+    }
+
+    const invoice = invoiceFromOrder(orderData);
+    if (!invoice) {
+      throw new Error("An active invoice is required to apply a discount.");
+    }
+    assertInvoiceHasNoPayments(invoice, "Discounts cannot be changed once payments have been recorded.");
+
+    const discountCents = input.type ? discountCentsFor(input.type, input.value, invoice.subtotal_cents) : 0;
+    assertDiscountWithinSubtotal(discountCents, invoice.subtotal_cents);
+
+    discountRecord = input.type
+      ? { type: input.type, value: input.value, cents: discountCents, applied_by: actorMap(user), applied_at: now() }
+      : null;
+
+    const updatedInvoice = applyDiscountToInvoice(invoice, discountRecord, now());
+    invoiceTotalCents = updatedInvoice.total_cents;
+
+    transaction.set(orderRef, { invoice: updatedInvoice, updated_at: now() }, { merge: true });
+  });
+
+  await writeActivity(orderId, {
+    action: discountRecord ? "discount_applied" : "discount_removed",
+    from_status: orderStatus,
+    to_status: orderStatus,
+    invoice_total_cents: invoiceTotalCents,
+    ...(discountRecord ? { discount_cents: (discountRecord as { cents: number }).cents } : {}),
+  }, user);
+
+  const updated = await findOrder(orderId);
+  if (!updated) {
+    throw new Error("Order not found after discount update.");
+  }
+
+  return markPaidIfSettled(updated, user);
+}
+
 function assertItemsEditable(order: FirestoreRecord<OrderData>): void {
   if (order.data.status !== "pending") {
     throw new Error("Packages can only be changed while an order is pending.");
@@ -763,7 +895,7 @@ export async function addPackages(orderId: string, packageTags: string[], packag
 
     const orderCollectionSnapshot = await transaction.get(db.collection(ORDERS));
     const statuses = buildPackageStatusMap(orderCollectionSnapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as OrderData })));
-    const sourcePrices = new Map(orderData.items.map((item) => [item.source_package_key, item.price_cents]));
+    const sourcePrices = new Map(orderData.items.map((item) => [item.source_package_key, { priceCents: item.price_cents, quantity: Number(item.quantity ?? 0) }]));
     const newItems: OrderItem[] = [];
 
     for (const tag of tags) {
@@ -801,6 +933,108 @@ export async function addPackages(orderId: string, packageTags: string[], packag
   });
 
   await writeActivity(orderId, { action: "packages_added", from_status: "pending", to_status: "pending", packages: addedTags }, user);
+
+  const updated = await findOrder(orderId);
+  if (!updated) {
+    throw new Error("Order not found after package update.");
+  }
+
+  return updated;
+}
+
+export async function updatePackages(orderId: string, packageTags: string[], packagePrices: Record<string, number>, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
+  const orderRef = db.doc(`${ORDERS}/${orderId}`);
+  const tags = normalizeTags(packageTags);
+  let addedTags: string[] = [];
+  let removedTags: string[] = [];
+  let pricesChanged = false;
+  let didUpdate = false;
+
+  if (tags.length === 0) {
+    throw new Error("Choose at least one package.");
+  }
+
+  await db.runTransaction(async (transaction) => {
+    const orderSnapshot = await transaction.get(orderRef);
+    if (!orderSnapshot.exists) {
+      throw new Error("Order not found.");
+    }
+
+    const orderData = orderSnapshot.data() as OrderData;
+    const order = { id: orderId, data: orderData } satisfies FirestoreRecord<OrderData>;
+    assertItemsEditable(order);
+
+    const selectedSet = new Set(tags);
+    const currentItemsByTag = new Map(orderData.items.map((item) => [item.package_tag, item]));
+    const currentTagSet = new Set(currentItemsByTag.keys());
+    addedTags = tags.filter((tag) => !currentTagSet.has(tag));
+    removedTags = orderData.items.map((item) => item.package_tag).filter((tag) => !selectedSet.has(tag));
+
+    const orderCollectionSnapshot = addedTags.length > 0 ? await transaction.get(db.collection(ORDERS)) : null;
+    const statuses: ReturnType<typeof buildPackageStatusMap> = orderCollectionSnapshot ? buildPackageStatusMap(orderCollectionSnapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() as OrderData }))) : {};
+    const sourcePrices = new Map<string, SourcePriceRecord>();
+    const items: OrderItem[] = [];
+    let transactionPricesChanged = false;
+
+    for (const tag of tags) {
+      const existingItem = currentItemsByTag.get(tag);
+      const priceCents = priceCentsForTag(packagePrices, tag);
+
+      if (existingItem) {
+        assertSameSourcePrice(sourcePrices, existingItem, priceCents);
+        transactionPricesChanged ||= existingItem.price_cents !== priceCents;
+        items.push({ ...existingItem, price_cents: priceCents });
+        continue;
+      }
+
+      const packageRef = db.doc(`packages/${docIdFromTag(tag)}`);
+      const packageSnapshot = await transaction.get(packageRef);
+      if (!packageSnapshot.exists) {
+        throw new Error(`Package ${tag} is not in active inventory.`);
+      }
+
+      const packageData = packageSnapshot.data() as PackageData;
+      if (!packageData.active || packageData.package_tag !== tag) {
+        throw new Error(`Package ${tag} is not in active inventory.`);
+      }
+
+      const statusInfo = statuses[packageData.package_tag];
+      if (statusInfo && statusInfo.order_id !== order.id && statusInfo.status !== "available") {
+        throw new Error(`Package ${tag} is already reserved on another order.`);
+      }
+
+      assertSameSourcePrice(sourcePrices, packageData, priceCents);
+      items.push(itemSnapshot({ id: packageRef.id, data: packageData }, priceCents));
+    }
+
+    pricesChanged = transactionPricesChanged;
+    didUpdate = addedTags.length > 0 || removedTags.length > 0 || pricesChanged;
+    if (!didUpdate) {
+      return;
+    }
+
+    transaction.set(
+      orderRef,
+      {
+        items,
+        total_cents: orderTotalCents({ items }),
+        updated_at: now(),
+      },
+      { merge: true },
+    );
+  });
+
+  if (addedTags.length > 0) {
+    await writeActivity(orderId, { action: "packages_added", from_status: "pending", to_status: "pending", packages: addedTags }, user);
+  }
+
+  if (removedTags.length > 0) {
+    await writeActivity(orderId, { action: "packages_removed", from_status: "pending", to_status: "pending", packages: removedTags }, user);
+  }
+
+  if (addedTags.length === 0 && removedTags.length === 0 && pricesChanged) {
+    await writeActivity(orderId, { action: "packages_updated", from_status: "pending", to_status: "pending", packages: tags }, user);
+  }
 
   const updated = await findOrder(orderId);
   if (!updated) {

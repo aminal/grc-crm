@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/session";
-import { createProduct, updateProduct } from "@/lib/data/sales-settings";
+import { redirect } from "next/navigation";
+import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { archiveProduct, createProduct, updateProduct } from "@/lib/data/sales-settings";
 import {
   editReasonSchema,
   formEntries,
@@ -16,19 +17,30 @@ type ProductFormState = {
 };
 
 export async function createProductAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = productCreateSchema.parse(formEntries(formData));
   await createProduct(input, user);
   revalidatePath("/products");
 }
 
 export async function updateProductAction(productId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const values = formEntries(formData);
   const input = productCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
   await updateProduct(productId, input, user, reason.reason);
   revalidatePath("/products");
+}
+
+export async function archiveProductAction(productId: string, formData: FormData): Promise<void> {
+  const user = await requireManagerOrAdmin();
+  if (formData.get("confirmation") !== "ARCHIVE") {
+    throw new Error("Type ARCHIVE to confirm product archive.");
+  }
+
+  await archiveProduct(productId, user, "Archived from Products settings.");
+  revalidatePath("/products");
+  redirect("/products");
 }
 
 export async function createProductFormAction(_: ProductFormState, formData: FormData): Promise<ProductFormState> {

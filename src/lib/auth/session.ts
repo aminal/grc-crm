@@ -60,14 +60,16 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     const profile = await getUserProfile(decoded.uid);
     const displayName = profile?.data.display_name?.trim() || (typeof decoded.name === "string" ? decoded.name : "");
     const picture = profile?.data.picture?.trim() || (typeof decoded.picture === "string" ? decoded.picture : "");
-    const googleVoiceNumber = profile?.data.google_voice_number?.trim() || "";
+    const role = profile?.data.role || "Guest";
+    const title = profile?.data.title?.trim() || null;
 
     return {
       uid: decoded.uid,
       email,
       name: displayName || null,
       picture: picture || null,
-      google_voice_number: googleVoiceNumber || null,
+      role,
+      title: title || null,
     };
   } catch {
     return null;
@@ -83,8 +85,44 @@ export async function requireUser(): Promise<AuthenticatedUser> {
   return user;
 }
 
+export function canManageRestrictedResources(user: Pick<AuthenticatedUser, "role">): boolean {
+  return user.role === "Manager" || user.role === "Admin";
+}
+
+export async function requireNonGuest(): Promise<AuthenticatedUser> {
+  const user = await requireUser();
+  if (user.role === "Guest") {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
+export async function requireManagerOrAdmin(): Promise<AuthenticatedUser> {
+  const user = await requireNonGuest();
+  if (!canManageRestrictedResources(user)) {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
+export async function requireAdmin(): Promise<AuthenticatedUser> {
+  const user = await requireUser();
+  if (user.role !== "Admin") {
+    redirect("/dashboard");
+  }
+
+  return user;
+}
+
 export async function syncVerifiedUserFromIdToken(idToken: string): Promise<AuthenticatedUser> {
   const decoded = await adminAuth.verifyIdToken(idToken);
+
+  if (decoded.firebase.sign_in_provider !== "google.com") {
+    throw new Error("Only Google accounts are allowed.");
+  }
+
   const email = typeof decoded.email === "string" ? decoded.email : "";
   const emailVerified = decoded.email_verified === true;
 
@@ -101,6 +139,7 @@ export async function syncVerifiedUserFromIdToken(idToken: string): Promise<Auth
     email,
     name: profile.name,
     picture: picture || null,
-    google_voice_number: profile.google_voice_number,
+    role: profile.role,
+    title: profile.title,
   };
 }

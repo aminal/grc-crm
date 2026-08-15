@@ -5,13 +5,25 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { buttonClasses } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { requireNonGuest } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { compactNumber, formatDate, formatInventoryCategory } from '@/lib/domain/format';
 import type { PackageData } from '@/lib/domain/types';
 
+type PackageStatus = NonNullable<PackageData['package_status']>;
+
+const packageStatusOrder = {
+    available: 0,
+    sold: 1,
+    pending: 2,
+    inactive: 3,
+} satisfies Record<PackageStatus, number>;
+
 export default async function InventoryGroupPage({ params }: {
     params: Promise<{ group: string }>
 }): Promise<React.ReactElement> {
+    await requireNonGuest();
+
     const { group: encodedGroup } = await params;
     const key = decodeURIComponent(encodedGroup);
     const packages = await listPackages(false);
@@ -30,6 +42,7 @@ export default async function InventoryGroupPage({ params }: {
         </>
     ) : null;
     const availablePackageCount = group.packages.filter((packageRecord) => packageStatus(packageRecord.data) === 'available').length;
+    const sortedPackages = [...group.packages].sort((left, right) => packageStatusOrder[packageStatus(left.data)] - packageStatusOrder[packageStatus(right.data)]);
     const packageDetails = [
         { label: 'Total Units', value: `${compactNumber(group.total_quantity)}` },
         { label: 'Product Type', value: formatInventoryCategory(group.category) || '—' },
@@ -41,11 +54,13 @@ export default async function InventoryGroupPage({ params }: {
 
     return (
         <div>
-            <PageHeader title={group.item} actions={
-                <Link href='/sales/create' className={buttonClasses()}>Create Order</Link>}>
+            <PageHeader
+                title={group.item}
+                actions={<Link href='/sales/create' className={buttonClasses()}>Create Order</Link>}
+                description={'Source Package: ' + (group.source_packages || 'unknown source')}
+            >
                 <div className='flex flex-wrap items-center gap-2 text-base/6 font-medium text-zinc-500 sm:text-base/6 dark:text-zinc-400'>
                     {packageTestStatus}
-                    <span>{'Source Package: ' + (group.source_packages || 'unknown source')}</span>
                 </div>
             </PageHeader>
 
@@ -71,7 +86,7 @@ export default async function InventoryGroupPage({ params }: {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {group.packages.map((packageRecord) => {
+                    {sortedPackages.map((packageRecord) => {
                         const status = packageStatus(packageRecord.data);
                         const packageTag = packageRecord.data.package_tag || 'Unknown package';
                         const unitLabel = packageRecord.data.unit_of_measure === 'ea' ? 'Units' : packageRecord.data.unit_of_measure || 'Qty';

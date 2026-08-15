@@ -13,11 +13,12 @@ export type ProductFormValues = Pick<ProductData, "name" | "brand_id" | "strain_
 export type ProductFormBrandOption = {
   id: string;
   name: string;
+  archived: boolean;
 };
 export type ProductFormStrainOption = {
   id: string;
   name: string;
-  deleted: boolean;
+  archived: boolean;
 };
 
 const PRODUCT_CATEGORY_OPTIONS = [
@@ -56,6 +57,7 @@ type ProductFormProps = {
   error: string | null;
   showReason: boolean;
   onCancel: () => void;
+  onArchive?: () => void;
 };
 
 export function ProductForm({
@@ -69,16 +71,21 @@ export function ProductForm({
   error,
   showReason,
   onCancel,
+  onArchive,
 }: ProductFormProps): React.ReactElement {
-  const hasBrands = brands.length > 0;
-  const activeStrains = strains.filter((strain) => !strain.deleted);
+  const selectedBrandId = product?.brand_id ?? "";
+  const selectedBrand = brands.find((brand) => brand.id === selectedBrandId);
+  const activeBrands = brands.filter((brand) => !brand.archived);
+  const brandOptions = selectedBrand?.archived ? [...activeBrands, selectedBrand] : activeBrands;
+  const canChooseBrand = activeBrands.length > 0 || selectedBrand !== undefined;
+  const activeStrains = strains.filter((strain) => !strain.archived);
   const hasActiveStrains = activeStrains.length > 0;
   const selectedStrainIds = new Set(product?.strain_ids ?? []);
-  const disabledSelectedStrains = strains.filter((strain) => strain.deleted && selectedStrainIds.has(strain.id));
+  const archivedSelectedStrains = strains.filter((strain) => strain.archived && selectedStrainIds.has(strain.id));
   const [strainIds, setStrainIds] = useState(() => activeStrains.filter((strain) => selectedStrainIds.has(strain.id)).map((strain) => strain.id));
   const selectedStrainNames = [
     ...activeStrains.filter((strain) => strainIds.includes(strain.id)).map((strain) => strain.name),
-    ...disabledSelectedStrains.map((strain) => `${strain.name} (deleted)`),
+    ...archivedSelectedStrains.map((strain) => `${strain.name} (archived)`),
   ];
   const strainSelectionLabel = selectedStrainNames.length > 0 ? selectedStrainNames.join(", ") : hasActiveStrains ? "Select strains" : "No strains available";
   const categoryOptions = product?.category && !PRODUCT_CATEGORY_OPTIONS.includes(product.category) ? [product.category, ...PRODUCT_CATEGORY_OPTIONS] : PRODUCT_CATEGORY_OPTIONS;
@@ -86,9 +93,9 @@ export function ProductForm({
   return (
     <form action={action} className="space-y-4">
       {error ? <div className="rounded-lg bg-red-500/15 p-3 text-sm/6 font-medium text-red-700 ring-1 ring-red-500/20">{error}</div> : null}
-      {!hasBrands ? (
+      {!canChooseBrand ? (
         <div className="rounded-lg bg-amber-500/15 p-3 text-sm/6 font-medium text-amber-800 ring-1 ring-amber-500/20 dark:text-amber-200">
-          Create a brand before adding products.
+          Create an active brand before adding products.
         </div>
       ) : null}
       {!hasActiveStrains ? (
@@ -100,15 +107,15 @@ export function ProductForm({
         <Input name="name" defaultValue={product?.name ?? ""} required disabled={pending} />
       </Field>
       <Field label="Brand">
-        <Select name="brand_id" defaultValue={product?.brand_id ?? ""} required disabled={pending || !hasBrands}>
+        <Select name="brand_id" defaultValue={selectedBrandId} required disabled={pending || !canChooseBrand}>
           <option value="" disabled>Select a brand</option>
-          {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+          {brandOptions.map((brand) => <option key={brand.id} value={brand.id} disabled={brand.archived && brand.id !== selectedBrandId}>{brand.name}{brand.archived ? " (archived)" : ""}</option>)}
         </Select>
       </Field>
       <Field label="Strains">
         <Headless.Listbox value={strainIds} onChange={setStrainIds} multiple disabled={pending || !hasActiveStrains} as="div" data-slot="control" className="relative">
           {strainIds.map((strainId) => <input key={`selected-${strainId}`} type="hidden" name="strain_ids" value={strainId} />)}
-          {disabledSelectedStrains.map((strain) => <input key={`hidden-${strain.id}`} type="hidden" name="strain_ids" value={strain.id} />)}
+          {archivedSelectedStrains.map((strain) => <input key={`hidden-${strain.id}`} type="hidden" name="strain_ids" value={strain.id} />)}
           <Headless.ListboxButton
             type="button"
             className="group relative block w-full cursor-pointer rounded-lg border border-zinc-950/10 bg-white px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] text-left text-base/6 font-medium text-zinc-950 shadow-sm hover:border-zinc-950/20 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-default disabled:border-zinc-950/20 disabled:bg-zinc-950/5 disabled:opacity-50 sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)] sm:text-base/6 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:border-white/20 dark:disabled:border-white/15 dark:disabled:bg-white/2.5"
@@ -160,8 +167,9 @@ export function ProductForm({
         </Field>
       ) : null}
       <DialogActions>
+        {onArchive ? <Button type="button" variant="danger" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" variant="plain" onClick={onCancel} disabled={pending}>Cancel</Button>
-        <Button disabled={pending || !hasBrands || !hasActiveStrains}>{pending ? pendingLabel : submitLabel}</Button>
+        <Button disabled={pending || !canChooseBrand || !hasActiveStrains}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>
     </form>
   );

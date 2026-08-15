@@ -13,18 +13,24 @@ type RecordPaymentDialogProps = {
   orderId: string;
   balanceCents: number;
   defaultPaidAt: string;
+  open?: boolean;
+  onClose?: () => void;
+  showTrigger?: boolean;
 };
 
-export function RecordPaymentDialog({ orderId, balanceCents, defaultPaidAt }: RecordPaymentDialogProps): React.ReactElement {
-  const [isOpen, setIsOpen] = useState(false);
+export function RecordPaymentDialog({ orderId, balanceCents, defaultPaidAt, open, onClose, showTrigger = true }: RecordPaymentDialogProps): React.ReactElement {
+  const [isInternalOpen, setIsInternalOpen] = useState(false);
+  const [method, setMethod] = useState("ach");
+  const isOpen = open ?? isInternalOpen;
 
   function close(): void {
-    setIsOpen(false);
+    setIsInternalOpen(false);
+    onClose?.();
   }
 
   return (
     <>
-      <Button type="button" onClick={() => setIsOpen(true)}>Record Payment</Button>
+      {showTrigger ? <Button type="button" onClick={() => setIsInternalOpen(true)}>Record Payment</Button> : null}
       <Dialog size="lg" open={isOpen} onClose={close} className="relative">
         <Headless.CloseButton
           className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-950 p-2 text-white transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
@@ -43,13 +49,15 @@ export function RecordPaymentDialog({ orderId, balanceCents, defaultPaidAt }: Re
               <Input name="paid_at" type="date" defaultValue={defaultPaidAt} required />
             </Field>
             <Field label="Method">
-              <Select name="method" defaultValue="ach">
+              <Select name="method" value={method} onChange={(event) => setMethod(event.target.value)}>
                 {Object.entries(PAYMENT_METHODS).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
               </Select>
             </Field>
-            <Field label="Check number">
-              <Input name="check_number" />
-            </Field>
+            {method === "check" ? (
+              <Field label="Check number">
+                <Input name="check_number" />
+              </Field>
+            ) : null}
             <DialogActions className="sm:col-span-2">
               <Button type="button" variant="plain" onClick={close}>Cancel</Button>
               <Button type="submit">Record Payment</Button>

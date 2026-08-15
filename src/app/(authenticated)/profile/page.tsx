@@ -14,7 +14,7 @@ export default async function ProfilePage({ searchParams }: {
 
     return (
         <div>
-            <PageHeader title='Profile' description='Manage app-only staff settings used across CRM interactions and Google Voice call links.' />
+            <PageHeader title='Profile' description='Manage app-only staff settings used across CRM interactions.' />
 
             <Card className='max-w-2xl'>
                 <CardHeader>
@@ -22,8 +22,11 @@ export default async function ProfilePage({ searchParams }: {
                 </CardHeader>
                 <CardContent>
                     {params.saved === '1' ?
-                        <div className='mb-4 rounded-lg border border-green-500/20 bg-green-500/15 p-3 text-sm text-green-700'>Profile
-                            saved.</div> : null}
+                        <div
+                            className='profile-saved-notification mb-4 max-h-20 overflow-hidden rounded-lg border-2 border-emerald-400/85 bg-emerald-300/75 p-2 text-sm uppercase font-semibold dark:text-white'
+                        >
+                            Profile saved!
+                        </div> : null}
                     <form action={updateProfileAction} className='space-y-4'>
                         <Field label='Email'>
                             <Input value={user.email} readOnly />
@@ -31,10 +34,9 @@ export default async function ProfilePage({ searchParams }: {
                         <Field label='Display name'>
                             <Input name='display_name' defaultValue={profile?.data.display_name ?? user.name ?? ''} required />
                         </Field>
-                        <Field label='Google Voice number'>
-                            <Input name='google_voice_number' defaultValue={profile?.data.google_voice_number ?? user.google_voice_number ?? ''} placeholder='+15555555555' />
-                        </Field>
-                        <Button>Save Profile</Button>
+                        <div className='flex justify-end'>
+                            <Button>Save Profile</Button>
+                        </div>
                     </form>
                 </CardContent>
             </Card>

@@ -20,11 +20,13 @@ export type PackagePickerPackage = {
     quantity: number;
     unit_of_measure: string;
     expiration_date: string | null;
+    unit_base_price_cents: number;
 };
 
 type PackagePickerProps = {
     packages: PackagePickerPackage[];
     initialPrices?: Record<string, string>;
+    initialSelectedTags?: string[];
     maxVisible?: number;
     title?: string;
 };
@@ -32,11 +34,12 @@ type PackagePickerProps = {
 export function PackagePicker({
     packages,
     initialPrices = {},
+    initialSelectedTags = [],
     maxVisible,
     title
 }: PackagePickerProps): React.ReactElement {
     const [query, setQuery] = useState('');
-    const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+    const [selectedTags, setSelectedTags] = useState<Set<string>>(() => new Set(initialSelectedTags));
     const [prices, setPrices] = useState<Record<string, string>>(initialPrices);
     const [dialogOpen, setDialogOpen] = useState(false);
     const normalizedQuery = query.trim().toLowerCase();
@@ -52,18 +55,37 @@ export function PackagePicker({
     const taxCents = 0;
     const totalCents = subtotalCents + taxCents;
 
-    function sourcePrice(sourcePackages: string): string {
+    function sourceUnitCents(sourcePackages: string): number {
         if (!sourcePackages) {
-            return '';
+            return 0;
         }
 
         for (const packageRecord of packages) {
-            if (packageRecord.source_packages === sourcePackages && selectedTags.has(packageRecord.package_tag) && prices[packageRecord.package_tag]) {
-                return prices[packageRecord.package_tag];
+            if (packageRecord.source_packages === sourcePackages && selectedTags.has(packageRecord.package_tag)) {
+                const quantity = Number(packageRecord.quantity ?? 0);
+                const priceCents = moneyToCents(prices[packageRecord.package_tag]);
+                if (quantity > 0 && priceCents > 0) {
+                    return Math.round(priceCents / quantity);
+                }
             }
         }
 
-        return '';
+        return 0;
+    }
+
+    function derivedPackageCents(packageRecord: PackagePickerPackage): number {
+        const quantity = Number(packageRecord.quantity ?? 0);
+        if (quantity <= 0) {
+            return 0;
+        }
+
+        const sourceUnit = sourceUnitCents(packageRecord.source_packages);
+        if (sourceUnit > 0) {
+            return sourceUnit * quantity;
+        }
+
+        const productUnitCents = Number(packageRecord.unit_base_price_cents ?? 0);
+        return productUnitCents > 0 ? productUnitCents * quantity : 0;
     }
 
     function togglePackage(packageRecord: PackagePickerPackage, checked: boolean): void {
@@ -77,10 +99,10 @@ export function PackagePicker({
             return next;
         });
 
-        if (checked && packageRecord.source_packages && !prices[packageRecord.package_tag]) {
-            const copiedPrice = sourcePrice(packageRecord.source_packages);
-            if (copiedPrice) {
-                setPrices((current) => ({ ...current, [packageRecord.package_tag]: copiedPrice }));
+        if (checked && !prices[packageRecord.package_tag]) {
+            const priceCents = derivedPackageCents(packageRecord);
+            if (priceCents > 0) {
+                setPrices((current) => ({ ...current, [packageRecord.package_tag]: centsToInputValue(priceCents) }));
             }
         }
     }
@@ -88,10 +110,16 @@ export function PackagePicker({
     function updatePrice(packageRecord: PackagePickerPackage, value: string): void {
         setPrices((current) => {
             const next = { ...current, [packageRecord.package_tag]: value };
-            if (packageRecord.source_packages && selectedTags.has(packageRecord.package_tag)) {
+            const quantity = Number(packageRecord.quantity ?? 0);
+            const editedCents = moneyToCents(value);
+            if (packageRecord.source_packages && quantity > 0 && editedCents > 0 && selectedTags.has(packageRecord.package_tag)) {
+                const impliedUnitCents = Math.round(editedCents / quantity);
                 for (const row of packages) {
-                    if (row.source_packages === packageRecord.source_packages && selectedTags.has(row.package_tag)) {
-                        next[row.package_tag] = value;
+                    if (row.source_packages === packageRecord.source_packages && selectedTags.has(row.package_tag) && row.package_tag !== packageRecord.package_tag) {
+                        const siblingQuantity = Number(row.quantity ?? 0);
+                        if (siblingQuantity > 0) {
+                            next[row.package_tag] = centsToInputValue(impliedUnitCents * siblingQuantity);
+                        }
                     }
                 }
             }
@@ -104,14 +132,13 @@ export function PackagePicker({
     }
 
     function unitPriceLabel(packageRecord: PackagePickerPackage): string {
-        const quantity = Number(packageRecord.quantity ?? 0);
-        const priceCents = moneyToCents(prices[packageRecord.package_tag]);
-        if (quantity <= 0 || priceCents <= 0) {
+        const unitCents = Number(packageRecord.unit_base_price_cents ?? 0);
+        if (unitCents <= 0) {
             return 'Price per unit: —';
         }
 
         const unitLabel = packageRecord.unit_of_measure ? ` / ${packageRecord.unit_of_measure}` : '';
-        return `Price per unit: ${formatMoney(priceCents / quantity)}${unitLabel}`;
+        return `Price per unit: ${formatMoney(unitCents)}${unitLabel}`;
     }
 
     const addPackagesButton = <Button type='button' variant='secondary' onClick={() => setDialogOpen(true)}>+ Add
@@ -167,8 +194,9 @@ export function PackagePicker({
                     </div>
                 </div>
             ) : (
-                <p className='rounded-lg border border-dashed border-zinc-950/10 p-8 text-center text-sm text-zinc-600 dark:border-white/10 dark:text-zinc-400'>No
-                    packages added yet.</p>
+                <p className='rounded-lg p-8 text-center uppercase font-semibold text-sm text-zinc-600 dark:text-zinc-400'>
+                    No packages added yet
+                </p>
             )}
         </>
     );
@@ -306,6 +334,10 @@ function moneyToCents(value: string | undefined): number {
 
     const amount = Number(clean);
     return Number.isFinite(amount) ? Math.round(amount * 100) : 0;
+}
+
+function centsToInputValue(cents: number): string {
+    return (cents / 100).toFixed(2);
 }
 
 function InvoiceTotalRow({ label, value, strong = false }: {

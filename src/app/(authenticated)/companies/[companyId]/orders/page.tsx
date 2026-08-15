@@ -5,11 +5,14 @@ import { StatusBadge } from "@/components/ui/badge";
 import { CompanyTabs } from "@/components/company/company-tabs";
 import { buttonClasses } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { requireNonGuest } from "@/lib/auth/session";
 import { listOrdersForCompany } from "@/lib/data/orders";
 import { formatCompanySubheading, formatDateTime, formatMoney } from "@/lib/domain/format";
 import { loadCompanyRoute } from "../company-route";
 
 export default async function CompanyOrdersPage({ params }: { params: Promise<{ companyId: string }> }): Promise<React.ReactElement> {
+  await requireNonGuest();
+
   const { companyId: routeSegment } = await params;
   const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, "/orders");
   const orders = await listOrdersForCompany(companyId);

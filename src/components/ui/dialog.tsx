@@ -75,6 +75,7 @@ type DeleteConfirmationDialogProps = {
   description: React.ReactNode;
   action: (formData: FormData) => void | Promise<void>;
   submitLabel: string;
+  confirmationValue?: string;
 };
 
 export function DeleteConfirmationDialog(props: DeleteConfirmationDialogProps): React.ReactElement {
@@ -85,10 +86,10 @@ export function DeleteConfirmationDialog(props: DeleteConfirmationDialogProps): 
   return <OpenDeleteConfirmationDialog {...props} />;
 }
 
-function OpenDeleteConfirmationDialog({ open, onClose, title, description, action, submitLabel }: DeleteConfirmationDialogProps): React.ReactElement {
+function OpenDeleteConfirmationDialog({ open, onClose, title, description, action, submitLabel, confirmationValue = "DELETE" }: DeleteConfirmationDialogProps): React.ReactElement {
   const [confirmation, setConfirmation] = useState("");
   const confirmationInputId = useId();
-  const canDelete = confirmation === "DELETE";
+  const canSubmit = confirmation === confirmationValue;
 
   function close(): void {
     setConfirmation("");
@@ -109,14 +110,14 @@ function OpenDeleteConfirmationDialog({ open, onClose, title, description, actio
               value={confirmation}
               onChange={(event) => setConfirmation(event.target.value)}
               autoComplete="off"
-              pattern="DELETE"
+              pattern={confirmationValue}
               required
               autoFocus
             />
           </div>
           <DialogActions>
             <Button type="button" variant="secondary" onClick={close}>Cancel</Button>
-            <Button type="submit" variant="danger" disabled={!canDelete}>{submitLabel}</Button>
+            <Button type="submit" variant="danger" disabled={!canSubmit}>{submitLabel}</Button>
           </DialogActions>
         </form>
       </DialogBody>

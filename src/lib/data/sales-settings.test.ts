@@ -53,6 +53,7 @@ import {
   buildFieldChanges,
   buildSettingsActivityData,
   listBrands,
+  listProducts,
   listStrains,
   productActivityFields,
   strainActivityFields,
@@ -147,6 +148,90 @@ describe("sales settings data helpers", () => {
     expect(firestoreMocks.batchCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("hides archived brands from active brand lists", async () => {
+    firestoreMocks.listCollection.mockResolvedValueOnce([
+      {
+        id: "brand-archived",
+        data: {
+          name: "Archived Brand",
+          acronym: "AB",
+          website: "",
+          notes: "",
+          archived_at: "2026-08-10T12:00:00.000Z",
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "brand-active",
+        data: {
+          name: "Active Brand",
+          acronym: "AC",
+          website: "",
+          notes: "",
+          archived_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+    ]);
+
+    await expect(listBrands()).resolves.toMatchObject([
+      {
+        id: "brand-active",
+        data: { name: "Active Brand", archived_at: null },
+      },
+    ]);
+    expect(firestoreMocks.listCollection).toHaveBeenCalledWith("brands");
+  });
+
+  it("hides archived products from active product lists", async () => {
+    firestoreMocks.listCollection.mockResolvedValueOnce([
+      {
+        id: "product-archived",
+        data: {
+          name: "Archived Product",
+          brand_id: "brand-a",
+          strain_ids: ["strain-a"],
+          category: "Flower",
+          unit_base_price_cents: 100,
+          case_quantity: 10,
+          sku: "ARCHIVED",
+          upc: "",
+          notes: "",
+          archived_at: "2026-08-10T12:00:00.000Z",
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "product-active",
+        data: {
+          name: "Active Product",
+          brand_id: "brand-a",
+          strain_ids: ["strain-a"],
+          category: "Flower",
+          unit_base_price_cents: 100,
+          case_quantity: 10,
+          sku: "ACTIVE",
+          upc: "",
+          notes: "",
+          archived_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+    ]);
+
+    await expect(listProducts()).resolves.toMatchObject([
+      {
+        id: "product-active",
+        data: { name: "Active Product", archived_at: null },
+      },
+    ]);
+    expect(firestoreMocks.listCollection).toHaveBeenCalledWith("products");
+  });
+
   it("serializes product strain IDs in stable order for activity diffs", () => {
     const previous = productActivityFields({
       name: "Gummy",
@@ -198,15 +283,16 @@ describe("sales settings data helpers", () => {
     expect(strainActivityFields({ type: "Indica/Sativa" }).sativa_percentage).toBe("50");
   });
 
-  it("hides soft-deleted strains from active strain lists", async () => {
+  it("hides archived strains from active strain lists", async () => {
     firestoreMocks.listCollection.mockResolvedValueOnce([
       {
-        id: "strain-deleted",
+        id: "strain-archived",
         data: {
-          name: "Deleted Strain",
+          name: "Archived Strain",
           type: "Hybrid",
           notes: "Hidden",
-          deleted_at: "2026-08-10T12:00:00.000Z",
+          archived_at: "2026-08-10T12:00:00.000Z",
+          deleted_at: null,
           created_at: null,
           updated_at: null,
         },
@@ -256,7 +342,8 @@ describe("sales settings data helpers", () => {
         email: "owner@example.com",
         name: null,
         picture: null,
-        google_voice_number: null,
+        role: "Guest",
+        title: null,
       },
       [{
         field: "name",

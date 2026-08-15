@@ -1,7 +1,7 @@
 "use client";
 
 import * as Headless from "@headlessui/react";
-import { Upload, X, RefreshCcwDotIcon } from "lucide-react";
+import { X, RefreshCcwDotIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";

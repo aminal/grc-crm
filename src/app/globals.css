@@ -63,3 +63,19 @@ body {
 a {
   text-decoration: none;
 }
+
+.profile-saved-notification {
+  animation: profile-saved-notification-fade 400ms ease-in 4s forwards;
+}
+
+@keyframes profile-saved-notification-fade {
+  to {
+    border-width: 0;
+    margin-bottom: 0;
+    max-height: 0;
+    opacity: 0;
+    padding-bottom: 0;
+    padding-top: 0;
+    visibility: hidden;
+  }
+}

@@ -8,12 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { listContacts } from "@/lib/data/crm";
 import { formatCompanySubheading } from "@/lib/domain/format";
 import { e164Phone, formatPhone, googleVoiceCallUrl } from "@/lib/domain/phone";
-import { requireUser } from "@/lib/auth/session";
+import { canManageRestrictedResources, requireNonGuest } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import { loadCompanyRoute } from "../company-route";
 
 export default async function CompanyContactsPage({ params, searchParams }: { params: Promise<{ companyId: string }>; searchParams: Promise<{ contact?: string }> }): Promise<React.ReactElement> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
+  const canManageCompany = canManageRestrictedResources(user);
   const { companyId: routeSegment } = await params;
   const query = await searchParams;
   const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, "/contacts");
@@ -24,7 +25,7 @@ export default async function CompanyContactsPage({ params, searchParams }: { pa
   const selectedContactEmail = selectedContact?.data.email.trim() ?? "";
   const selectedContactPhone = selectedContact ? formatPhone(selectedContact.data.phone) : null;
   const selectedContactDialablePhone = selectedContact ? e164Phone(selectedContact.data.phone) : null;
-  const selectedContactCallUrl = user.google_voice_number && selectedContactDialablePhone ? googleVoiceCallUrl(selectedContactDialablePhone, user.email) : null;
+  const selectedContactCallUrl = selectedContactDialablePhone ? googleVoiceCallUrl(selectedContactDialablePhone, user.email) : null;
 
   return (
     <div>
@@ -104,6 +105,7 @@ export default async function CompanyContactsPage({ params, searchParams }: { pa
           dialablePhone={selectedContactDialablePhone}
           callUrl={selectedContactCallUrl}
           isPrimary={selectedContact.id === company.data.primary_contact_id}
+          canManageCompany={canManageCompany}
           closeHref={contactsHref}
         />
       ) : null}

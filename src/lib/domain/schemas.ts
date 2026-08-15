@@ -122,18 +122,6 @@ export const interactionEntrySchema = z.object({
 
 export const profileSchema = z.object({
   display_name: requiredShortString,
-  google_voice_number: z.preprocess((value) => {
-    if (typeof value !== "string") {
-      return value;
-    }
-
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return "";
-    }
-
-    return e164Phone(trimmed) ?? trimmed;
-  }, z.string().refine((value) => value === "" || /^\+[1-9]\d{7,14}$/.test(value), "Enter a valid phone number.")),
 });
 
 export const createOrderSchema = z.object({
@@ -224,6 +212,34 @@ export const removePackagesSchema = z.object({
   package_tags: z.array(requiredString).min(1),
 });
 
+export const discountSchema = z.object({
+  discount_type: z.enum(["percent", "amount", "none"]),
+  discount_value: optionalString,
+}).transform((value, context) => {
+  if (value.discount_type === "none") {
+    return { type: null, value: 0 } as const;
+  }
+
+  if (value.discount_type === "percent") {
+    const parsed = z.coerce.number()
+      .min(0, "Discount percent cannot be negative.")
+      .max(100, "Discount percent cannot exceed 100%.")
+      .safeParse(value.discount_value === "" ? 0 : value.discount_value);
+    if (!parsed.success) {
+      context.addIssue({ code: "custom", path: ["discount_value"], message: parsed.error.issues[0]?.message ?? "Enter a valid discount percent." });
+      return z.NEVER;
+    }
+    return parsed.data === 0 ? { type: null, value: 0 } as const : { type: "percent" as const, value: parsed.data };
+  }
+
+  const parsed = optionalCentsFromMoney.safeParse(value.discount_value);
+  if (!parsed.success) {
+    context.addIssue({ code: "custom", path: ["discount_value"], message: parsed.error.issues[0]?.message ?? "Enter a valid discount amount." });
+    return z.NEVER;
+  }
+  return parsed.data === 0 ? { type: null, value: 0 } as const : { type: "amount" as const, value: parsed.data };
+});
+
 export const brandCreateSchema = z.object({
   name: requiredShortString,
   acronym: optionalShortString,
@@ -259,6 +275,12 @@ export const productUpdateSchema = productCreateSchema;
 
 export const editReasonSchema = z.object({
   reason: requiredLongString,
+});
+
+export const userUpdateSchema = z.object({
+  display_name: requiredShortString,
+  role: z.enum(["Guest", "Employee", "Manager", "Admin"]),
+  title: optionalShortString,
 });
 
 export function formEntries(formData: FormData): Record<string, FormDataEntryValue | FormDataEntryValue[]> {

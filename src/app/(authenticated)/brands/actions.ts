@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth/session";
-import { createBrand, updateBrand } from "@/lib/data/sales-settings";
+import { redirect } from "next/navigation";
+import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { archiveBrand, createBrand, updateBrand } from "@/lib/data/sales-settings";
 import {
   brandCreateSchema,
   editReasonSchema,
@@ -16,19 +17,31 @@ type BrandFormState = {
 };
 
 export async function createBrandAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = brandCreateSchema.parse(formEntries(formData));
   await createBrand(input, user);
   revalidatePath("/brands");
 }
 
 export async function updateBrandAction(brandId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const values = formEntries(formData);
   const input = brandCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
   await updateBrand(brandId, input, user, reason.reason);
   revalidatePath("/brands");
+}
+
+export async function archiveBrandAction(brandId: string, formData: FormData): Promise<void> {
+  const user = await requireManagerOrAdmin();
+  if (formData.get("confirmation") !== "ARCHIVE") {
+    throw new Error("Type ARCHIVE to confirm brand archive.");
+  }
+
+  await archiveBrand(brandId, user, "Archived from Brands settings.");
+  revalidatePath("/brands");
+  revalidatePath("/products");
+  redirect("/brands");
 }
 
 export async function createBrandFormAction(_: BrandFormState, formData: FormData): Promise<BrandFormState> {

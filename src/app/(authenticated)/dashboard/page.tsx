@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/badge";
 import { buttonClasses } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { requireUser } from "@/lib/auth/session";
 import { listCompanies } from "@/lib/data/crm";
 import { groupInventory, listPackages } from "@/lib/data/inventory";
 import { listOrders } from "@/lib/data/orders";
@@ -10,6 +11,12 @@ import { companyPath } from "@/lib/domain/company-slug";
 import { compactNumber, dateFromFirestore, formatDateTime, formatMoney } from "@/lib/domain/format";
 
 export default async function DashboardPage(): Promise<React.ReactElement> {
+  const user = await requireUser();
+
+  if (user.role === "Guest") {
+    return <div />;
+  }
+
   const [companies, packages, orders] = await Promise.all([listCompanies(), listPackages(false), listOrders()]);
   const inventoryGroups = groupInventory(packages);
   const openOrders = orders.filter((order) => !["paid", "cancelled", "rejected", "delivery_rejected"].includes(order.data.status));

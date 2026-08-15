@@ -1,4 +1,4 @@
-import type { FirestoreDate, InvoiceData, InvoicePayment } from "@/lib/domain/types";
+import type { FirestoreDate, InvoiceData, InvoiceDiscount, InvoicePayment } from "@/lib/domain/types";
 
 export function invoicePayments(invoice: Pick<InvoiceData, "payments">): InvoicePayment[] {
   return Array.isArray(invoice.payments) ? [...invoice.payments] : [];
@@ -13,6 +13,21 @@ export function assertPaymentDoesNotOverpay(invoice: Pick<InvoiceData, "payments
   if (otherPaidCents + amountCents > Number(invoice.total_cents ?? 0)) {
     throw new Error("Payment amount cannot exceed the invoice balance.");
   }
+}
+
+export function discountCentsFor(type: "percent" | "amount", value: number, subtotalCents: number): number {
+  return type === "percent" ? Math.round((subtotalCents * value) / 100) : Math.round(value);
+}
+
+export function assertDiscountWithinSubtotal(discountCents: number, subtotalCents: number): void {
+  if (discountCents < 0 || discountCents > subtotalCents) {
+    throw new Error("Discount cannot exceed the invoice subtotal.");
+  }
+}
+
+export function applyDiscountToInvoice(invoice: InvoiceData, discount: InvoiceDiscount | null, timestamp: FirestoreDate): InvoiceData {
+  const totalCents = invoice.subtotal_cents - (discount?.cents ?? 0);
+  return recalculateInvoice({ ...invoice, discount, total_cents: totalCents }, timestamp);
 }
 
 export function recalculateInvoice(invoice: InvoiceData, timestamp: FirestoreDate): InvoiceData {

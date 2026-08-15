@@ -2,6 +2,7 @@ import { cn } from '@/lib/utils';
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     leadingIcon?: React.ReactNode;
+    trailingIcon?: React.ReactNode;
 };
 type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement>;
 type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
@@ -31,7 +32,7 @@ export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLab
     return <label data-slot='label' className={cn('text-base/6 text-zinc-950 select-none uppercase sm:text-sm/6 dark:text-zinc-500', className)} {...props} />;
 }
 
-export function Input({ className, type, leadingIcon, ...props }: InputProps): React.ReactElement {
+export function Input({ className, type, leadingIcon, trailingIcon, ...props }: InputProps): React.ReactElement {
     const isDateType = type ? ['date', 'datetime-local', 'month', 'time', 'week'].includes(type) : false;
 
     return (
@@ -40,9 +41,9 @@ export function Input({ className, type, leadingIcon, ...props }: InputProps): R
           type={type}
           className={cn(
               controlClasses,
-              leadingIcon
-                  ? 'pr-[calc(--spacing(3.5)-1px)] pl-[calc(--spacing(10)-1px)] py-[calc(--spacing(3)-1px)] sm:pr-[calc(--spacing(3)-1px)] sm:pl-[calc(--spacing(9)-1px)] sm:py-[calc(--spacing(2)-1px)]'
-                  : 'px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(3)-1px)] sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)]',
+              leadingIcon ? 'pl-[calc(--spacing(10)-1px)] sm:pl-[calc(--spacing(9)-1px)]' : 'pl-[calc(--spacing(3.5)-1px)] sm:pl-[calc(--spacing(3)-1px)]',
+              trailingIcon ? 'pr-[calc(--spacing(10)-1px)] sm:pr-[calc(--spacing(9)-1px)]' : 'pr-[calc(--spacing(3.5)-1px)] sm:pr-[calc(--spacing(3)-1px)]',
+              'py-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)]',
               'file:mr-3 file:rounded-md file:border-0 file:bg-zinc-100 file:px-2.5 file:py-2 file:text-sm/6 file:font-medium file:text-zinc-950 hover:file:bg-zinc-200',
               isDateType && dateClasses,
           )}
@@ -51,6 +52,11 @@ export function Input({ className, type, leadingIcon, ...props }: InputProps): R
             {leadingIcon ? (
                 <span className='pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500 group-has-disabled:text-zinc-600 sm:pl-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
           {leadingIcon}
+        </span>
+            ) : null}
+            {trailingIcon ? (
+                <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 group-has-disabled:text-zinc-600 sm:pr-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
+          {trailingIcon}
         </span>
             ) : null}
     </span>

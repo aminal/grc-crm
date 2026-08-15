@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
+import { requireManagerOrAdmin, requireNonGuest } from "@/lib/auth/session";
 import {
   createCompany,
   createContact,
@@ -19,7 +19,7 @@ import { companyPath } from "@/lib/domain/company-slug";
 import { companySchema, contactSchema, formEntries, interactionEntrySchema, interactionSchema } from "@/lib/domain/schemas";
 
 export async function createCompanyAction(formData: FormData): Promise<void> {
-  await requireUser();
+  await requireManagerOrAdmin();
   const input = companySchema.parse(formEntries(formData));
   const company = await createCompany(input);
   revalidatePath("/companies");
@@ -27,7 +27,7 @@ export async function createCompanyAction(formData: FormData): Promise<void> {
 }
 
 export async function updateCompanyAction(companyId: string, formData: FormData): Promise<void> {
-  await requireUser();
+  await requireManagerOrAdmin();
   const input = companySchema.parse(formEntries(formData));
   const currentCompany = await findCompany(companyId);
   const company = await updateCompany(companyId, input);
@@ -40,7 +40,7 @@ export async function updateCompanyAction(companyId: string, formData: FormData)
 }
 
 export async function deleteCompanyAction(companyId: string, formData: FormData): Promise<void> {
-  await requireUser();
+  await requireManagerOrAdmin();
   if (formData.get("confirmation") !== "DELETE") {
     throw new Error("Type DELETE to confirm company deletion.");
   }
@@ -54,7 +54,7 @@ export async function deleteCompanyAction(companyId: string, formData: FormData)
 }
 
 export async function createContactAction(companyId: string, formData: FormData): Promise<void> {
-  await requireUser();
+  await requireNonGuest();
   const input = contactSchema.parse(formEntries(formData));
   await createContact(companyId, input);
   const path = await companyBasePath(companyId);
@@ -63,7 +63,7 @@ export async function createContactAction(companyId: string, formData: FormData)
 }
 
 export async function updateContactAction(companyId: string, contactId: string, formData: FormData): Promise<void> {
-  await requireUser();
+  await requireNonGuest();
   const input = contactSchema.parse(formEntries(formData));
   await updateContact(companyId, contactId, input);
   const path = await companyBasePath(companyId);
@@ -72,7 +72,7 @@ export async function updateContactAction(companyId: string, contactId: string, 
 }
 
 export async function deleteContactAction(companyId: string, contactId: string, formData: FormData): Promise<void> {
-  await requireUser();
+  await requireNonGuest();
   if (formData.get("confirmation") !== "DELETE") {
     throw new Error("Type DELETE to confirm contact deletion.");
   }
@@ -83,7 +83,7 @@ export async function deleteContactAction(companyId: string, contactId: string, 
 }
 
 export async function setPrimaryContactAction(companyId: string, contactId: string): Promise<void> {
-  await requireUser();
+  await requireManagerOrAdmin();
   await setPrimaryContact(companyId, contactId);
   const path = await companyBasePath(companyId);
   revalidatePath(path);
@@ -91,7 +91,7 @@ export async function setPrimaryContactAction(companyId: string, contactId: stri
 }
 
 export async function createInteractionAction(companyId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   const input = interactionSchema.parse(formEntries(formData));
   await createInteraction(companyId, input, user);
   const path = await companyBasePath(companyId);
@@ -100,7 +100,7 @@ export async function createInteractionAction(companyId: string, formData: FormD
 }
 
 export async function createInteractionEntryAction(companyId: string, interactionId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireNonGuest();
   const input = interactionEntrySchema.parse(formEntries(formData));
   await createInteractionEntry(companyId, interactionId, input, user);
   const path = await companyBasePath(companyId);

@@ -9,9 +9,9 @@ describe("order status rules", () => {
     expect(canTransition("approved", "delivered")).toBe(true);
     expect(canTransition("approved", "delivery_rejected")).toBe(true);
     expect(canTransition("approved", "pending")).toBe(true);
-    expect(canTransition("delivered", "approved")).toBe(true);
-    expect(canTransition("delivered", "paid")).toBe(true);
-    expect(canTransition("rejected", "approved")).toBe(true);
+    expect(canTransition("delivered", "approved")).toBe(false);
+    expect(canTransition("delivered", "paid")).toBe(false);
+    expect(canTransition("rejected", "approved")).toBe(false);
     expect(canTransition("rejected", "pending")).toBe(true);
     expect(canTransition("cancelled", "pending")).toBe(true);
     expect(canTransition("paid", "delivered")).toBe(false);
@@ -20,12 +20,13 @@ describe("order status rules", () => {
 
   it("returns the valid action set for each status", () => {
     expect(availableOrderActions("pending")).toEqual(["approve", "reject", "cancel"]);
-    expect(availableOrderActions("rejected")).toEqual(["approve", "unapprove"]);
+    expect(availableOrderActions("rejected")).toEqual(["unapprove", "close"]);
     expect(availableOrderActions("approved")).toEqual(["deliver", "delivery_reject", "unapprove"]);
-    expect(availableOrderActions("delivered")).toEqual(["undeliver", "pay"]);
-    expect(availableOrderActions("cancelled")).toEqual(["mark_pending"]);
-    expect(availableOrderActions("paid")).toEqual([]);
-    expect(availableOrderActions("delivery_rejected")).toEqual([]);
+    expect(availableOrderActions("delivered")).toEqual([]);
+    expect(availableOrderActions("cancelled")).toEqual(["mark_pending", "close"]);
+    expect(availableOrderActions("paid")).toEqual(["close"]);
+    expect(availableOrderActions("delivery_rejected")).toEqual(["close"]);
+    expect(availableOrderActions("paid", "closed")).toEqual(["reopen"]);
   });
 
   it("maps consuming order statuses to derived package statuses", () => {

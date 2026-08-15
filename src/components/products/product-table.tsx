@@ -10,10 +10,16 @@ type ProductTableProps = {
   strains: FirestoreRecord<StrainData>[];
   selectedProductId?: string;
   hrefBase?: string;
+  canManage?: boolean;
 };
 
-export function ProductTable({ products, brands, strains, selectedProductId, hrefBase = "/products" }: ProductTableProps): React.ReactElement {
-  const hasActiveStrains = strains.some((strain) => strain.data.deleted_at === null || strain.data.deleted_at === undefined);
+function isArchived(record: FirestoreRecord<BrandData | StrainData>): boolean {
+  const archived = record.data.archived_at ?? ("deleted_at" in record.data ? record.data.deleted_at : null);
+  return archived !== null && archived !== undefined;
+}
+
+export function ProductTable({ products, brands, strains, selectedProductId, hrefBase = "/products", canManage = true }: ProductTableProps): React.ReactElement {
+  const hasActiveStrains = strains.some((strain) => !isArchived(strain));
 
   if (products.length === 0) {
     if (brands.length === 0) {
@@ -25,8 +31,8 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
       : <EmptyState title="No products yet" description="Create a strain before adding your first product." />;
   }
 
-  const brandNames = new Map(brands.map((brand) => [brand.id, brand.data.name]));
-  const strainNames = new Map(strains.map((strain) => [strain.id, `${strain.data.name}${strain.data.deleted_at !== null && strain.data.deleted_at !== undefined ? " (deleted)" : ""}`]));
+  const brandNames = new Map(brands.map((brand) => [brand.id, `${brand.data.name}${isArchived(brand) ? " (archived)" : ""}`]));
+  const strainNames = new Map(strains.map((strain) => [strain.id, `${strain.data.name}${isArchived(strain) ? " (archived)" : ""}`]));
 
   function displayStrains(strainIds: string[]): string {
     return strainIds.length > 0 ? strainIds.map((strainId) => strainNames.get(strainId) ?? strainId).join(", ") : "—";
@@ -50,35 +56,47 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
           const label = `Edit ${product.data.name}`;
 
           return (
-            <TableRow key={product.id} className={cn("group cursor-pointer", selectedProductId === product.id && "bg-zinc-950/2.5 dark:bg-white/5")}>
+            <TableRow key={product.id} className={cn(canManage && "group cursor-pointer", canManage && selectedProductId === product.id && "bg-zinc-950/2.5 dark:bg-white/5")}>
               <TableCell>
-                <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
-                  <span className="absolute inset-0" />
-                  {product.data.name}
-                </Link>
+                {canManage ? (
+                  <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
+                    <span className="absolute inset-0" />
+                    {product.data.name}
+                  </Link>
+                ) : (
+                  <span className="font-semibold text-zinc-950 dark:text-white">{product.data.name}</span>
+                )}
               </TableCell>
               <TableCell>
-                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                  <span className="sr-only">{label}</span>
-                </Link>
+                {canManage ? (
+                  <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                    <span className="sr-only">{label}</span>
+                  </Link>
+                ) : null}
                 {product.data.sku || "—"}
               </TableCell>
               <TableCell>
-                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                  <span className="sr-only">{label}</span>
-                </Link>
+                {canManage ? (
+                  <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                    <span className="sr-only">{label}</span>
+                  </Link>
+                ) : null}
                 {brandNames.get(product.data.brand_id) ?? "Unknown Brand"}
               </TableCell>
               <TableCell>
-                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                  <span className="sr-only">{label}</span>
-                </Link>
+                {canManage ? (
+                  <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                    <span className="sr-only">{label}</span>
+                  </Link>
+                ) : null}
                 {displayStrains(product.data.strain_ids)}
               </TableCell>
               <TableCell>
-                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                  <span className="sr-only">{label}</span>
-                </Link>
+                {canManage ? (
+                  <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                    <span className="sr-only">{label}</span>
+                  </Link>
+                ) : null}
                 {product.data.category || "—"}
               </TableCell>
             </TableRow>

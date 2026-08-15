@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/session";
-import { createStrain, deleteStrain, updateStrain } from "@/lib/data/sales-settings";
+import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { archiveStrain, createStrain, updateStrain } from "@/lib/data/sales-settings";
 import {
   editReasonSchema,
   formEntries,
@@ -18,14 +18,14 @@ type StrainFormState = {
 };
 
 export async function createStrainAction(formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const input = strainCreateSchema.parse(formEntries(formData));
   await createStrain(input, user);
   revalidatePath("/strains");
 }
 
 export async function updateStrainAction(strainId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
+  const user = await requireManagerOrAdmin();
   const values = formEntries(formData);
   const input = strainUpdateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
@@ -33,13 +33,13 @@ export async function updateStrainAction(strainId: string, formData: FormData): 
   revalidatePath("/strains");
 }
 
-export async function deleteStrainAction(strainId: string, formData: FormData): Promise<void> {
-  const user = await requireUser();
-  if (formData.get("confirmation") !== "DELETE") {
-    throw new Error("Type DELETE to confirm strain deletion.");
+export async function archiveStrainAction(strainId: string, formData: FormData): Promise<void> {
+  const user = await requireManagerOrAdmin();
+  if (formData.get("confirmation") !== "ARCHIVE") {
+    throw new Error("Type ARCHIVE to confirm strain archive.");
   }
 
-  await deleteStrain(strainId, user, "Deleted from Strains settings.");
+  await archiveStrain(strainId, user, "Archived from Strains settings.");
   revalidatePath("/strains");
   revalidatePath("/products");
   redirect("/strains");

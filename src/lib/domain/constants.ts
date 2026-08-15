@@ -83,6 +83,8 @@ export const ORDER_STATUSES = [
   "delivery_rejected",
 ] as const;
 
+export const ORDER_STATES = ["open", "closed"] as const;
+
 export const ORDER_TERMS = ["CIA", "COD - Check", "COD - ACH", "COD - Cash", "NET-30", "NET-60", "EOM", "15 MFI", "Other"] as const;
 
 export const PAYMENT_METHODS = {
