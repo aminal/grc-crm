@@ -129,16 +129,18 @@ export default async function OrderPage({ params }: {
                 </div>
             </PageHeader>
 
-            <div className='mb-4 flex justify-center'>
+            <div className='relative sm:-mt-4 mb-4 flex justify-center'>
                 <OrderProgressBar status={order.data.status} />
             </div>
 
             <div className='grid gap-6 xl:grid-cols-[1.44fr_0.76fr]'>
                 <div className='space-y-6'>
                     <Card>
-                        <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                            <CardTitle>Packages</CardTitle>
-                            <p>{order.data.items.length} package{order.data.items.length !== 1 ? 's' : ''} for {formatMoney(order.data.total_cents)}</p>
+                        <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+                            <div>
+                                <CardTitle>Packages</CardTitle>
+                                <p className='mt-1 text-sm text-zinc-500 dark:text-zinc-400'>{order.data.items.length} package{order.data.items.length !== 1 ? 's' : ''} for {formatMoney(order.data.total_cents)}</p>
+                            </div>
                             {editableItems ?
                                 <EditPackagesDialog orderId={orderId} packages={editPackageRows} initialSelectedTags={initialSelectedTags} initialPackagePrices={initialPackagePrices} /> : null}
                         </CardHeader>
@@ -168,8 +170,21 @@ export default async function OrderPage({ params }: {
 
                     {invoice ? (
                         <Card>
-                            <CardHeader>
+                            <CardHeader className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
                                 <CardTitle>Invoice & Payments</CardTitle>
+                                {canEditDiscount || canRecordPayment ? (
+                                    <div className='flex flex-wrap gap-2 sm:justify-end'>
+                                        {canEditDiscount ? (
+                                            <DiscountDialog orderId={orderId} discount={invoice.discount ? {
+                                                type: invoice.discount.type,
+                                                value: invoice.discount.value
+                                            } : null} />
+                                        ) : null}
+                                        {canRecordPayment ? (
+                                            <RecordPaymentDialog orderId={orderId} balanceCents={invoice.balance_cents} defaultPaidAt={defaultPaidAt} />
+                                        ) : null}
+                                    </div>
+                                ) : null}
                             </CardHeader>
                             <CardContent>
                                 <div className='space-y-5'>
@@ -189,15 +204,6 @@ export default async function OrderPage({ params }: {
                                             />
                                         ) : null}
                                     </div>
-
-                                    {canEditDiscount ? (
-                                        <div className='flex justify-end'>
-                                            <DiscountDialog orderId={orderId} discount={invoice.discount ? {
-                                                type: invoice.discount.type,
-                                                value: invoice.discount.value
-                                            } : null} />
-                                        </div>
-                                    ) : null}
 
                                     <div className='space-y-3'>
                                         {invoice.payments.map((payment) => {
@@ -243,12 +249,6 @@ export default async function OrderPage({ params }: {
                                             );
                                         })}
                                     </div>
-
-                                    {canRecordPayment ? (
-                                        <div className='flex justify-end'>
-                                            <RecordPaymentDialog orderId={orderId} balanceCents={invoice.balance_cents} defaultPaidAt={defaultPaidAt} />
-                                        </div>
-                                    ) : null}
                                 </div>
                             </CardContent>
                         </Card>
@@ -346,13 +346,13 @@ function ProgressBar({ steps }: { steps: ProgressBarStep[] }): React.ReactElemen
                     <li key={step.name} className='flex items-center'>
                         <div className='relative flex size-8 shrink-0 items-center justify-center'>
                             {step.status === 'complete' ? (
-                                <div className='flex size-8 items-center justify-center rounded-full bg-purple-500'>
+                                <div className='flex size-8 items-center justify-center rounded-full bg-emerald-500'>
                                     <CheckIcon aria-hidden='true' className='z-50 size-5 text-white' />
                                     <span className='sr-only'>{step.name}</span>
                                 </div>
                             ) : step.status === 'current' ? (
-                                <div aria-current='step' className='flex size-8 items-center justify-center rounded-full border-2 border-purple-600 bg-white'>
-                                    <ClockIcon aria-hidden='true' className='size-5 text-purple-500' />
+                                <div aria-current='step' className='flex size-8 items-center justify-center rounded-full border-2 border-purple-700 bg-purple-500'>
+                                    <ClockIcon aria-hidden='true' className='size-5 text-white' />
                                     <span className='sr-only'>{step.name}</span>
                                 </div>
                             ) : step.status === 'failed' ? (
@@ -361,14 +361,14 @@ function ProgressBar({ steps }: { steps: ProgressBarStep[] }): React.ReactElemen
                                     <span className='sr-only'>{step.name}</span>
                                 </div>
                             ) : (
-                                <div className='flex size-8 items-center justify-center rounded-full border-2 border-gray-300 bg-white'>
+                                <div className='flex size-8 items-center justify-center rounded-full border-2 border-purple-600 bg-purple-600'>
                                     <span aria-hidden='true' className='size-2.5 rounded-full bg-transparent' />
                                     <span className='sr-only'>{step.name}</span>
                                 </div>
                             )}
                             <div className='absolute left-1/2 top-8 -translate-x-1/2 whitespace-nowrap pt-2 text-center uppercase text-[0.625rem] font-bold tracking-widest'>{step.name}</div>
                         </div>
-                        {stepIdx !== steps.length - 1 ? <div aria-hidden='true' className={step.status === 'complete' ? 'h-0.5 w-8 bg-purple-500 sm:w-20' : 'h-0.5 w-8 bg-gray-200 sm:w-20'} /> : null}
+                        {stepIdx !== steps.length - 1 ? <div aria-hidden='true' className={step.status === 'complete' ? 'h-0.5 w-8 bg-emerald-500 sm:w-20' : 'h-0.5 w-8 bg-purple-600 sm:w-20'} /> : null}
                     </li>
                 ))}
             </ol>
