@@ -95,7 +95,7 @@ export default async function SalesPage({ searchParams }: {
 
             <div className='mb-5 sm:hidden'>
                 <Dropdown>
-                    <DropdownButton className={buttonClasses('plain', 'w-full justify-between bg-zinc-50 dark:bg-zinc-950/40')}>
+                    <DropdownButton className={buttonClasses('plain', 'w-full justify-between bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-500/15 dark:text-purple-300 dark:hover:bg-purple-500/20')}>
                         {activeSalesTab.label}
                         <ChevronDown data-slot='icon' aria-hidden='true' />
                     </DropdownButton>
@@ -110,13 +110,13 @@ export default async function SalesPage({ searchParams }: {
                 </Dropdown>
             </div>
 
-            <div className='mb-5 hidden gap-2 overflow-x-auto rounded-lg bg-zinc-50 p-2.5 dark:bg-zinc-950/40 sm:flex'>
+            <nav aria-label='Sales status' className='mb-5 hidden gap-2 overflow-x-auto sm:flex'>
                 {salesTabs.map((tab) => (
-                    <Link key={tab.key} href={salesHref(tab.key, query)} aria-current={status === tab.key ? 'page' : undefined} className={cn('rounded-lg px-6 py-2.5 uppercase text-sm font-semibold text-zinc-600 transition hover:text-zinc-950/95 dark:hover:text-white', status === tab.key && ' bg-zinc-300 dark:bg-zinc-950 text-zinc-950/65 dark:text-white')}>
+                    <Link key={tab.key} href={salesHref(tab.key, query)} aria-current={status === tab.key ? 'page' : undefined} className={cn('shrink-0 rounded-md px-3 py-2 text-sm font-medium text-zinc-500 transition hover:text-zinc-700 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:text-zinc-400 dark:hover:text-white', status === tab.key && 'bg-purple-100 text-purple-700 hover:text-purple-700 dark:bg-purple-500/15 dark:text-purple-300 dark:hover:text-purple-300')}>
                         {tab.label}
                     </Link>
                 ))}
-            </div>
+            </nav>
 
             <div className='space-y-6'>
                 <TableSearch query={query} placeholder='Filter sales by order, company, status, or package' preservedParams={preservedParams} />

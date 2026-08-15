@@ -11,7 +11,12 @@ type TableSearchProps = {
     preservedParams?: Record<string, string>;
 };
 
-export function TableSearch({ query, placeholder, paramName = 'q', preservedParams }: TableSearchProps): React.ReactElement {
+export function TableSearch({
+    query,
+    placeholder,
+    paramName = 'q',
+    preservedParams
+}: TableSearchProps): React.ReactElement {
     const pathname = usePathname();
     const router = useRouter();
     const [value, setValue] = useState(query);
@@ -71,7 +76,15 @@ export function TableSearch({ query, placeholder, paramName = 'q', preservedPara
                 applySearch(value.trim());
             }}
         >
-            <Input type='search' name={paramName} value={value} onChange={(event) => setValue(event.target.value)} placeholder={placeholder} aria-label={placeholder} />
+            <Input
+                type='search'
+                name={paramName}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+                placeholder={placeholder}
+                aria-label={placeholder}
+                className='text-sm/6! sm:text-sm/6!'
+            />
         </form>
     );
 }
