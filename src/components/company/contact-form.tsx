@@ -47,13 +47,13 @@ export function ContactForm({ contact, action, submitLabel, footerStart, footerE
           <div className="flex">{footerStart}</div>
           <div className="flex gap-3">
             {footerEnd}
-            <Button>{submitLabel}</Button>
+            <Button color="purple">{submitLabel}</Button>
           </div>
         </div>
       ) : (
         <div className="flex justify-end gap-3 sm:col-span-2">
           {footerEnd}
-          <Button>{submitLabel}</Button>
+          <Button color="purple">{submitLabel}</Button>
         </div>
       )}
     </form>

@@ -29,7 +29,7 @@ export function MetrcUploadDialog(): React.ReactElement {
 
   return (
     <>
-      <Button type="button" onClick={openDialog}>
+      <Button type="button" color="purple" onClick={openDialog}>
         <RefreshCcwDotIcon data-slot="icon" aria-hidden="true" />
         Sync Inventory
       </Button>
@@ -65,7 +65,7 @@ function MetrcUploadForm({ onSuccess }: { onSuccess: () => void }): React.ReactE
       <Field label="Active Packages .xlsx">
         <Input name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required disabled={pending} />
       </Field>
-      <Button disabled={pending}>{pending ? "Syncing Inventory..." : "Sync Inventory"}</Button>
+      <Button color="purple" disabled={pending}>{pending ? "Syncing Inventory..." : "Sync Inventory"}</Button>
     </form>
   );
 }

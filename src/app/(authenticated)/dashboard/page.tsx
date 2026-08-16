@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/page-header";
 import { StatusBadge } from "@/components/ui/badge";
-import { buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth/session";
 import { listCompanies } from "@/lib/data/crm";
@@ -29,7 +29,7 @@ export default async function DashboardPage(): Promise<React.ReactElement> {
       <PageHeader
         title="Dashboard"
         description="Operational snapshot for CRM accounts, METRC inventory, active sales orders, and invoice balances."
-        actions={<Link href="/sales/create" className={buttonClasses()}>Create Order</Link>}
+        actions={<Button color="purple" href="/sales/create">Create Order</Button>}
       />
 
       <div className="grid gap-8 sm:grid-cols-2 xl:grid-cols-4">

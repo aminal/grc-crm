@@ -35,7 +35,7 @@ export default async function ProfilePage({ searchParams }: {
                             <Input name='display_name' defaultValue={profile?.data.display_name ?? user.name ?? ''} required />
                         </Field>
                         <div className='flex justify-end'>
-                            <Button>Save Profile</Button>
+                            <Button color='purple'>Save Profile</Button>
                         </div>
                     </form>
                 </CardContent>

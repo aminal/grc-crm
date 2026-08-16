@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PageHeader } from '@/components/layout/page-header';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { requireNonGuest } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
@@ -56,7 +55,7 @@ export default async function InventoryGroupPage({ params }: {
         <div>
             <PageHeader
                 title={group.item}
-                actions={<Link href='/sales/create' className={buttonClasses()}>Create Order</Link>}
+                actions={<Button color='purple' href='/sales/create'>Create Order</Button>}
                 description={'Source Package: ' + (group.source_packages || 'unknown source')}
             >
                 <div className='flex flex-wrap items-center gap-2 text-base/6 font-medium text-zinc-500 sm:text-base/6 dark:text-zinc-400'>

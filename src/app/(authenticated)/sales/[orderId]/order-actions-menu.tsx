@@ -2,7 +2,7 @@
 
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/20/solid';
 import { useState } from 'react';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { DeleteConfirmationDialog, Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownLabel, DropdownMenu } from '@/components/ui/dropdown';
 import { Field, Input } from '@/components/ui/field';
@@ -18,6 +18,8 @@ import {
     unapproveOrderAction,
 } from '../actions';
 import { RecordPaymentDialog } from './record-payment-dialog';
+
+const actionsButtonClasses = 'relative isolate inline-flex items-baseline justify-center gap-x-2 rounded-lg border text-base/6 font-semibold px-[calc(--spacing(3.5)-1px)] py-[calc(--spacing(2.5)-1px)] sm:px-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(1.5)-1px)] sm:text-sm/6 focus:not-data-focus:outline-hidden data-focus:outline-2 data-focus:outline-offset-2 data-focus:outline-blue-500 data-disabled:opacity-50 *:data-[slot=icon]:-mx-0.5 *:data-[slot=icon]:my-0.5 *:data-[slot=icon]:size-5 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:self-center *:data-[slot=icon]:text-(--btn-icon) sm:*:data-[slot=icon]:my-1 sm:*:data-[slot=icon]:size-4 forced-colors:[--btn-icon:ButtonText] forced-colors:data-hover:[--btn-icon:ButtonText] border-transparent bg-(--btn-border) dark:bg-(--btn-bg) before:absolute before:inset-0 before:-z-10 before:rounded-[calc(var(--radius-lg)-1px)] before:bg-(--btn-bg) before:shadow-sm dark:before:hidden dark:border-white/5 after:absolute after:inset-0 after:-z-10 after:rounded-[calc(var(--radius-lg)-1px)] after:shadow-[inset_0_1px_--theme(--color-white/15%)] data-active:after:bg-(--btn-hover-overlay) data-hover:after:bg-(--btn-hover-overlay) dark:after:-inset-px dark:after:rounded-lg data-disabled:before:shadow-none data-disabled:after:shadow-none text-white [--btn-hover-overlay:var(--color-white)]/10 [--btn-bg:var(--color-purple-500)] [--btn-border:var(--color-purple-600)]/90 [--btn-icon:var(--color-white)] data-active:[--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)] dark:[--btn-icon:var(--color-white)] dark:data-hover:[--btn-icon:var(--color-white)] dark:data-active:[--btn-icon:var(--color-white)]';
 
 type InvoiceApprovalDefaults = {
     invoiceNumber: string;
@@ -73,7 +75,7 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
     return (
         <>
             <Dropdown>
-                <DropdownButton className={buttonClasses('primary', '[--btn-icon:var(--color-white)] hover:[--btn-icon:var(--color-white)] active:[--btn-icon:var(--color-white)] dark:[--btn-icon:var(--color-white)] dark:hover:[--btn-icon:var(--color-white)] dark:active:[--btn-icon:var(--color-white)]')}>
+                <DropdownButton className={actionsButtonClasses}>
                     Actions
                     <ChevronDownIcon data-slot='icon' aria-hidden='true' />
                 </DropdownButton>
@@ -172,8 +174,8 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                             </Field>
                         </div>
                         <DialogActions>
-                            <Button type='button' variant='plain' onClick={closeCreateInvoiceDialog}>Cancel</Button>
-                            <Button>Create Invoice and Approve</Button>
+                            <Button type='button' plain onClick={closeCreateInvoiceDialog}>Cancel</Button>
+                            <Button color='purple'>Create Invoice and Approve</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>
@@ -198,8 +200,8 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                             <Input name='delivered_at' type='datetime-local' defaultValue={new Date().toISOString().slice(0, 16)} required autoFocus />
                         </Field>
                         <DialogActions>
-                            <Button type='button' variant='plain' onClick={closeDeliverDialog}>Cancel</Button>
-                            <Button>Mark Delivered</Button>
+                            <Button type='button' plain onClick={closeDeliverDialog}>Cancel</Button>
+                            <Button color='purple'>Mark Delivered</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>
@@ -252,8 +254,8 @@ function ConfirmOrderActionDialog({ actionType, orderId, orderNumber, onClose }:
             <DialogBody>
                 <form action={confirmationServerAction(actionType, orderId)}>
                     <DialogActions>
-                        <Button type='button' variant='plain' onClick={onClose}>Cancel</Button>
-                        <Button type='submit' variant='danger'>{details.submitLabel}</Button>
+                        <Button type='button' plain onClick={onClose}>Cancel</Button>
+                        <Button type='submit' color='red'>{details.submitLabel}</Button>
                     </DialogActions>
                 </form>
             </DialogBody>

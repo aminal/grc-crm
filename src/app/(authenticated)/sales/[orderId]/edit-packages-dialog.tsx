@@ -25,7 +25,7 @@ export function EditPackagesDialog({ orderId, packages, initialSelectedTags, ini
 
   return (
     <>
-      <Button type="button" variant="primary" size="sm" onClick={() => setIsOpen(true)}>Edit</Button>
+      <Button type="button" color="purple" className="px-[calc(--spacing(2)+1px)]! py-[calc(--spacing(2)-3px)]! text-[0.86rem]/5! tracking-wide!" onClick={() => setIsOpen(true)}>Edit</Button>
       <Dialog size="5xl" open={isOpen} onClose={close} className="relative">
         <Headless.CloseButton
           className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
@@ -50,7 +50,7 @@ export function EditPackagesDialog({ orderId, packages, initialSelectedTags, ini
               )}
             </Card>
             <div className="flex justify-end">
-              <Button disabled={packages.length === 0}>Save Packages</Button>
+              <Button color="purple" disabled={packages.length === 0}>Save Packages</Button>
             </div>
           </form>
         </DialogBody>

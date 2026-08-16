@@ -116,8 +116,8 @@ function OpenDeleteConfirmationDialog({ open, onClose, title, description, actio
             />
           </div>
           <DialogActions>
-            <Button type="button" variant="secondary" onClick={close}>Cancel</Button>
-            <Button type="submit" variant="danger" disabled={!canSubmit}>{submitLabel}</Button>
+            <Button type="button" color="emerald" onClick={close}>Cancel</Button>
+            <Button type="submit" color="red" disabled={!canSubmit}>{submitLabel}</Button>
           </DialogActions>
         </form>
       </DialogBody>

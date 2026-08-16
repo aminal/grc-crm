@@ -12,7 +12,7 @@ export function NewCompanyDialog({ initialOpen = false }: { initialOpen?: boolea
 
     return (
         <>
-            <Button type='button' onClick={() => setIsOpen(true)}>
+            <Button type='button' color='purple' onClick={() => setIsOpen(true)}>
                 <Plus data-slot='icon' aria-hidden='true' />
                 New Company
             </Button>
@@ -35,7 +35,7 @@ export function NewCompanyDialog({ initialOpen = false }: { initialOpen?: boolea
                     <CompanyForm
                         action={createCompanyAction}
                         submitLabel='Create Company'
-                        footerEnd={<Button type='button' variant='plain' onClick={() => setIsOpen(false)}>Cancel</Button>}
+                        footerEnd={<Button type='button' plain onClick={() => setIsOpen(false)}>Cancel</Button>}
                     />
                 </DialogBody>
             </Dialog>
@@ -58,7 +58,7 @@ export function EditCompanyDialog({ companyId, company }: { companyId: string; c
 
     return (
         <>
-            <Button type='button' variant='primary' onClick={() => setIsOpen(true)}>
+            <Button type='button' color='purple' onClick={() => setIsOpen(true)}>
                 <Pencil data-slot='icon' aria-hidden='true' />
                 Edit
             </Button>
@@ -81,8 +81,8 @@ export function EditCompanyDialog({ companyId, company }: { companyId: string; c
                         company={company}
                         action={updateCompanyAction.bind(null, companyId)}
                         submitLabel='Save Company'
-                        footerStart={<Button type='button' variant='danger' onClick={() => setIsDeleteOpen(true)}>Delete Company</Button>}
-                        footerEnd={<Button type='button' variant='plain' onClick={closeEditDialog}>Cancel</Button>}
+                        footerStart={<Button type='button' color='red' onClick={() => setIsDeleteOpen(true)}>Delete Company</Button>}
+                        footerEnd={<Button type='button' plain onClick={closeEditDialog}>Cancel</Button>}
                     />
                 </DialogBody>
             </Dialog>

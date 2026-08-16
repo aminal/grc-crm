@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { CompanyTabs } from "@/components/company/company-tabs";
-import { buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { requireNonGuest } from "@/lib/auth/session";
 import { listOrdersForCompany } from "@/lib/data/orders";
@@ -19,7 +19,7 @@ export default async function CompanyOrdersPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={<Link href={`/sales/create?company_slug=${encodeURIComponent(companySlug)}`} className={buttonClasses()}>Create Order</Link>} />
+      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={<Button color="purple" href={`/sales/create?company_slug=${encodeURIComponent(companySlug)}`}>Create Order</Button>} />
       <CompanyTabs companySlug={companySlug} active="orders" />
 
       <div className="mt-4">

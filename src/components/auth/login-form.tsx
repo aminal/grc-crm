@@ -59,7 +59,7 @@ export function LoginForm(): React.ReactElement {
                 : null
             }
 
-            <Button type='button' className='w-full' onClick={signIn} disabled={loading}>
+            <Button type='button' color='purple' className='w-full' onClick={signIn} disabled={loading}>
                 {loading ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : null}
                 Sign In
             </Button>

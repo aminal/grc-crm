@@ -17,7 +17,7 @@ export function LogInteractionDialog({ companyId }: { companyId: string }): Reac
 
   return (
     <>
-      <Button type="button" onClick={() => setIsOpen(true)}>
+      <Button type="button" color="purple" onClick={() => setIsOpen(true)}>
         <Plus data-slot="icon" aria-hidden="true" />
         Log Interaction
       </Button>
@@ -48,8 +48,8 @@ export function LogInteractionDialog({ companyId }: { companyId: string }): Reac
               <Textarea name="discussion_notes" required />
             </Field>
             <DialogActions>
-              <Button type="button" variant="plain" onClick={close}>Cancel</Button>
-              <Button>Log Interaction</Button>
+              <Button type="button" plain onClick={close}>Cancel</Button>
+              <Button color="purple">Log Interaction</Button>
             </DialogActions>
           </form>
         </DialogBody>

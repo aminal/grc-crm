@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StrainDialog } from "@/components/strains/strain-dialog";
 import { StrainTable, type StrainTableStrain } from "@/components/strains/strain-table";
-import { buttonClasses } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TableSearch } from "@/components/ui/table-search";
 import { canManageRestrictedResources, requireNonGuest } from "@/lib/auth/session";
@@ -121,10 +120,10 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
       <PageHeader
         title="Strains"
         actions={canManage ? (
-          <Link href={createStrainHref} className={buttonClasses()}>
+          <Button color="purple" href={createStrainHref}>
             <Plus data-slot="icon" aria-hidden="true" />
             Add Strain
-          </Link>
+          </Button>
         ) : null}
       />
       <div className="space-y-6">

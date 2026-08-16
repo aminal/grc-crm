@@ -79,10 +79,10 @@ export function EditUserDialog({
             <p className="text-sm text-red-500">{state.error}</p>
           )}
           <div className="flex justify-end gap-x-3">
-            <Button type="button" variant="plain" onClick={close}>
+            <Button type="button" plain onClick={close}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending}>
+            <Button type="submit" color="purple" disabled={pending}>
               {pending ? "Saving..." : "Save Changes"}
             </Button>
           </div>

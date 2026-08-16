@@ -82,7 +82,7 @@ export default async function CompanyActivityPage({ params }: {
                                             </summary>
                                             <form action={createInteractionEntryAction.bind(null, companyId, interaction.id)} className='text-right mt-4 space-y-3 '>
                                                 <Textarea name='discussion_notes' required placeholder='' />
-                                                <Button variant='primary'>Add Reply</Button>
+                                                <Button color='purple'>Add Reply</Button>
                                             </form>
                                         </details>
                                     </div>

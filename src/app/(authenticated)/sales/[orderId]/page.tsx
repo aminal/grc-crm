@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { FacilityBadge } from '@/components/company/facility-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import { Field, Input, Select } from '@/components/ui/field';
 import { PAYMENT_METHODS } from '@/lib/domain/constants';
@@ -234,11 +234,10 @@ export default async function OrderPage({ params }: {
                                                             <Field label='Check number'>
                                                                 <Input name='check_number' defaultValue={payment.check_number} />
                                                             </Field>
-                                                            <Button variant='secondary'>Save Payment</Button>
+                                                            <Button color='emerald'>Save Payment</Button>
                                                         </form>
                                                         <form action={deletePaymentAction.bind(null, orderId, payment.id)}>
-                                                            <button className={buttonClasses('danger')}>Delete Payment
-                                                            </button>
+                                                            <Button color='red'>Delete Payment</Button>
                                                         </form>
                                                     </div>
                                                 </details>

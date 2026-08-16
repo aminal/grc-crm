@@ -141,7 +141,7 @@ export function PackagePicker({
         return `Price per unit: ${formatMoney(unitCents)}${unitLabel}`;
     }
 
-    const addPackagesButton = <Button type='button' variant='secondary' onClick={() => setDialogOpen(true)}>+ Add
+    const addPackagesButton = <Button type='button' color='emerald' onClick={() => setDialogOpen(true)}>+ Add
         Packages</Button>;
     const packageContent = (
         <>
@@ -176,7 +176,7 @@ export function PackagePicker({
                                         <Input name={`package_prices[${packageRecord.package_tag}]`} inputMode='decimal' placeholder='0.00' value={prices[packageRecord.package_tag] ?? ''} onChange={(event) => updatePrice(packageRecord, event.target.value)} required />
                                     </TableCell>
                                     <TableCell className='text-right'>
-                                        <Button type='button' variant='plain' size='sm' onClick={() => removePackage(packageRecord)} aria-label={`Remove ${packageRecord.item || packageRecord.package_tag}`}>
+                                        <Button type='button' plain className='px-2! py-1! *:data-[slot=icon]:size-4!' onClick={() => removePackage(packageRecord)} aria-label={`Remove ${packageRecord.item || packageRecord.package_tag}`}>
                                             <Trash2 data-slot='icon' aria-hidden='true' />
                                         </Button>
                                     </TableCell>
@@ -297,7 +297,7 @@ export function PackagePicker({
                 </div>
             </DialogBody>
             <DialogActions>
-                <Button type='button' variant='secondary' onClick={() => setDialogOpen(false)}>Done</Button>
+                <Button type='button' color='emerald' onClick={() => setDialogOpen(false)}>Done</Button>
             </DialogActions>
         </Dialog>
     );

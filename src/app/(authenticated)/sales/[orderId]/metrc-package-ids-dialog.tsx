@@ -51,9 +51,8 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
     <>
       <Button
         type="button"
-        variant="secondary"
-        size="xs"
-        className="[--btn-icon:var(--color-white)] hover:[--btn-icon:var(--color-white)] active:[--btn-icon:var(--color-white)] dark:hover:[--btn-icon:var(--color-white)] dark:active:[--btn-icon:var(--color-white)]"
+        color="emerald"
+        className="px-2! py-1! *:data-[slot=icon]:size-4! [--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)] data-active:[--btn-icon:var(--color-white)] dark:data-hover:[--btn-icon:var(--color-white)] dark:data-active:[--btn-icon:var(--color-white)]"
         onClick={() => setIsOpen(true)}
         aria-label="Package details"
       >

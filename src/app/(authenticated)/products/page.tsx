@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { ProductDialog } from '@/components/products/product-dialog';
 import { ProductTable } from '@/components/products/product-table';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSearch } from '@/components/ui/table-search';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
@@ -204,10 +203,10 @@ export default async function ProductsPage({ searchParams }: {
             <PageHeader
                 title='Products'
                 actions={canManage ? (
-                    <Link href={createProductHref} className={buttonClasses()}>
+                    <Button color='purple' href={createProductHref}>
                         <Plus data-slot='icon' aria-hidden='true' />
                         Add Product
-                    </Link>
+                    </Button>
                 ) : null}
             />
             <div className='space-y-6'>

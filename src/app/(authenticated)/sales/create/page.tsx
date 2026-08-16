@@ -115,7 +115,7 @@ export default async function CreateOrderPage({ searchParams }: {
                 </Card>
 
                 <div className='flex justify-end'>
-                    <Button>Create Order</Button>
+                    <Button color='purple'>Create Order</Button>
                 </div>
             </form>
         </div>

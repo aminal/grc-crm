@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge, StatusBadge } from '@/components/ui/badge';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { TableSearch } from '@/components/ui/table-search';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
@@ -44,10 +44,10 @@ export default async function InventoryPage({ searchParams }: {
                 actions={(
                     <>
                         {canManage ? <MetrcUploadDialog /> : null}
-                        <Link href='/sales/create' className={buttonClasses()}>
+                        <Button color='purple' href='/sales/create'>
                             <Plus data-slot='icon' aria-hidden='true' />
                             New Order
-                        </Link>
+                        </Button>
                     </>
                 )}
             />

@@ -1,9 +1,8 @@
-import Link from 'next/link';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { BrandDialog } from '@/components/brands/brand-dialog';
 import { BrandTable } from '@/components/brands/brand-table';
-import { buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { TableSearch } from '@/components/ui/table-search';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
@@ -101,10 +100,10 @@ export default async function BrandsPage({ searchParams }: {
             <PageHeader
                 title='Brands'
                 actions={canManage ? (
-                    <Link href={createBrandHref} className={buttonClasses()}>
+                    <Button color='purple' href={createBrandHref}>
                         <Plus data-slot='icon' aria-hidden='true' />
                         Add Brand
-                    </Link>
+                    </Button>
                 ) : null}
             />
             <div className='space-y-6'>

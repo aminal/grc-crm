@@ -5,7 +5,7 @@ import { Pencil, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 import { createContactAction, deleteContactAction, setPrimaryContactAction, updateContactAction } from '@/app/(authenticated)/companies/actions';
 import { ContactForm, type ContactFormValues } from '@/components/company/contact-form';
-import { Button, buttonClasses } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import {
     DeleteConfirmationDialog,
     Dialog,
@@ -24,7 +24,7 @@ export function AddContactDialog({ companyId }: { companyId: string }): React.Re
 
     return (
         <>
-            <Button type='button' onClick={() => setIsOpen(true)}>
+            <Button type='button' color='purple' onClick={() => setIsOpen(true)}>
                 <Plus className='size-5 shrink-0 sm:size-4' aria-hidden='true' />
                 Add Contact
             </Button>
@@ -45,7 +45,7 @@ export function AddContactDialog({ companyId }: { companyId: string }): React.Re
                     <ContactForm
                         action={createContactAction.bind(null, companyId)}
                         submitLabel='Add Contact'
-                        footerEnd={<Button type='button' variant='plain' onClick={close}>Cancel</Button>}
+                        footerEnd={<Button type='button' plain onClick={close}>Cancel</Button>}
                     />
                 </DialogBody>
             </Dialog>
@@ -100,7 +100,7 @@ export function ViewContactDialog({
                     <div className='flex items-start gap-2'>
                         {canManageCompany && !isPrimary ? (
                             <form action={setPrimaryContactAction.bind(null, companyId, contactId)}>
-                                <Button type='submit' variant='primary' size='sm'>Make Primary</Button>
+                                <Button type='submit' color='purple' className='px-[calc(--spacing(2)+1px)]! py-[calc(--spacing(2)-3px)]! text-[0.86rem]/5! tracking-wide!'>Make Primary</Button>
                             </form>
                         ) : null}
                         <button
@@ -121,9 +121,9 @@ export function ViewContactDialog({
                             action={updateContactAction.bind(null, companyId, contactId)}
                             submitLabel='Save Contact'
                             footerStart={
-                                <Button type='button' variant='danger' onClick={() => setIsDeleteOpen(true)}>Delete</Button>}
+                                <Button type='button' color='red' onClick={() => setIsDeleteOpen(true)}>Delete</Button>}
                             footerEnd={
-                                <Button type='button' variant='plain' onClick={() => setIsEditing(false)}>Cancel</Button>}
+                                <Button type='button' plain onClick={() => setIsEditing(false)}>Cancel</Button>}
                         />
                     ) : (
                         <>
@@ -161,10 +161,10 @@ export function ViewContactDialog({
                                 </section>
                             </div>
                             <DialogActions>
-                                <Button type='button' variant='plain' onClick={close}>Close</Button>
+                                <Button type='button' plain onClick={close}>Close</Button>
                                 {callUrl ?
-                                    <a href={callUrl} target='_blank' rel='noreferrer' className={buttonClasses('secondary')}>Call</a> : null}
-                                <Button type='button' onClick={() => setIsEditing(true)}>
+                                    <Button href={callUrl} target='_blank' rel='noreferrer' color='emerald'>Call</Button> : null}
+                                <Button type='button' color='purple' onClick={() => setIsEditing(true)}>
                                     <Pencil data-slot='icon' aria-hidden='true' />
                                     Edit
                                 </Button>

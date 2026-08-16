@@ -50,7 +50,7 @@ export function DiscountDialog({ orderId, discount }: DiscountDialogProps): Reac
 
   return (
     <>
-      <Button type="button" variant="primary" onClick={open}>{title}</Button>
+      <Button type="button" color="purple" onClick={open}>{title}</Button>
       <Dialog size="lg" open={isOpen} onClose={close} className="relative">
         <Headless.CloseButton
           className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
@@ -86,8 +86,8 @@ export function DiscountDialog({ orderId, discount }: DiscountDialogProps): Reac
               </Field>
             </div>
             <DialogActions>
-              <Button type="button" variant="plain" onClick={close}>Cancel</Button>
-              <Button type="submit">{title}</Button>
+              <Button type="button" plain onClick={close}>Cancel</Button>
+              <Button type="submit" color="purple">{title}</Button>
             </DialogActions>
           </form>
         </DialogBody>

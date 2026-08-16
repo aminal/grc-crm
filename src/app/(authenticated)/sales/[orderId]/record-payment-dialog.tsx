@@ -37,7 +37,7 @@ export function RecordPaymentDialog({
 
     return (
         <>
-            {showTrigger ? <Button type='button' variant='secondary' onClick={() => setIsInternalOpen(true)}>Record
+            {showTrigger ? <Button type='button' color='emerald' onClick={() => setIsInternalOpen(true)}>Record
                 Payment</Button> : null}
             <Dialog size='lg' open={isOpen} onClose={close} className='relative'>
                 <Headless.CloseButton
@@ -68,8 +68,8 @@ export function RecordPaymentDialog({
                             </Field>
                         ) : null}
                         <DialogActions className='sm:col-span-2'>
-                            <Button type='button' variant='plain' onClick={close}>Cancel</Button>
-                            <Button type='submit'>Record Payment</Button>
+                            <Button type='button' plain onClick={close}>Cancel</Button>
+                            <Button type='submit' color='purple'>Record Payment</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>
