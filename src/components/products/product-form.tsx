@@ -169,7 +169,7 @@ export function ProductForm({
       <DialogActions>
         {onArchive ? <Button type="button" color="red" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" plain onClick={onCancel} disabled={pending}>Cancel</Button>
-        <Button color="purple" disabled={pending || !canChooseBrand || !hasActiveStrains}>{pending ? pendingLabel : submitLabel}</Button>
+        <Button type="submit" color="purple" disabled={pending || !canChooseBrand || !hasActiveStrains}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>
     </form>
   );

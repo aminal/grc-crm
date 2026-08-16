@@ -234,10 +234,10 @@ export default async function OrderPage({ params }: {
                                                             <Field label='Check number'>
                                                                 <Input name='check_number' defaultValue={payment.check_number} />
                                                             </Field>
-                                                            <Button color='emerald'>Save Payment</Button>
+                                                            <Button type='submit' color='emerald'>Save Payment</Button>
                                                         </form>
                                                         <form action={deletePaymentAction.bind(null, orderId, payment.id)}>
-                                                            <Button color='red'>Delete Payment</Button>
+                                                            <Button type='submit' color='red'>Delete Payment</Button>
                                                         </form>
                                                     </div>
                                                 </details>

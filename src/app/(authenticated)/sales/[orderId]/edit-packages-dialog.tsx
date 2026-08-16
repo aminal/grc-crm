@@ -50,7 +50,7 @@ export function EditPackagesDialog({ orderId, packages, initialSelectedTags, ini
               )}
             </Card>
             <div className="flex justify-end">
-              <Button color="purple" disabled={packages.length === 0}>Save Packages</Button>
+              <Button type="submit" color="purple" disabled={packages.length === 0}>Save Packages</Button>
             </div>
           </form>
         </DialogBody>

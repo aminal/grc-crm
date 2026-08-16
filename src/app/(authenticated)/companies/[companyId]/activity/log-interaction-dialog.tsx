@@ -49,7 +49,7 @@ export function LogInteractionDialog({ companyId }: { companyId: string }): Reac
             </Field>
             <DialogActions>
               <Button type="button" plain onClick={close}>Cancel</Button>
-              <Button color="purple">Log Interaction</Button>
+              <Button type="submit" color="purple">Log Interaction</Button>
             </DialogActions>
           </form>
         </DialogBody>

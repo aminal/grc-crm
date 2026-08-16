@@ -175,7 +175,7 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                         </div>
                         <DialogActions>
                             <Button type='button' plain onClick={closeCreateInvoiceDialog}>Cancel</Button>
-                            <Button color='purple'>Create Invoice and Approve</Button>
+                            <Button type='submit' color='purple'>Create Invoice and Approve</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>
@@ -201,7 +201,7 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                         </Field>
                         <DialogActions>
                             <Button type='button' plain onClick={closeDeliverDialog}>Cancel</Button>
-                            <Button color='purple'>Mark Delivered</Button>
+                            <Button type='submit' color='purple'>Mark Delivered</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>

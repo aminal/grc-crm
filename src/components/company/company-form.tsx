@@ -137,13 +137,13 @@ export function CompanyForm({ company, action, submitLabel, footerStart, footerE
           <div className="flex">{footerStart}</div>
           <div className="flex gap-3">
             {footerEnd}
-            <Button color="purple">{submitLabel}</Button>
+            <Button type="submit" color="purple">{submitLabel}</Button>
           </div>
         </div>
       ) : (
         <div className="flex gap-3 sm:col-span-6 sm:justify-end">
           {footerEnd}
-          <Button color="purple">{submitLabel}</Button>
+          <Button type="submit" color="purple">{submitLabel}</Button>
         </div>
       )}
     </form>

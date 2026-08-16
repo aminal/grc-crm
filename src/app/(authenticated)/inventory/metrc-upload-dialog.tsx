@@ -65,7 +65,7 @@ function MetrcUploadForm({ onSuccess }: { onSuccess: () => void }): React.ReactE
       <Field label="Active Packages .xlsx">
         <Input name="file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required disabled={pending} />
       </Field>
-      <Button color="purple" disabled={pending}>{pending ? "Syncing Inventory..." : "Sync Inventory"}</Button>
+      <Button type="submit" color="purple" disabled={pending}>{pending ? "Syncing Inventory..." : "Sync Inventory"}</Button>
     </form>
   );
 }
