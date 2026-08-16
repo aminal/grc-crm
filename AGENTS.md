@@ -14,6 +14,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 This is **Green Room CRM**, a private CRM, METRC inventory, product catalog, sales-order, invoice, and payment lifecycle app for Green Room Cannabis.
 
+The app is live in production. Treat changes as production-impacting, preserve existing production data, and avoid backwards-incompatible schema or workflow changes unless explicitly requested.
+
 Use this file as the first source of project context. `./CLAUDE.md` only references `./AGENTS.md`. `./README.md` is still default create-next-app boilerplate and should not be treated as app-specific truth.
 
 ## Stack
