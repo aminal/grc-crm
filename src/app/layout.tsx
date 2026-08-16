@@ -22,7 +22,7 @@ const themeScript = `
 `;
 
 export const metadata: Metadata = {
-  title: "Green Room GRC",
+  title: "GRC CRM",
   description: "CRM, METRC inventory, and sales lifecycle management for Green Room Cannabis.",
   manifest: "/manifest.json",
   icons: {

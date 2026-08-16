@@ -8,11 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-# Green Room GRC App Guide
+# GRC CRM App Guide
 
 ## Purpose
 
-This is **Green Room CRM**, a private CRM, METRC inventory, product catalog, sales-order, invoice, and payment lifecycle app for Green Room Cannabis.
+This is **GRC CRM**, a private CRM, METRC inventory, product catalog, sales-order, invoice, and payment lifecycle app for Green Room Cannabis.
 
 The app is live in production. Treat changes as production-impacting, preserve existing production data, and avoid backwards-incompatible schema or workflow changes unless explicitly requested.
 

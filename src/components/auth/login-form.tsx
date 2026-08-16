@@ -45,7 +45,7 @@ export function LoginForm(): React.ReactElement {
             <div className='flex gap-3 mb-8 items-center justify-center'>
                 <Image
                     src='/web-app-manifest-192x192.png'
-                    alt='Green Room'
+                    alt='Green Room Cannabis'
                     width={192}
                     height={192}
                     className='size-10 rounded-lg'
