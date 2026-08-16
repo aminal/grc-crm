@@ -6,6 +6,14 @@ describe("companySlugBase", () => {
     expect(companySlugBase("Green Room & Co.", "North Adams")).toBe("green-room-and-co-north-adams");
   });
 
+  it("does not append the city when it is already in the company name", () => {
+    expect(companySlugBase("Green Room North Adams", "North Adams")).toBe("green-room-north-adams");
+  });
+
+  it("does not treat city text as present inside another word", () => {
+    expect(companySlugBase("Greenroom", "Room")).toBe("greenroom-room");
+  });
+
   it("falls back to company when the name and city are empty", () => {
     expect(companySlugBase("", "")).toBe("company");
   });

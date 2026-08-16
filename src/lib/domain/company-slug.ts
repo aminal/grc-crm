@@ -1,7 +1,10 @@
 import type { CompanyData, FirestoreRecord } from "./types";
 
 export function companySlugBase(companyName: string, city: string): string {
-  const segments = [slugSegment(companyName), slugSegment(city)].filter(Boolean);
+  const companySegment = slugSegment(companyName);
+  const citySegment = slugSegment(city);
+  const shouldAppendCity = citySegment.length > 0 && !containsSlugSegment(companySegment, citySegment);
+  const segments = [companySegment, shouldAppendCity ? citySegment : ""].filter(Boolean);
   return segments.join("-") || "company";
 }
 
@@ -26,6 +29,15 @@ export function companyUrlSegment(company: FirestoreRecord<CompanyData>): string
 
 export function companyPath(company: FirestoreRecord<CompanyData>): string {
   return `/companies/${companyUrlSegment(company)}`;
+}
+
+function containsSlugSegment(value: string, segment: string): boolean {
+  return (
+    value === segment ||
+    value.startsWith(`${segment}-`) ||
+    value.endsWith(`-${segment}`) ||
+    value.includes(`-${segment}-`)
+  );
 }
 
 function slugSegment(value: string): string {
