@@ -1,19 +1,24 @@
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StrainDialog } from "@/components/strains/strain-dialog";
-import { StrainTable, type StrainTableStrain } from "@/components/strains/strain-table";
+import { StrainTable, type StrainTableSortKey, type StrainTableStrain } from "@/components/strains/strain-table";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from "@/components/ui/table";
 import { TableSearch } from "@/components/ui/table-search";
 import { canManageRestrictedResources, requireNonGuest } from "@/lib/auth/session";
 import { findStrain, listStrains } from "@/lib/data/sales-settings";
 import type { FirestoreRecord, StrainData } from "@/lib/domain/types";
 
 const strainsHref = "/strains";
+const strainSortKeys = ["name", "composition"] as const;
 
 type StrainsSearchParams = {
   q?: string | string[];
   strain?: string | string[];
+  page?: string | string[];
+  sort?: string | string[];
+  dir?: string | string[];
 };
 
 type StrainDialogStrain = {
@@ -89,6 +94,9 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
 
   const params = await searchParams;
   const query = firstSearchParam(params.q).trim();
+  const sortKey = tableSortKeyFromSearchParam(params.sort, strainSortKeys);
+  const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
+  const sortParams = tableSortParams(sortKey, sortDirection);
   const strainParam = firstSearchParam(params.strain).trim();
   const showCreateStrainDialog = canManage && strainParam === "new";
   const showEditStrainDialog = canManage && strainParam !== "" && strainParam !== "new";
@@ -110,9 +118,14 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
   }
 
   const filteredStrains = filterStrains(strains, query);
-  const filteredHref = hrefWithQuery(strainsHref, query);
-  const createStrainHref = hrefWithQuery(strainsHref, query, { strain: "new" });
-  const serializedStrains = filteredStrains.map(serializeTableStrain);
+  const sortedStrains = sortStrains(filteredStrains, sortKey, sortDirection);
+  const currentPage = tablePageFromSearchParam(params.page, sortedStrains.length);
+  const paginatedStrains = paginatedTableItems(sortedStrains, currentPage);
+  const paginationHref = hrefWithQuery(strainsHref, query, sortParams);
+  const pageParams: Record<string, string> = currentPage > 1 ? { ...sortParams, page: String(currentPage) } : sortParams;
+  const filteredHref = hrefWithQuery(strainsHref, query, pageParams);
+  const createStrainHref = hrefWithQuery(strainsHref, query, { ...pageParams, strain: "new" });
+  const serializedStrains = paginatedStrains.map(serializeTableStrain);
   const serializedStrain = selectedStrain ? serializeStrain(selectedStrain) : null;
 
   return (
@@ -127,12 +140,38 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
         ) : null}
       />
       <div className="space-y-6">
-        <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, or composition" />
-        {query && serializedStrains.length === 0 ? <EmptyState title="No strains found" /> :
-          <StrainTable strains={serializedStrains} selectedStrainId={selectedStrain?.id} hrefBase={filteredHref} canManage={canManage} />}
+        <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, or composition" preservedParams={sortParams} />
+        {query && filteredStrains.length === 0 ? <EmptyState title="No strains found" /> : (
+          <>
+            <StrainTable strains={serializedStrains} selectedStrainId={selectedStrain?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+            <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedStrains.length} />
+          </>
+        )}
       </div>
       {showCreateStrainDialog ? <StrainDialog mode="create" closeHref={filteredHref} /> : null}
       {showEditStrainDialog && serializedStrain ? <StrainDialog mode="edit" strain={serializedStrain} closeHref={filteredHref} /> : null}
     </div>
   );
+}
+
+function sortStrains(strains: FirestoreRecord<StrainData>[], sortKey: StrainTableSortKey | null, sortDirection: TableSortDirection | null): FirestoreRecord<StrainData>[] {
+  if (!sortKey || !sortDirection) {
+    return strains;
+  }
+
+  const direction = sortDirection === "asc" ? 1 : -1;
+  return [...strains].sort((a, b) => compareStrains(a, b, sortKey) * direction);
+}
+
+function compareStrains(a: FirestoreRecord<StrainData>, b: FirestoreRecord<StrainData>, sortKey: StrainTableSortKey): number {
+  switch (sortKey) {
+    case "name":
+      return compareStrings(a.data.name, b.data.name);
+    case "composition":
+      return a.data.sativa_percentage - b.data.sativa_percentage;
+  }
+}
+
+function compareStrings(a: string | null | undefined, b: string | null | undefined): number {
+  return (a ?? "").localeCompare(b ?? "", undefined, { numeric: true, sensitivity: "base" });
 }

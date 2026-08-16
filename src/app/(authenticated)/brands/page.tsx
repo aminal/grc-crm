@@ -1,19 +1,24 @@
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { BrandDialog } from '@/components/brands/brand-dialog';
-import { BrandTable } from '@/components/brands/brand-table';
+import { BrandTable, type BrandTableSortKey } from '@/components/brands/brand-table';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
 import { findBrand, listBrands } from '@/lib/data/sales-settings';
 import type { BrandData, FirestoreRecord } from '@/lib/domain/types';
 
 const brandsHref = '/brands';
+const brandSortKeys = ['name', 'acronym', 'website'] as const;
 
 type BrandsSearchParams = {
     brand?: string | string[];
     q?: string | string[];
+    page?: string | string[];
+    sort?: string | string[];
+    dir?: string | string[];
 };
 
 type BrandDialogBrand = {
@@ -70,6 +75,9 @@ export default async function BrandsPage({ searchParams }: {
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
+    const sortKey = tableSortKeyFromSearchParam(params.sort, brandSortKeys);
+    const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
+    const sortParams = tableSortParams(sortKey, sortDirection);
     const brandParam = firstSearchParam(params.brand).trim();
     const showCreateBrandDialog = canManage && brandParam === 'new';
     const showEditBrandDialog = canManage && brandParam !== '' && brandParam !== 'new';
@@ -91,8 +99,13 @@ export default async function BrandsPage({ searchParams }: {
     }
 
     const filteredBrands = filterBrands(brands, query);
-    const filteredHref = hrefWithQuery(brandsHref, query);
-    const createBrandHref = hrefWithQuery(brandsHref, query, { brand: 'new' });
+    const sortedBrands = sortBrands(filteredBrands, sortKey, sortDirection);
+    const currentPage = tablePageFromSearchParam(params.page, sortedBrands.length);
+    const paginatedBrands = paginatedTableItems(sortedBrands, currentPage);
+    const paginationHref = hrefWithQuery(brandsHref, query, sortParams);
+    const pageParams: Record<string, string> = currentPage > 1 ? { ...sortParams, page: String(currentPage) } : sortParams;
+    const filteredHref = hrefWithQuery(brandsHref, query, pageParams);
+    const createBrandHref = hrefWithQuery(brandsHref, query, { ...pageParams, brand: 'new' });
     const serializedBrand = selectedBrand ? serializeBrand(selectedBrand) : null;
 
     return (
@@ -107,13 +120,41 @@ export default async function BrandsPage({ searchParams }: {
                 ) : null}
             />
             <div className='space-y-6'>
-                <TableSearch query={query} placeholder='Filter brands by name, acronym, or website' />
-                {query && filteredBrands.length === 0 ? <EmptyState title='No brands found' /> :
-                    <BrandTable brands={filteredBrands} selectedBrandId={selectedBrand?.id} hrefBase={filteredHref} canManage={canManage} />}
+                <TableSearch query={query} placeholder='Filter brands by name, acronym, or website' preservedParams={sortParams} />
+                {query && filteredBrands.length === 0 ? <EmptyState title='No brands found' /> : (
+                    <>
+                        <BrandTable brands={paginatedBrands} selectedBrandId={selectedBrand?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedBrands.length} />
+                    </>
+                )}
             </div>
             {showCreateBrandDialog ? <BrandDialog mode='create' closeHref={filteredHref} /> : null}
             {showEditBrandDialog && serializedBrand ?
                 <BrandDialog mode='edit' brand={serializedBrand} closeHref={filteredHref} /> : null}
         </div>
     );
+}
+
+function sortBrands(brands: FirestoreRecord<BrandData>[], sortKey: BrandTableSortKey | null, sortDirection: TableSortDirection | null): FirestoreRecord<BrandData>[] {
+    if (!sortKey || !sortDirection) {
+        return brands;
+    }
+
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    return [...brands].sort((a, b) => compareStrings(brandSortValue(a, sortKey), brandSortValue(b, sortKey)) * direction);
+}
+
+function brandSortValue(brand: FirestoreRecord<BrandData>, sortKey: BrandTableSortKey): string {
+    switch (sortKey) {
+        case 'name':
+            return brand.data.name;
+        case 'acronym':
+            return brand.data.acronym ?? '';
+        case 'website':
+            return brand.data.website ?? '';
+    }
+}
+
+function compareStrings(a: string | null | undefined, b: string | null | undefined): number {
+    return (a ?? '').localeCompare(b ?? '', undefined, { numeric: true, sensitivity: 'base' });
 }

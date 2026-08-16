@@ -1,19 +1,27 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
 import type { BrandData, FirestoreRecord } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
+
+export type BrandTableSortKey = "name" | "acronym" | "website";
 
 export function BrandTable({
   brands,
   selectedBrandId,
   hrefBase = "/brands",
   canManage = true,
+  query = "",
+  sortKey = null,
+  sortDirection = null,
 }: {
   brands: FirestoreRecord<BrandData>[];
   selectedBrandId?: string;
   hrefBase?: string;
   canManage?: boolean;
+  query?: string;
+  sortKey?: BrandTableSortKey | null;
+  sortDirection?: TableSortDirection | null;
 }): React.ReactElement {
   if (brands.length === 0) {
     return <EmptyState title="No brands yet" description="Create a brand to start building your sales catalog." />;
@@ -23,9 +31,9 @@ export function BrandTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Acronym</TableHead>
-          <TableHead>Website</TableHead>
+          <TableHead sortHref={brandSortHref("name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
+          <TableHead sortHref={brandSortHref("acronym", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("acronym", sortKey, sortDirection)}>Acronym</TableHead>
+          <TableHead sortHref={brandSortHref("website", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("website", sortKey, sortDirection)}>Website</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -68,4 +76,8 @@ export function BrandTable({
       </TableBody>
     </Table>
   );
+}
+
+function brandSortHref(column: BrandTableSortKey, query: string, sortKey: BrandTableSortKey | null, sortDirection: TableSortDirection | null): string {
+  return tableSortHref("/brands", column, { q: query }, sortKey, sortDirection);
 }

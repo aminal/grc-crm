@@ -1,18 +1,27 @@
 import Link from "next/link";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
 import { FacilityBadge } from "@/components/company/facility-badge";
 import { companyPath } from "@/lib/domain/company-slug";
 import type { CompanyData, FirestoreRecord } from "@/lib/domain/types";
 
-export function CompanyTable({ companies }: { companies: FirestoreRecord<CompanyData>[] }): React.ReactElement {
+export type CompanyTableSortKey = "company" | "license" | "location" | "facility";
+
+type CompanyTableProps = {
+  companies: FirestoreRecord<CompanyData>[];
+  query: string;
+  sortKey: CompanyTableSortKey | null;
+  sortDirection: TableSortDirection | null;
+};
+
+export function CompanyTable({ companies, query, sortKey, sortDirection }: CompanyTableProps): React.ReactElement {
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Company</TableHead>
-          <TableHead>License</TableHead>
-          <TableHead>Location</TableHead>
-          <TableHead>Facility</TableHead>
+          <TableHead sortHref={companySortHref("company", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("company", sortKey, sortDirection)}>Company</TableHead>
+          <TableHead sortHref={companySortHref("license", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("license", sortKey, sortDirection)}>License</TableHead>
+          <TableHead sortHref={companySortHref("location", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("location", sortKey, sortDirection)}>Location</TableHead>
+          <TableHead sortHref={companySortHref("facility", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("facility", sortKey, sortDirection)}>Facility</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -52,4 +61,8 @@ export function CompanyTable({ companies }: { companies: FirestoreRecord<Company
       </TableBody>
     </Table>
   );
+}
+
+function companySortHref(column: CompanyTableSortKey, query: string, sortKey: CompanyTableSortKey | null, sortDirection: TableSortDirection | null): string {
+  return tableSortHref("/companies", column, { q: query }, sortKey, sortDirection);
 }

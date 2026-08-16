@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
 import type { BrandData, FirestoreRecord, ProductData, StrainData } from "@/lib/domain/types";
 import { cn } from "@/lib/utils";
+
+export type ProductTableSortKey = "name" | "sku" | "brand" | "strain" | "category";
 
 type ProductTableProps = {
   products: FirestoreRecord<ProductData>[];
@@ -11,6 +13,9 @@ type ProductTableProps = {
   selectedProductId?: string;
   hrefBase?: string;
   canManage?: boolean;
+  query?: string;
+  sortKey?: ProductTableSortKey | null;
+  sortDirection?: TableSortDirection | null;
 };
 
 function isArchived(record: FirestoreRecord<BrandData | StrainData>): boolean {
@@ -18,7 +23,7 @@ function isArchived(record: FirestoreRecord<BrandData | StrainData>): boolean {
   return archived !== null && archived !== undefined;
 }
 
-export function ProductTable({ products, brands, strains, selectedProductId, hrefBase = "/products", canManage = true }: ProductTableProps): React.ReactElement {
+export function ProductTable({ products, brands, strains, selectedProductId, hrefBase = "/products", canManage = true, query = "", sortKey = null, sortDirection = null }: ProductTableProps): React.ReactElement {
   const hasActiveStrains = strains.some((strain) => !isArchived(strain));
 
   if (products.length === 0) {
@@ -42,11 +47,11 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>SKU</TableHead>
-          <TableHead>Brand</TableHead>
-          <TableHead>Strain</TableHead>
-          <TableHead>Category</TableHead>
+          <TableHead sortHref={productSortHref("name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
+          <TableHead sortHref={productSortHref("sku", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("sku", sortKey, sortDirection)}>SKU</TableHead>
+          <TableHead sortHref={productSortHref("brand", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("brand", sortKey, sortDirection)}>Brand</TableHead>
+          <TableHead sortHref={productSortHref("strain", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("strain", sortKey, sortDirection)}>Strain</TableHead>
+          <TableHead sortHref={productSortHref("category", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("category", sortKey, sortDirection)}>Category</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -105,4 +110,8 @@ export function ProductTable({ products, brands, strains, selectedProductId, hre
       </TableBody>
     </Table>
   );
+}
+
+function productSortHref(column: ProductTableSortKey, query: string, sortKey: ProductTableSortKey | null, sortDirection: TableSortDirection | null): string {
+  return tableSortHref("/products", column, { q: query }, sortKey, sortDirection);
 }

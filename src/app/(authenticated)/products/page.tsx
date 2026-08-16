@@ -1,19 +1,24 @@
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { ProductDialog } from '@/components/products/product-dialog';
-import { ProductTable } from '@/components/products/product-table';
+import { ProductTable, type ProductTableSortKey } from '@/components/products/product-table';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
 import { findBrand, findProduct, findStrain, listBrands, listProducts, listStrains, } from '@/lib/data/sales-settings';
 import type { BrandData, FirestoreRecord, ProductData, StrainData } from '@/lib/domain/types';
 
 const productsHref = '/products';
+const productSortKeys = ['name', 'sku', 'brand', 'strain', 'category'] as const;
 
 type ProductsSearchParams = {
     product?: string | string[];
     q?: string | string[];
+    page?: string | string[];
+    sort?: string | string[];
+    dir?: string | string[];
 };
 
 type ProductDialogProduct = {
@@ -161,6 +166,9 @@ export default async function ProductsPage({ searchParams }: {
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
+    const sortKey = tableSortKeyFromSearchParam(params.sort, productSortKeys);
+    const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
+    const sortParams = tableSortParams(sortKey, sortDirection);
     const productParam = firstSearchParam(params.product).trim();
     const showCreateProductDialog = canManage && productParam === 'new';
     const showEditProductDialog = canManage && productParam !== '' && productParam !== 'new';
@@ -192,8 +200,13 @@ export default async function ProductsPage({ searchParams }: {
     const brands = await includeReferencedBrands(activeBrands, products);
     const strains = await includeReferencedStrains(activeStrains, products);
     const filteredProducts = filterProducts(products, brands, strains, query);
-    const filteredHref = hrefWithQuery(productsHref, query);
-    const createProductHref = hrefWithQuery(productsHref, query, { product: 'new' });
+    const sortedProducts = sortProducts(filteredProducts, sortKey, sortDirection, brands, strains);
+    const currentPage = tablePageFromSearchParam(params.page, sortedProducts.length);
+    const paginatedProducts = paginatedTableItems(sortedProducts, currentPage);
+    const paginationHref = hrefWithQuery(productsHref, query, sortParams);
+    const pageParams: Record<string, string> = currentPage > 1 ? { ...sortParams, page: String(currentPage) } : sortParams;
+    const filteredHref = hrefWithQuery(productsHref, query, pageParams);
+    const createProductHref = hrefWithQuery(productsHref, query, { ...pageParams, product: 'new' });
     const serializedBrands = brands.map(serializeBrand);
     const serializedStrains = strains.map(serializeStrain);
     const serializedProduct = selectedProduct ? serializeProduct(selectedProduct) : null;
@@ -210,9 +223,13 @@ export default async function ProductsPage({ searchParams }: {
                 ) : null}
             />
             <div className='space-y-6'>
-                <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, or category' />
-                {query && filteredProducts.length === 0 ? <EmptyState title='No products found' /> :
-                    <ProductTable products={filteredProducts} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={filteredHref} canManage={canManage} />}
+                <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, or category' preservedParams={sortParams} />
+                {query && filteredProducts.length === 0 ? <EmptyState title='No products found' /> : (
+                    <>
+                        <ProductTable products={paginatedProducts} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedProducts.length} />
+                    </>
+                )}
             </div>
             {showCreateProductDialog ?
                 <ProductDialog mode='create' brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} /> : null}
@@ -220,4 +237,34 @@ export default async function ProductsPage({ searchParams }: {
                 <ProductDialog mode='edit' product={serializedProduct} brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} /> : null}
         </div>
     );
+}
+
+function sortProducts(products: FirestoreRecord<ProductData>[], sortKey: ProductTableSortKey | null, sortDirection: TableSortDirection | null, brands: FirestoreRecord<BrandData>[], strains: FirestoreRecord<StrainData>[]): FirestoreRecord<ProductData>[] {
+    if (!sortKey || !sortDirection) {
+        return products;
+    }
+
+    const direction = sortDirection === 'asc' ? 1 : -1;
+    const brandNames = new Map(brands.map((brand) => [brand.id, brand.data.name]));
+    const strainNames = new Map(strains.map((strain) => [strain.id, strain.data.name]));
+    return [...products].sort((a, b) => compareStrings(productSortValue(a, sortKey, brandNames, strainNames), productSortValue(b, sortKey, brandNames, strainNames)) * direction);
+}
+
+function productSortValue(product: FirestoreRecord<ProductData>, sortKey: ProductTableSortKey, brandNames: Map<string, string>, strainNames: Map<string, string>): string {
+    switch (sortKey) {
+        case 'name':
+            return product.data.name;
+        case 'sku':
+            return product.data.sku ?? '';
+        case 'brand':
+            return brandNames.get(product.data.brand_id) ?? '';
+        case 'strain':
+            return product.data.strain_ids.map((strainId) => strainNames.get(strainId) ?? strainId).join(', ');
+        case 'category':
+            return product.data.category ?? '';
+    }
+}
+
+function compareStrings(a: string | null | undefined, b: string | null | undefined): number {
+    return (a ?? '').localeCompare(b ?? '', undefined, { numeric: true, sensitivity: 'base' });
 }

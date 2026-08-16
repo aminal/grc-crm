@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+
+export type StrainTableSortKey = "name" | "composition";
 
 export type StrainTableStrain = {
   id: string;
@@ -20,11 +22,17 @@ export function StrainTable({
   selectedStrainId,
   hrefBase = "/strains",
   canManage = true,
+  query = "",
+  sortKey = null,
+  sortDirection = null,
 }: {
   strains: StrainTableStrain[];
   selectedStrainId?: string;
   hrefBase?: string;
   canManage?: boolean;
+  query?: string;
+  sortKey?: StrainTableSortKey | null;
+  sortDirection?: TableSortDirection | null;
 }): React.ReactElement {
   if (strains.length === 0) {
     return <EmptyState title="No strains yet" description="Create a strain before adding products to the sales catalog." />;
@@ -34,8 +42,8 @@ export function StrainTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Composition</TableHead>
+          <TableHead sortHref={strainSortHref("name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
+          <TableHead sortHref={strainSortHref("composition", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("composition", sortKey, sortDirection)}>Composition</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -70,4 +78,8 @@ export function StrainTable({
       </TableBody>
     </Table>
   );
+}
+
+function strainSortHref(column: StrainTableSortKey, query: string, sortKey: StrainTableSortKey | null, sortDirection: TableSortDirection | null): string {
+  return tableSortHref("/strains", column, { q: query }, sortKey, sortDirection);
 }
