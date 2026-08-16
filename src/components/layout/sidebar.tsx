@@ -2,12 +2,12 @@
 
 import * as Headless from '@headlessui/react';
 import {
-  ArrowRightStartOnRectangleIcon,
-  Bars3Icon,
-  ChevronUpIcon,
-  MoonIcon,
-  UserCircleIcon,
-  XMarkIcon
+    ArrowRightStartOnRectangleIcon,
+    Bars3Icon,
+    ChevronUpIcon,
+    MoonIcon,
+    UserCircleIcon,
+    XMarkIcon
 } from '@heroicons/react/20/solid';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -16,12 +16,12 @@ import type { AuthenticatedUser } from '@/lib/domain/types';
 import { TouchTarget } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
 import {
-  Dropdown,
-  DropdownButton,
-  DropdownDivider,
-  DropdownItem,
-  DropdownLabel,
-  DropdownMenu
+    Dropdown,
+    DropdownButton,
+    DropdownDivider,
+    DropdownItem,
+    DropdownLabel,
+    DropdownMenu
 } from '@/components/ui/dropdown';
 import { sidebarItemClasses, SidebarNav } from '@/components/layout/sidebar-nav';
 import { cn } from '@/lib/utils';
@@ -159,7 +159,8 @@ function Brand({ compact = false }: { compact?: boolean }): React.ReactElement {
                 className='size-10 shrink-0 rounded-lg'
             />
             <span className='min-w-0'>
-                <span className='block truncate text-lg/5 font-semibold text-zinc-950 dark:text-white uppercase'>Green Room</span>
+                <span className='block truncate text-lg/5 font-semibold text-zinc-950 dark:text-white uppercase'>Green
+                    Room</span>
                 <span className='block truncate text-sm/5 font-semibold text-zinc-500 dark:text-zinc-400'>CRM</span>
             </span>
         </TouchTarget>
@@ -232,13 +233,13 @@ function UserPanel({ user, logoutAction, onNavigate }: {
             <Dropdown>
                 <DropdownButton className={sidebarItemClasses}>
                     <TouchTarget>
-            <span className='flex min-w-0 items-center gap-3'>
-              <Avatar name={user.name ?? user.email} picture={user.picture} className='size-10 rounded-lg sm:size-9' />
-              <span className='min-w-0'>
-                <span className='block truncate text-sm/5 font-medium text-zinc-950 dark:text-white'>{user.name ?? user.email}</span>
-                <span className='block truncate text-xs/5 font-medium text-zinc-500 dark:text-zinc-400'>{userPanelDetail}</span>
-              </span>
-            </span>
+                        <span className='flex min-w-0 items-center gap-3'>
+                            <Avatar name={user.name ?? user.email} picture={user.picture} className='size-10 rounded-lg sm:size-9' />
+                            <span className='min-w-0'>
+                                <span className='block truncate text-sm/5 font-medium text-zinc-950 dark:text-white'>{user.name ?? user.email}</span>
+                                <span className='block truncate text-xs/5 font-medium text-zinc-500 dark:text-zinc-400'>{userPanelDetail}</span>
+                            </span>
+                        </span>
                         <ChevronUpIcon data-slot='icon' aria-hidden='true' />
                     </TouchTarget>
                 </DropdownButton>
@@ -257,8 +258,8 @@ function UserPanel({ user, logoutAction, onNavigate }: {
                                 isDarkMode ? 'bg-purple-500' : 'bg-zinc-200 dark:bg-zinc-700',
                             )}
                         >
-              <span className={cn('size-4 rounded-full bg-white shadow-xs ring-1 ring-zinc-950/10 transition-transform', isDarkMode && 'translate-x-4')} />
-            </span>
+                            <span className={cn('size-4 rounded-full bg-white shadow-xs ring-1 ring-zinc-950/10 transition-transform', isDarkMode && 'translate-x-4')} />
+                        </span>
                     </DropdownItem>
                     <DropdownDivider />
                     <form action={logoutAction} className='contents'>
