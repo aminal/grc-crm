@@ -45,19 +45,61 @@ export function getFirebaseSignInMode(): FirebaseSignInMode {
   return "redirect";
 }
 
+const REDIRECT_SIGN_IN_ATTEMPT_KEY = "firebase-redirect-sign-in-attempt";
+
 export async function completeFirebaseRedirectSignIn(
   firebaseAuth: Auth,
   onIdToken: (idToken: string) => Promise<void>,
   resolveRedirectResult: (auth: Auth) => Promise<UserCredential | null> = getRedirectResult,
+  allowCurrentUserFallback = false,
 ): Promise<boolean> {
   const credential = await resolveRedirectResult(firebaseAuth);
-  if (!credential?.user) {
+  const user = credential?.user ?? (allowCurrentUserFallback ? await resolveCurrentUser(firebaseAuth) : null);
+  if (!user) {
     return false;
   }
 
-  const idToken = await credential.user.getIdToken();
+  const idToken = await user.getIdToken();
   await onIdToken(idToken);
   return true;
+}
+
+export function rememberFirebaseRedirectSignInAttempt(
+  storage: Pick<Storage, "setItem"> | null = getSessionStorage(),
+): void {
+  storage?.setItem(REDIRECT_SIGN_IN_ATTEMPT_KEY, "1");
+}
+
+export function consumeFirebaseRedirectSignInAttempt(
+  storage: Pick<Storage, "getItem" | "removeItem"> | null = getSessionStorage(),
+): boolean {
+  if (!storage) {
+    return false;
+  }
+
+  const hasPendingAttempt = storage.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY) === "1";
+  if (hasPendingAttempt) {
+    storage.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+  }
+
+  return hasPendingAttempt;
+}
+
+async function resolveCurrentUser(firebaseAuth: Auth): Promise<Auth["currentUser"]> {
+  if (firebaseAuth.currentUser) {
+    return firebaseAuth.currentUser;
+  }
+
+  await firebaseAuth.authStateReady();
+  return firebaseAuth.currentUser;
+}
+
+function getSessionStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.sessionStorage;
 }
 
 export function connectFirebaseAuthEmulator(): void {

@@ -8,9 +8,11 @@ import { Loader2 } from 'lucide-react';
 import {
     completeFirebaseRedirectSignIn,
     connectFirebaseAuthEmulator,
+    consumeFirebaseRedirectSignInAttempt,
     getFirebaseAuth,
     getFirebaseSignInMode,
     googleProvider,
+    rememberFirebaseRedirectSignInAttempt,
 } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 
@@ -47,7 +49,12 @@ export function LoginForm(): React.ReactElement {
 
         async function completeRedirect(): Promise<void> {
             try {
-                const handledRedirect = await completeFirebaseRedirectSignIn(getFirebaseAuth(), createServerSession);
+                const handledRedirect = await completeFirebaseRedirectSignIn(
+                    getFirebaseAuth(),
+                    createServerSession,
+                    undefined,
+                    consumeFirebaseRedirectSignInAttempt(),
+                );
                 if (cancelled) {
                     return;
                 }
@@ -84,6 +91,7 @@ export function LoginForm(): React.ReactElement {
         try {
             const firebaseAuth = getFirebaseAuth();
             if (getFirebaseSignInMode() === 'redirect') {
+                rememberFirebaseRedirectSignInAttempt();
                 await signInWithRedirect(firebaseAuth, googleProvider);
                 return;
             }
