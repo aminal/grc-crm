@@ -1,17 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
-import { connectFirebaseAuthEmulator, getFirebaseAuth, googleProvider } from '@/lib/firebase/client';
+import {
+    completeFirebaseRedirectSignIn,
+    connectFirebaseAuthEmulator,
+    getFirebaseAuth,
+    getFirebaseSignInMode,
+    googleProvider,
+} from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
 
 export function LoginForm(): React.ReactElement {
     const router = useRouter();
+    const checkedRedirect = useRef(false);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    async function createServerSession(idToken: string): Promise<void> {
+        const response = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ id_token: idToken }),
+        });
+        const body = (await response.json().catch(() => ({}))) as { error?: string };
+
+        if (!response.ok) {
+            throw new Error(body.error ?? 'Unable to create a server session.');
+        }
+    }
+
+    useEffect(() => {
+        if (checkedRedirect.current) {
+            return;
+        }
+
+        checkedRedirect.current = true;
+        connectFirebaseAuthEmulator();
+        setLoading(true);
+        setError(null);
+
+        let cancelled = false;
+
+        async function completeRedirect(): Promise<void> {
+            try {
+                const handledRedirect = await completeFirebaseRedirectSignIn(getFirebaseAuth(), createServerSession);
+                if (cancelled) {
+                    return;
+                }
+
+                if (handledRedirect) {
+                    router.push('/dashboard');
+                    router.refresh();
+                    return;
+                }
+
+                setLoading(false);
+            } catch (caught) {
+                if (cancelled) {
+                    return;
+                }
+
+                setError(caught instanceof Error ? caught.message : 'Unable to sign in.');
+                setLoading(false);
+            }
+        }
+
+        void completeRedirect();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [router]);
 
     async function signIn(): Promise<void> {
         setError(null);
@@ -19,19 +82,15 @@ export function LoginForm(): React.ReactElement {
         connectFirebaseAuthEmulator();
 
         try {
-            const credential = await signInWithPopup(getFirebaseAuth(), googleProvider);
-            const idToken = await credential.user.getIdToken();
-            const response = await fetch('/api/auth/session', {
-                method: 'POST',
-                headers: { 'content-type': 'application/json' },
-                body: JSON.stringify({ id_token: idToken }),
-            });
-            const body = (await response.json().catch(() => ({}))) as { error?: string };
-
-            if (!response.ok) {
-                throw new Error(body.error ?? 'Unable to create a server session.');
+            const firebaseAuth = getFirebaseAuth();
+            if (getFirebaseSignInMode() === 'redirect') {
+                await signInWithRedirect(firebaseAuth, googleProvider);
+                return;
             }
 
+            const credential = await signInWithPopup(firebaseAuth, googleProvider);
+            const idToken = await credential.user.getIdToken();
+            await createServerSession(idToken);
             router.push('/dashboard');
             router.refresh();
         } catch (caught) {
@@ -42,7 +101,7 @@ export function LoginForm(): React.ReactElement {
 
     return (
         <div className='w-full max-w-sm rounded-lg bg-white p-8 shadow-xs ring-1 ring-zinc-950/10 dark:bg-zinc-900 dark:ring-white/10'>
-            <div className='flex gap-3 mb-8 items-center justify-center'>
+            <div className='mb-8 flex items-center justify-center gap-3'>
                 <Image
                     src='/web-app-manifest-192x192.png'
                     alt='Green Room Cannabis'

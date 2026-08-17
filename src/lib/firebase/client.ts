@@ -1,5 +1,5 @@
 import { initializeApp, getApps, type FirebaseApp, type FirebaseOptions } from "firebase/app";
-import { connectAuthEmulator, getAuth, GoogleAuthProvider, type Auth } from "firebase/auth";
+import { connectAuthEmulator, getAuth, getRedirectResult, GoogleAuthProvider, type Auth, type UserCredential } from "firebase/auth";
 import { getClientEnv } from "@/lib/env";
 
 let app: FirebaseApp | null = null;
@@ -29,11 +29,36 @@ export function getFirebaseAuth(): Auth {
 }
 
 export const googleProvider = new GoogleAuthProvider();
+export type FirebaseSignInMode = "popup" | "redirect";
 
 googleProvider.setCustomParameters({
   hd: "greenroomcannabis.com",
   prompt: "select_account",
 });
+
+export function getFirebaseSignInMode(): FirebaseSignInMode {
+  const authEmulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  if (process.env.NODE_ENV !== "production" || authEmulatorHost) {
+    return "popup";
+  }
+
+  return "redirect";
+}
+
+export async function completeFirebaseRedirectSignIn(
+  firebaseAuth: Auth,
+  onIdToken: (idToken: string) => Promise<void>,
+  resolveRedirectResult: (auth: Auth) => Promise<UserCredential | null> = getRedirectResult,
+): Promise<boolean> {
+  const credential = await resolveRedirectResult(firebaseAuth);
+  if (!credential?.user) {
+    return false;
+  }
+
+  const idToken = await credential.user.getIdToken();
+  await onIdToken(idToken);
+  return true;
+}
 
 export function connectFirebaseAuthEmulator(): void {
   const host = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST || process.env.FIREBASE_AUTH_EMULATOR_HOST;
