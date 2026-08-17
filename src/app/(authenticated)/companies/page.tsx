@@ -8,7 +8,7 @@ import { searchCompanies } from '@/lib/data/crm';
 import type { CompanyData, FirestoreRecord } from '@/lib/domain/types';
 import { NewCompanyDialog } from './new-company-dialog';
 
-const companySortKeys = ['company', 'license', 'location', 'facility'] as const;
+const companySortKeys = ['company', 'status', 'location', 'facility'] as const;
 
 type CompaniesSearchParams = {
     q?: string | string[];
@@ -73,8 +73,8 @@ function companySortValue(company: FirestoreRecord<CompanyData>, sortKey: Compan
     switch (sortKey) {
         case 'company':
             return company.data.company_name;
-        case 'license':
-            return company.data.license_number;
+        case 'status':
+            return company.data.status;
         case 'location':
             return [company.data.address.city, company.data.address.state].filter(Boolean).join(', ');
         case 'facility':

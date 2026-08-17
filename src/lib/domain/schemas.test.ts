@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { COMPANY_STATUSES } from "./constants";
 import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
     const parsed = companySchema.parse({
       company_name: "Jane's Shop",
+      status: "Lead",
       facility_type: "Dispensary",
       address_city: "Albany",
       address_state: "NY",
@@ -16,12 +18,28 @@ describe("domain schemas", () => {
     expect(parsed.social_instagram).toBe("janes_shop");
     expect(parsed.social_x).toBe("janes_x");
     expect(parsed.social_threads).toBe("janes_threads");
-    expect(companySchema.parse({ company_name: "Jane's Shop", facility_type: "Dispensary", address_city: "Albany", address_state: "ny", social_instagram: "@janes_shop", social_x: "@janes_x", social_threads: "@janes_threads" })).toMatchObject({
+    expect(companySchema.parse({ company_name: "Jane's Shop", status: "Lead", facility_type: "Dispensary", address_city: "Albany", address_state: "ny", social_instagram: "@janes_shop", social_x: "@janes_x", social_threads: "@janes_threads" })).toMatchObject({
       address_state: "NY",
       social_instagram: "janes_shop",
       social_x: "janes_x",
       social_threads: "janes_threads",
     });
+  });
+
+  it("accepts only valid company statuses", () => {
+    const baseCompany = {
+      company_name: "Jane's Shop",
+      facility_type: "Dispensary",
+      address_city: "Albany",
+      address_state: "NY",
+    };
+
+    for (const status of COMPANY_STATUSES) {
+      expect(companySchema.parse({ ...baseCompany, status }).status).toBe(status);
+    }
+
+    expect(() => companySchema.parse({ ...baseCompany, status: "Customer" })).toThrow();
+    expect(() => companySchema.parse(baseCompany)).toThrow();
   });
 
   it("requires check number for check payments", () => {

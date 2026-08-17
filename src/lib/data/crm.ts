@@ -23,6 +23,7 @@ const COMPANIES = "companies";
 type CompanyInput = {
   company_name: string;
   license_number: string;
+  status: CompanyData["status"];
   facility_type: CompanyData["facility_type"];
   address_street: string;
   address_city: string;
@@ -193,6 +194,7 @@ export async function createCompany(input: CompanyInput): Promise<FirestoreRecor
       company_name: input.company_name,
       slug: nextCompanySlug(input, companies),
       license_number: input.license_number,
+      status: input.status,
       facility_type: input.facility_type,
       primary_contact_id: null,
       address: {
@@ -240,6 +242,7 @@ export async function updateCompany(companyId: string, input: CompanyInput): Pro
         company_name: input.company_name,
         slug,
         license_number: input.license_number,
+        status: input.status,
         facility_type: input.facility_type,
         address: {
           street: input.address_street,

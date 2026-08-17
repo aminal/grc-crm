@@ -10,12 +10,13 @@ import {
     XIcon
 } from '@/components/company/company-form';
 import { CompanyTabs } from '@/components/company/company-tabs';
-import { FacilityBadge } from '@/components/company/facility-badge';
+import { CompanyStatusBadge, FacilityBadge } from '@/components/company/facility-badge';
 import { EditCompanyDialog } from '../new-company-dialog';
 import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
 import { listContacts } from '@/lib/data/crm';
 import { listOrdersForCompany } from '@/lib/data/orders';
 import { loadCompanyRoute } from './company-route';
+import { COMPANY_STATUSES } from '@/lib/domain/constants';
 import { formatCompanySubheading, formatMoney } from '@/lib/domain/format';
 
 export default async function CompanyDetailsPage({ params }: {
@@ -40,9 +41,11 @@ export default async function CompanyDetailsPage({ params }: {
     const location = [company.data.address.city, company.data.address.state].filter(Boolean).join(', ');
     const address = [company.data.address.street, location, company.data.address.postal_code].filter(Boolean).join(', ');
     const socialLinks = company.data.social_links ?? { facebook: '', instagram: '', x: '', threads: '' };
+    const companyStatus = COMPANY_STATUSES.includes(company.data.status) ? company.data.status : 'Lead';
     const companyFormValues = {
         company_name: company.data.company_name,
         license_number: company.data.license_number,
+        status: companyStatus,
         facility_type: company.data.facility_type,
         address: {
             street: company.data.address.street,
@@ -65,7 +68,10 @@ export default async function CompanyDetailsPage({ params }: {
                 title={company.data.company_name}
                 description={formatCompanySubheading(company.data)}
             >
-                <FacilityBadge facilityType={company.data.facility_type} />
+                <div className='flex flex-wrap items-center gap-2'>
+                    <FacilityBadge facilityType={company.data.facility_type} />
+                    <CompanyStatusBadge status={companyStatus} />
+                </div>
             </PageHeader>
             <CompanyTabs companySlug={companySlug} active='details' />
 

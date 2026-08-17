@@ -1,5 +1,6 @@
 import type { FieldValue, Timestamp } from "firebase-admin/firestore";
 import type {
+  COMPANY_STATUSES,
   FACILITY_TYPES,
   INTERACTION_METHODS,
   ORDER_STATUSES,
@@ -10,6 +11,7 @@ import type {
 } from "./constants";
 
 export type FirestoreDate = Timestamp | FieldValue | Date | string | null;
+export type CompanyStatus = (typeof COMPANY_STATUSES)[number];
 export type FacilityType = (typeof FACILITY_TYPES)[number];
 export type InteractionMethod = (typeof INTERACTION_METHODS)[number];
 export type PreferredCommunicationMethod = (typeof PREFERRED_COMMUNICATION_METHODS)[number];
@@ -61,6 +63,7 @@ export type CompanyData = {
   company_name: string;
   slug?: string;
   license_number: string;
+  status: CompanyStatus;
   facility_type: FacilityType;
   primary_contact_id: string | null;
   address: Address;

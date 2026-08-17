@@ -1,15 +1,23 @@
-import { FACILITY_TYPES, US_STATE_ABBREVIATIONS } from "@/lib/domain/constants";
+import { COMPANY_STATUSES, FACILITY_TYPES, US_STATE_ABBREVIATIONS } from "@/lib/domain/constants";
 import type { CompanyData } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 
-export type CompanyFormValues = Pick<CompanyData, "company_name" | "license_number" | "facility_type" | "address" | "website_url" | "social_links">;
+export type CompanyFormValues = Pick<CompanyData, "company_name" | "license_number" | "status" | "facility_type" | "address" | "website_url" | "social_links">;
 
 const socialIconClasses = "size-5 sm:size-4";
 
 function defaultState(value: string | undefined): string {
   const state = value?.trim().toUpperCase() ?? "";
   return US_STATE_ABBREVIATIONS.includes(state as (typeof US_STATE_ABBREVIATIONS)[number]) ? state : "NY";
+}
+
+function isCompanyStatus(value: string | undefined): value is CompanyData["status"] {
+  return COMPANY_STATUSES.some((status) => status === value);
+}
+
+function defaultCompanyStatus(value: string | undefined): CompanyData["status"] {
+  return isCompanyStatus(value) ? value : "Lead";
 }
 
 export function FacebookIcon(props: React.SVGProps<SVGSVGElement>): React.ReactElement {
@@ -77,6 +85,13 @@ export function CompanyForm({ company, action, submitLabel, footerStart, footerE
         <Field label="Facility type">
           <Select name="facility_type" defaultValue={company?.facility_type ?? "Dispensary"} required>
             {FACILITY_TYPES.map((type) => <option key={type} value={type}>{type}</option>)}
+          </Select>
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <Field label="Status">
+          <Select name="status" defaultValue={defaultCompanyStatus(company?.status)} required>
+            {COMPANY_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
           </Select>
         </Field>
       </div>

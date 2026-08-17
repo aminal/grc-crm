@@ -10,6 +10,17 @@ export const FACILITY_TYPES = [
   "Microbusiness",
 ] as const;
 
+export const COMPANY_STATUSES = [
+  "Lead",
+  "Pending",
+  "Active",
+  "Active - COD Only",
+  "On Hold - Financial",
+  "On Hold - Compliance",
+  "Inactive",
+  "Blacklisted",
+] as const;
+
 export const US_STATE_ABBREVIATIONS = [
   "AL",
   "AK",

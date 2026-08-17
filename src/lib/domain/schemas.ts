@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  COMPANY_STATUSES,
   FACILITY_TYPES,
   INTERACTION_METHODS,
   ORDER_TERMS,
@@ -86,6 +87,7 @@ function socialHandleFromInput(value: string, hosts: string[]): string {
 export const companySchema = z.object({
   company_name: requiredShortString,
   license_number: optionalString,
+  status: z.enum(COMPANY_STATUSES),
   facility_type: z.enum(FACILITY_TYPES),
   address_street: optionalString,
   address_city: requiredShortString,

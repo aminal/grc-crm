@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
-import { FacilityBadge } from "@/components/company/facility-badge";
+import { CompanyStatusBadge, FacilityBadge } from "@/components/company/facility-badge";
 import { companyPath } from "@/lib/domain/company-slug";
 import type { CompanyData, FirestoreRecord } from "@/lib/domain/types";
 
-export type CompanyTableSortKey = "company" | "license" | "location" | "facility";
+export type CompanyTableSortKey = "company" | "status" | "location" | "facility";
 
 type CompanyTableProps = {
   companies: FirestoreRecord<CompanyData>[];
@@ -19,7 +19,7 @@ export function CompanyTable({ companies, query, sortKey, sortDirection }: Compa
       <TableHeader>
         <TableRow>
           <TableHead sortHref={companySortHref("company", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("company", sortKey, sortDirection)}>Company</TableHead>
-          <TableHead sortHref={companySortHref("license", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("license", sortKey, sortDirection)}>License</TableHead>
+          <TableHead sortHref={companySortHref("status", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("status", sortKey, sortDirection)}>Status</TableHead>
           <TableHead sortHref={companySortHref("location", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("location", sortKey, sortDirection)}>Location</TableHead>
           <TableHead sortHref={companySortHref("facility", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("facility", sortKey, sortDirection)}>Facility</TableHead>
         </TableRow>
@@ -32,16 +32,17 @@ export function CompanyTable({ companies, query, sortKey, sortDirection }: Compa
           return (
             <TableRow key={company.id} className="group cursor-pointer">
               <TableCell>
-                <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
+                <Link href={href} className="flex flex-col items-start gap-1">
                   <span className="absolute inset-0" />
-                  {company.data.company_name}
+                  <span className="text-base/5 font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">{company.data.company_name}</span>
+                  <span className="text-xs/5 font-medium text-zinc-500 dark:text-zinc-400">{company.data.license_number || "—"}</span>
                 </Link>
               </TableCell>
               <TableCell>
                 <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
                   <span className="sr-only">{label}</span>
                 </Link>
-                {company.data.license_number || "—"}
+                <CompanyStatusBadge status={company.data.status} />
               </TableCell>
               <TableCell>
                 <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
