@@ -1,6 +1,7 @@
 import type { Auth, UserCredential } from "firebase/auth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  completeFirebaseCurrentUserSignIn,
   completeFirebaseRedirectSignIn,
   consumeFirebaseRedirectSignInAttempt,
   getFirebaseSignInMode,
@@ -10,6 +11,43 @@ import {
 afterEach(() => {
   vi.unstubAllEnvs();
 });
+
+function createStorage(initialValue: string | null = null): {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+  getItemMock: ReturnType<typeof vi.fn>;
+  setItemMock: ReturnType<typeof vi.fn>;
+  removeItemMock: ReturnType<typeof vi.fn>;
+  state: { value: string | null };
+} {
+  const state = { value: initialValue };
+  const getItemMock = vi.fn((key: string) => (key === "firebase-redirect-sign-in-attempt" ? state.value : null));
+  const setItemMock = vi.fn((key: string, value: string) => {
+    if (key === "firebase-redirect-sign-in-attempt") {
+      state.value = value;
+    }
+  });
+  const removeItemMock = vi.fn((key: string) => {
+    if (key === "firebase-redirect-sign-in-attempt") {
+      state.value = null;
+    }
+  });
+
+  return {
+    state,
+    getItem: (key: string) => getItemMock(key),
+    setItem: (key: string, value: string) => {
+      setItemMock(key, value);
+    },
+    removeItem: (key: string) => {
+      removeItemMock(key);
+    },
+    getItemMock,
+    setItemMock,
+    removeItemMock,
+  };
+}
 
 describe("getFirebaseSignInMode", () => {
   it("uses popup sign-in outside production", () => {
@@ -37,28 +75,81 @@ describe("getFirebaseSignInMode", () => {
 });
 
 describe("rememberFirebaseRedirectSignInAttempt", () => {
-  it("records and consumes a pending redirect attempt", () => {
-    const storage = {
-      value: null as string | null,
-      getItem: vi.fn((key: string) => (key === "firebase-redirect-sign-in-attempt" ? storage.value : null)),
-      setItem: vi.fn((key: string, value: string) => {
-        if (key === "firebase-redirect-sign-in-attempt") {
-          storage.value = value;
-        }
-      }),
-      removeItem: vi.fn((key: string) => {
-        if (key === "firebase-redirect-sign-in-attempt") {
-          storage.value = null;
-        }
-      }),
+  it("records a pending redirect attempt in session and local storage and consumes it once", () => {
+    const sessionStorage = createStorage();
+    const localStorage = createStorage();
+
+    expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage)).toBe(false);
+
+    rememberFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_000);
+
+    expect(sessionStorage.setItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt", "1000");
+    expect(localStorage.setItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt", "1000");
+    expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(true);
+    expect(sessionStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+    expect(localStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+    expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(false);
+  });
+
+  it("falls back to local storage when the session-storage marker is missing", () => {
+    const sessionStorage = createStorage();
+    const localStorage = createStorage("1000");
+
+    expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(true);
+    expect(sessionStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+    expect(localStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+  });
+
+  it("ignores stale redirect-attempt markers", () => {
+    const sessionStorage = createStorage();
+    const localStorage = createStorage("1000");
+
+    expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 700_001)).toBe(false);
+    expect(localStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+  });
+});
+
+describe("completeFirebaseCurrentUserSignIn", () => {
+  function createAuth(currentUser: Auth["currentUser"] = null): {
+    auth: Auth;
+    authStateReady: ReturnType<typeof vi.fn>;
+    state: { currentUser: Auth["currentUser"] };
+  } {
+    const state = { currentUser };
+    const authStateReady = vi.fn().mockResolvedValue(undefined);
+
+    return {
+      auth: {
+        get currentUser() {
+          return state.currentUser;
+        },
+        authStateReady,
+      } as unknown as Auth,
+      authStateReady,
+      state,
     };
+  }
 
-    expect(consumeFirebaseRedirectSignInAttempt(storage)).toBe(false);
+  it("returns false when no Firebase user is restored", async () => {
+    const onIdToken = vi.fn();
+    const { auth, authStateReady } = createAuth();
 
-    rememberFirebaseRedirectSignInAttempt(storage);
+    await expect(completeFirebaseCurrentUserSignIn(auth, onIdToken)).resolves.toBe(false);
 
-    expect(consumeFirebaseRedirectSignInAttempt(storage)).toBe(true);
-    expect(consumeFirebaseRedirectSignInAttempt(storage)).toBe(false);
+    expect(authStateReady).toHaveBeenCalledOnce();
+    expect(onIdToken).not.toHaveBeenCalled();
+  });
+
+  it("creates the server session from an already restored Firebase user", async () => {
+    const getIdToken = vi.fn().mockResolvedValue("restored-id-token");
+    const onIdToken = vi.fn().mockResolvedValue(undefined);
+    const { auth, authStateReady } = createAuth({ getIdToken } as unknown as Auth["currentUser"]);
+
+    await expect(completeFirebaseCurrentUserSignIn(auth, onIdToken)).resolves.toBe(true);
+
+    expect(authStateReady).not.toHaveBeenCalled();
+    expect(getIdToken).toHaveBeenCalledOnce();
+    expect(onIdToken).toHaveBeenCalledWith("restored-id-token");
   });
 });
 

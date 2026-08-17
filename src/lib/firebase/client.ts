@@ -6,6 +6,12 @@ let app: FirebaseApp | null = null;
 let auth: Auth | null = null;
 let emulatorConnected = false;
 
+type RedirectAttemptReadableStorage = Pick<Storage, "getItem" | "removeItem">;
+type RedirectAttemptWritableStorage = Pick<Storage, "setItem">;
+
+const REDIRECT_SIGN_IN_ATTEMPT_KEY = "firebase-redirect-sign-in-attempt";
+const REDIRECT_SIGN_IN_ATTEMPT_TTL_MS = 10 * 60 * 1000;
+
 function firebaseConfig(): FirebaseOptions {
   const env = getClientEnv();
   return {
@@ -45,8 +51,6 @@ export function getFirebaseSignInMode(): FirebaseSignInMode {
   return "redirect";
 }
 
-const REDIRECT_SIGN_IN_ATTEMPT_KEY = "firebase-redirect-sign-in-attempt";
-
 export async function completeFirebaseRedirectSignIn(
   firebaseAuth: Auth,
   onIdToken: (idToken: string) => Promise<void>,
@@ -64,25 +68,49 @@ export async function completeFirebaseRedirectSignIn(
   return true;
 }
 
-export function rememberFirebaseRedirectSignInAttempt(
-  storage: Pick<Storage, "setItem"> | null = getSessionStorage(),
-): void {
-  storage?.setItem(REDIRECT_SIGN_IN_ATTEMPT_KEY, "1");
-}
-
-export function consumeFirebaseRedirectSignInAttempt(
-  storage: Pick<Storage, "getItem" | "removeItem"> | null = getSessionStorage(),
-): boolean {
-  if (!storage) {
+export async function completeFirebaseCurrentUserSignIn(
+  firebaseAuth: Auth,
+  onIdToken: (idToken: string) => Promise<void>,
+): Promise<boolean> {
+  const user = await resolveCurrentUser(firebaseAuth);
+  if (!user) {
     return false;
   }
 
-  const hasPendingAttempt = storage.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY) === "1";
-  if (hasPendingAttempt) {
-    storage.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+  const idToken = await user.getIdToken();
+  await onIdToken(idToken);
+  return true;
+}
+
+export function rememberFirebaseRedirectSignInAttempt(
+  sessionStorage: RedirectAttemptWritableStorage | null = getSessionStorage(),
+  localStorage: RedirectAttemptWritableStorage | null = getLocalStorage(),
+  now: () => number = Date.now,
+): void {
+  const timestamp = String(now());
+
+  sessionStorage?.setItem(REDIRECT_SIGN_IN_ATTEMPT_KEY, timestamp);
+  localStorage?.setItem(REDIRECT_SIGN_IN_ATTEMPT_KEY, timestamp);
+}
+
+export function consumeFirebaseRedirectSignInAttempt(
+  sessionStorage: RedirectAttemptReadableStorage | null = getSessionStorage(),
+  localStorage: RedirectAttemptReadableStorage | null = getLocalStorage(),
+  now: () => number = Date.now,
+): boolean {
+  const sessionAttempt = sessionStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+  if (sessionAttempt) {
+    clearFirebaseRedirectSignInAttempt(sessionStorage, localStorage);
+    return isFreshRedirectSignInAttempt(sessionAttempt, now);
   }
 
-  return hasPendingAttempt;
+  const localAttempt = localStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+  if (!localAttempt) {
+    return false;
+  }
+
+  clearFirebaseRedirectSignInAttempt(sessionStorage, localStorage);
+  return isFreshRedirectSignInAttempt(localAttempt, now);
 }
 
 async function resolveCurrentUser(firebaseAuth: Auth): Promise<Auth["currentUser"]> {
@@ -94,12 +122,33 @@ async function resolveCurrentUser(firebaseAuth: Auth): Promise<Auth["currentUser
   return firebaseAuth.currentUser;
 }
 
+function isFreshRedirectSignInAttempt(value: string, now: () => number): boolean {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) && now() - timestamp <= REDIRECT_SIGN_IN_ATTEMPT_TTL_MS;
+}
+
+function clearFirebaseRedirectSignInAttempt(
+  sessionStorage: RedirectAttemptReadableStorage | null,
+  localStorage: RedirectAttemptReadableStorage | null,
+): void {
+  sessionStorage?.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+  localStorage?.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
+}
+
 function getSessionStorage(): Storage | null {
   if (typeof window === "undefined") {
     return null;
   }
 
   return window.sessionStorage;
+}
+
+function getLocalStorage(): Storage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  return window.localStorage;
 }
 
 export function connectFirebaseAuthEmulator(): void {

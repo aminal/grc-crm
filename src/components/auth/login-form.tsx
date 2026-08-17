@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import {
+    completeFirebaseCurrentUserSignIn,
     completeFirebaseRedirectSignIn,
     connectFirebaseAuthEmulator,
     consumeFirebaseRedirectSignInAttempt,
@@ -91,6 +92,12 @@ export function LoginForm(): React.ReactElement {
         try {
             const firebaseAuth = getFirebaseAuth();
             if (getFirebaseSignInMode() === 'redirect') {
+                if (await completeFirebaseCurrentUserSignIn(firebaseAuth, createServerSession)) {
+                    router.push('/dashboard');
+                    router.refresh();
+                    return;
+                }
+
                 rememberFirebaseRedirectSignInAttempt();
                 await signInWithRedirect(firebaseAuth, googleProvider);
                 return;
