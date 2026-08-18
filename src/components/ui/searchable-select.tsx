@@ -46,6 +46,7 @@ export function SearchableSelect({
   const [selectedOption, setSelectedOption] = useState<SearchableSelectOption | null>(() => optionByValue(options, defaultValue));
   const [isDirty, setIsDirty] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const didSelectOptionRef = useRef(false);
   const normalizedQuery = query.trim().toLowerCase();
   const filteredOptions = useMemo(() => {
     const matches = normalizedQuery ? options.filter((option) => optionText(option).includes(normalizedQuery)) : options;
@@ -69,6 +70,7 @@ export function SearchableSelect({
   }
 
   function handleChange(option: SearchableSelectOption | null): void {
+    didSelectOptionRef.current = option !== null;
     setSelectedOption(option);
     setIsDirty(false);
     setQuery("");
@@ -76,6 +78,11 @@ export function SearchableSelect({
 
   function handleClose(): void {
     setQuery("");
+
+    if (didSelectOptionRef.current) {
+      didSelectOptionRef.current = false;
+      return;
+    }
 
     if (isDirty) {
       setSelectedOption(null);
