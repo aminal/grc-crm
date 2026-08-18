@@ -12,7 +12,7 @@ export const controlFrameClasses = [
     'before:absolute before:inset-px before:rounded-[calc(var(--radius-lg)-1px)] before:bg-white before:shadow-none',
     'dark:before:hidden',
     'after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:ring-transparent after:ring-inset focus-within:after:ring-2 focus-within:after:ring-purple-500',
-    'has-disabled:opacity-50 has-disabled:before:bg-zinc-950/5 has-disabled:before:shadow-none',
+    'has-[input:disabled]:opacity-50 has-[input:disabled]:before:bg-zinc-950/5 has-[input:disabled]:before:shadow-none has-[select:disabled]:opacity-50 has-[select:disabled]:before:bg-zinc-950/5 has-[select:disabled]:before:shadow-none has-[textarea:disabled]:opacity-50 has-[textarea:disabled]:before:bg-zinc-950/5 has-[textarea:disabled]:before:shadow-none',
 ];
 
 export const controlClasses = [
@@ -50,12 +50,12 @@ export function Input({ className, type, leadingIcon, trailingIcon, ...props }: 
           {...props}
       />
             {leadingIcon ? (
-                <span className='pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500 group-has-disabled:text-zinc-600 sm:pl-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
+                <span className='pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-500 group-has-[input:disabled]:text-zinc-600 sm:pl-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
           {leadingIcon}
         </span>
             ) : null}
             {trailingIcon ? (
-                <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 group-has-disabled:text-zinc-600 sm:pr-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
+                <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-zinc-500 group-has-[input:disabled]:text-zinc-600 sm:pr-3 dark:text-zinc-400 forced-colors:text-[CanvasText]'>
           {trailingIcon}
         </span>
             ) : null}
@@ -78,14 +78,14 @@ export function Select({ className, multiple, ...props }: SelectProps): React.Re
           multiple={multiple}
           className={cn(
               controlClasses,
-              'py-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)] [&_optgroup]:font-semibold dark:*:bg-zinc-800 dark:*:text-white',
+              'py-[calc(--spacing(3)-1px)] sm:py-[calc(--spacing(2)-1px)] [&_optgroup]:font-semibold dark:*:bg-zinc-800 dark:text-white',
               multiple ? 'px-[calc(--spacing(3.5)-1px)] sm:px-[calc(--spacing(3)-1px)]' : 'pr-[calc(--spacing(10)-1px)] pl-[calc(--spacing(3.5)-1px)] sm:pr-[calc(--spacing(9)-1px)] sm:pl-[calc(--spacing(3)-1px)]',
           )}
           {...props}
       />
             {!multiple ? (
                 <span className='pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2'>
-          <svg className='size-5 stroke-zinc-500 group-has-disabled:stroke-zinc-600 sm:size-4 dark:stroke-zinc-400 forced-colors:stroke-[CanvasText]' viewBox='0 0 16 16' aria-hidden='true' fill='none'>
+          <svg className='size-5 stroke-zinc-500 group-has-[select:disabled]:stroke-zinc-600 sm:size-4 dark:stroke-zinc-400 forced-colors:stroke-[CanvasText]' viewBox='0 0 16 16' aria-hidden='true' fill='none'>
             <path d='M5.75 10.75L8 13L10.25 10.75' strokeWidth={1.5} strokeLinecap='round' strokeLinejoin='round' />
             <path d='M10.25 5.25L8 3L5.75 5.25' strokeWidth={1.5} strokeLinecap='round' strokeLinejoin='round' />
           </svg>

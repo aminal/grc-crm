@@ -21,7 +21,7 @@ export function LoginForm(): React.ReactElement {
     const router = useRouter();
     const checkedRedirect = useRef(false);
     const [error, setError] = useState<string | null>(null);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(() => getFirebaseSignInMode() === 'redirect');
 
     async function createServerSession(idToken: string): Promise<void> {
         const response = await fetch('/api/auth/session', {
@@ -43,8 +43,11 @@ export function LoginForm(): React.ReactElement {
 
         checkedRedirect.current = true;
         connectFirebaseAuthEmulator();
-        setLoading(true);
-        setError(null);
+
+        const allowCurrentUserFallback = consumeFirebaseRedirectSignInAttempt();
+        if (getFirebaseSignInMode() !== 'redirect' && !allowCurrentUserFallback) {
+            return;
+        }
 
         let cancelled = false;
 
@@ -54,7 +57,7 @@ export function LoginForm(): React.ReactElement {
                     getFirebaseAuth(),
                     createServerSession,
                     undefined,
-                    consumeFirebaseRedirectSignInAttempt(),
+                    allowCurrentUserFallback,
                 );
                 if (cancelled) {
                     return;
