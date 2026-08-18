@@ -5,6 +5,7 @@ import {
   completeFirebaseRedirectSignIn,
   consumeFirebaseRedirectSignInAttempt,
   getFirebaseSignInMode,
+  hasFreshFirebaseRedirectSignInAttempt,
   rememberFirebaseRedirectSignInAttempt,
 } from "@/lib/firebase/client";
 
@@ -91,12 +92,30 @@ describe("rememberFirebaseRedirectSignInAttempt", () => {
     expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(false);
   });
 
+  it("detects a fresh redirect attempt without clearing it", () => {
+    const sessionStorage = createStorage("1000");
+    const localStorage = createStorage("1000");
+
+    expect(hasFreshFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(true);
+    expect(sessionStorage.removeItemMock).not.toHaveBeenCalled();
+    expect(localStorage.removeItemMock).not.toHaveBeenCalled();
+    expect(hasFreshFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(true);
+  });
+
   it("falls back to local storage when the session-storage marker is missing", () => {
     const sessionStorage = createStorage();
     const localStorage = createStorage("1000");
 
     expect(consumeFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 1_500)).toBe(true);
     expect(sessionStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+    expect(localStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
+  });
+
+  it("clears stale redirect-attempt markers while checking for a fresh attempt", () => {
+    const sessionStorage = createStorage();
+    const localStorage = createStorage("1000");
+
+    expect(hasFreshFirebaseRedirectSignInAttempt(sessionStorage, localStorage, () => 700_001)).toBe(false);
     expect(localStorage.removeItemMock).toHaveBeenCalledWith("firebase-redirect-sign-in-attempt");
   });
 

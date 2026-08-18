@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { Loader2 } from 'lucide-react';
 import {
+    clearFirebaseRedirectSignInAttempt,
     completeFirebaseCurrentUserSignIn,
     completeFirebaseRedirectSignIn,
     connectFirebaseAuthEmulator,
-    consumeFirebaseRedirectSignInAttempt,
     getFirebaseAuth,
     getFirebaseSignInMode,
     googleProvider,
+    hasFreshFirebaseRedirectSignInAttempt,
     rememberFirebaseRedirectSignInAttempt,
 } from '@/lib/firebase/client';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export function LoginForm(): React.ReactElement {
         checkedRedirect.current = true;
         connectFirebaseAuthEmulator();
 
-        const allowCurrentUserFallback = consumeFirebaseRedirectSignInAttempt();
+        const allowCurrentUserFallback = hasFreshFirebaseRedirectSignInAttempt();
         if (getFirebaseSignInMode() !== 'redirect' && !allowCurrentUserFallback) {
             return;
         }
@@ -64,6 +65,7 @@ export function LoginForm(): React.ReactElement {
                 }
 
                 if (handledRedirect) {
+                    clearFirebaseRedirectSignInAttempt();
                     router.push('/dashboard');
                     router.refresh();
                     return;
@@ -75,6 +77,7 @@ export function LoginForm(): React.ReactElement {
                     return;
                 }
 
+                clearFirebaseRedirectSignInAttempt();
                 setError(caught instanceof Error ? caught.message : 'Unable to sign in.');
                 setLoading(false);
             }

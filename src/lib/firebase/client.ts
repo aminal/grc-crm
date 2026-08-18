@@ -93,24 +93,38 @@ export function rememberFirebaseRedirectSignInAttempt(
   localStorage?.setItem(REDIRECT_SIGN_IN_ATTEMPT_KEY, timestamp);
 }
 
+export function hasFreshFirebaseRedirectSignInAttempt(
+  sessionStorage: RedirectAttemptReadableStorage | null = getSessionStorage(),
+  localStorage: RedirectAttemptReadableStorage | null = getLocalStorage(),
+  now: () => number = Date.now,
+): boolean {
+  const attempts = [
+    sessionStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY),
+    localStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY),
+  ].filter((attempt): attempt is string => Boolean(attempt));
+  if (attempts.length === 0) {
+    return false;
+  }
+
+  const hasFreshAttempt = attempts.some((attempt) => isFreshRedirectSignInAttempt(attempt, now));
+  if (!hasFreshAttempt) {
+    clearFirebaseRedirectSignInAttempt(sessionStorage, localStorage);
+  }
+
+  return hasFreshAttempt;
+}
+
 export function consumeFirebaseRedirectSignInAttempt(
   sessionStorage: RedirectAttemptReadableStorage | null = getSessionStorage(),
   localStorage: RedirectAttemptReadableStorage | null = getLocalStorage(),
   now: () => number = Date.now,
 ): boolean {
-  const sessionAttempt = sessionStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
-  if (sessionAttempt) {
+  const hasFreshAttempt = hasFreshFirebaseRedirectSignInAttempt(sessionStorage, localStorage, now);
+  if (hasFreshAttempt) {
     clearFirebaseRedirectSignInAttempt(sessionStorage, localStorage);
-    return isFreshRedirectSignInAttempt(sessionAttempt, now);
   }
 
-  const localAttempt = localStorage?.getItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
-  if (!localAttempt) {
-    return false;
-  }
-
-  clearFirebaseRedirectSignInAttempt(sessionStorage, localStorage);
-  return isFreshRedirectSignInAttempt(localAttempt, now);
+  return hasFreshAttempt;
 }
 
 async function resolveCurrentUser(firebaseAuth: Auth): Promise<Auth["currentUser"]> {
@@ -127,9 +141,9 @@ function isFreshRedirectSignInAttempt(value: string, now: () => number): boolean
   return Number.isFinite(timestamp) && now() - timestamp <= REDIRECT_SIGN_IN_ATTEMPT_TTL_MS;
 }
 
-function clearFirebaseRedirectSignInAttempt(
-  sessionStorage: RedirectAttemptReadableStorage | null,
-  localStorage: RedirectAttemptReadableStorage | null,
+export function clearFirebaseRedirectSignInAttempt(
+  sessionStorage: RedirectAttemptReadableStorage | null = getSessionStorage(),
+  localStorage: RedirectAttemptReadableStorage | null = getLocalStorage(),
 ): void {
   sessionStorage?.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
   localStorage?.removeItem(REDIRECT_SIGN_IN_ATTEMPT_KEY);
