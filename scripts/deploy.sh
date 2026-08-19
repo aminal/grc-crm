@@ -4,6 +4,7 @@ set -euo pipefail
 APP_DIR="${APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 ENV_FILE="${ENV_FILE:-/etc/grc-crm.env}"
 SERVICE_NAME="${SERVICE_NAME:-grc-crm}"
+SYSTEMCTL_BIN="${SYSTEMCTL_BIN:-/usr/bin/systemctl}"
 
 if [[ "$(id -un)" != "webapps" ]]; then
   echo "This script must be run as the webapps user." >&2
@@ -27,4 +28,8 @@ set +a
 rm -rf .next
 npm run build
 
-sudo -n systemctl restart "$SERVICE_NAME"
+if ! sudo -n "$SYSTEMCTL_BIN" restart "$SERVICE_NAME"; then
+  echo "Unable to restart $SERVICE_NAME without a sudo password." >&2
+  echo "Allow webapps to run: $SYSTEMCTL_BIN restart $SERVICE_NAME" >&2
+  exit 1
+fi
