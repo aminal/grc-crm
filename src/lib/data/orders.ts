@@ -32,7 +32,8 @@ const FIRST_ORDER_NUMBER = 1501;
 
 type InvoiceApprovalInput = {
   invoice_number: string;
-  due_date: string;
+  terms: OrderTerms;
+  terms_notes: string;
 };
 
 type PaidActivityInput = {
@@ -190,23 +191,13 @@ function dueDaysForOrderTerms(terms: OrderTerms): number {
   return 0;
 }
 
-function isDueAfterDelivery(terms: OrderTerms): boolean {
-  return terms === "NET-30" || terms === "NET-60";
-}
-
 function invoiceForApproval(order: FirestoreRecord<OrderData>, user: AuthenticatedUser, input: InvoiceApprovalInput): InvoiceData {
   const total = orderTotalCents(order.data);
-  const today = new Date();
   const issuedBy = actorMap(user);
   const invoiceNumber = input.invoice_number.trim();
-  const dueDate = input.due_date.trim();
 
   if (!invoiceNumber) {
     throw new Error("An invoice number is required to approve an order.");
-  }
-
-  if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
-    throw new Error("Enter a valid due date.");
   }
 
   return {
@@ -217,7 +208,7 @@ function invoiceForApproval(order: FirestoreRecord<OrderData>, user: Authenticat
     company_id: order.data.company_id,
     company_name: order.data.company_name,
     status: "unpaid",
-    due_date: dueDate || (isDueAfterDelivery(order.data.terms) ? null : dateOnly(today)),
+    due_date: null,
     delivery_confirmed_at: null,
     subtotal_cents: total,
     total_cents: total,
@@ -492,7 +483,11 @@ export async function approveOrder(orderId: string, user: AuthenticatedUser, inp
   const result: { invoice: InvoiceData | null } = { invoice: null };
   const updated = await transitionOrderWithUpdate(orderId, "approved", user, "approved", (order) => {
     result.invoice = invoiceForApproval(order, user, input);
-    return { invoice: result.invoice };
+    return {
+      invoice: result.invoice,
+      terms: input.terms,
+      terms_notes: input.terms === "Other" ? input.terms_notes : "",
+    };
   });
 
   if (!result.invoice) {

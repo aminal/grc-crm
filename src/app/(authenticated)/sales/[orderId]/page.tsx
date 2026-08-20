@@ -22,7 +22,7 @@ import {
     formatMoney,
     invoiceStatusLabel
 } from '@/lib/domain/format';
-import type { FirestoreDate, OrderItem, OrderStatus, OrderTerms } from '@/lib/domain/types';
+import type { FirestoreDate, OrderItem, OrderStatus } from '@/lib/domain/types';
 import { hasInvoicePayments } from '@/lib/sales/invoice';
 import { DiscountDialog } from './discount-dialog';
 import { EditPackagesDialog } from './edit-packages-dialog';
@@ -109,8 +109,8 @@ export default async function OrderPage({ params }: {
     const orderTermsLabel = order.data.terms === 'Other' && order.data.terms_notes ? order.data.terms_notes : order.data.terms;
     const approvalInvoice = {
         invoiceNumber: `INV-${order.data.order_number}`,
-        dueDate: invoiceDueDateForApproval(order.data.terms),
-        termsLabel: orderTermsLabel,
+        terms: order.data.terms,
+        termsNotes: order.data.terms_notes,
         totalLabel: formatMoney(order.data.total_cents),
     };
     const showClosedBadge = order.data.status === 'paid' && orderState === 'closed';
@@ -304,10 +304,6 @@ export default async function OrderPage({ params }: {
             </div>
         </div>
     );
-}
-
-function invoiceDueDateForApproval(terms: OrderTerms): string {
-    return terms === 'NET-30' || terms === 'NET-60' ? '' : new Date().toISOString().slice(0, 10);
 }
 
 function formatActivityAction(action: string): string {

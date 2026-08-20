@@ -62,7 +62,8 @@ export async function approveOrderAction(orderId: string, formData: FormData): P
   const user = await requireManagerOrAdmin();
   const input = createInvoiceSchema.parse({
     invoice_number: formData.get("invoice_number") ?? "",
-    due_date: formData.get("due_date") ?? "",
+    terms: formData.get("terms"),
+    terms_notes: formData.get("terms_notes") ?? "",
   });
   await approveOrder(orderId, user, input);
   revalidateOrder(orderId);

@@ -165,15 +165,8 @@ export const createOrderSchema = z.object({
 
 export const createInvoiceSchema = z.object({
   invoice_number: requiredShortString,
-  due_date: optionalString,
-}).superRefine((value, context) => {
-  if (value.due_date && !/^\d{4}-\d{2}-\d{2}$/.test(value.due_date)) {
-    context.addIssue({
-      code: "custom",
-      path: ["due_date"],
-      message: "Enter a valid due date.",
-    });
-  }
+  terms: z.enum(ORDER_TERMS),
+  terms_notes: optionalLongString,
 });
 
 export const deliverySchema = z.object({

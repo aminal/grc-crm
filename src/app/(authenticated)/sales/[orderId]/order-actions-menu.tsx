@@ -2,10 +2,12 @@
 
 import { ChevronDownIcon, XMarkIcon } from '@heroicons/react/20/solid';
 import { useState } from 'react';
+import { OrderTermsField } from '@/components/sales/order-terms-field';
 import { Button } from '@/components/ui/button';
 import { DeleteConfirmationDialog, Dialog, DialogActions, DialogBody, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Dropdown, DropdownButton, DropdownDivider, DropdownItem, DropdownLabel, DropdownMenu } from '@/components/ui/dropdown';
 import { Field, Input } from '@/components/ui/field';
+import type { OrderTerms } from '@/lib/domain/types';
 import {
     approveOrderAction,
     cancelOrderAction,
@@ -23,8 +25,8 @@ const actionsButtonClasses = 'relative isolate inline-flex items-baseline justif
 
 type InvoiceApprovalDefaults = {
     invoiceNumber: string;
-    dueDate: string;
-    termsLabel: string;
+    terms: OrderTerms;
+    termsNotes: string;
     totalLabel: string;
 };
 
@@ -157,25 +159,15 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                             <Field label='Invoice number'>
                                 <Input name='invoice_number' defaultValue={approvalInvoice.invoiceNumber} required autoFocus />
                             </Field>
-                            {approvalInvoice.dueDate ? (
-                                <Field label='Due date'>
-                                    <Input name='due_date' type='date' defaultValue={approvalInvoice.dueDate} required />
-                                </Field>
-                            ) : (
-                                <Field label='Due date'>
-                                    <Input defaultValue='Set after delivery' readOnly />
-                                </Field>
-                            )}
-                            <Field label='Terms'>
-                                <Input defaultValue={approvalInvoice.termsLabel} readOnly />
-                            </Field>
+                            <OrderTermsField defaultTerms={approvalInvoice.terms} defaultTermsNotes={approvalInvoice.termsNotes} />
+                            <div />
                             <Field label='Total'>
                                 <Input defaultValue={approvalInvoice.totalLabel} readOnly />
                             </Field>
                         </div>
                         <DialogActions>
                             <Button type='button' plain onClick={closeCreateInvoiceDialog}>Cancel</Button>
-                            <Button type='submit' color='purple'>Create Invoice and Approve</Button>
+                            <Button type='submit' color='purple'>Approve & Create Invoice</Button>
                         </DialogActions>
                     </form>
                 </DialogBody>

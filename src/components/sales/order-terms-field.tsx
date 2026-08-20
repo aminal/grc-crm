@@ -5,8 +5,13 @@ import { Field, Select, Textarea } from "@/components/ui/field";
 import { ORDER_TERMS } from "@/lib/domain/constants";
 import type { OrderTerms } from "@/lib/domain/types";
 
-export function OrderTermsField(): React.ReactElement {
-  const [terms, setTerms] = useState<OrderTerms | "">("");
+type OrderTermsFieldProps = {
+  defaultTerms?: OrderTerms | "";
+  defaultTermsNotes?: string;
+};
+
+export function OrderTermsField({ defaultTerms = "", defaultTermsNotes = "" }: OrderTermsFieldProps = {}): React.ReactElement {
+  const [terms, setTerms] = useState<OrderTerms | "">(defaultTerms);
 
   return (
     <>
@@ -18,7 +23,7 @@ export function OrderTermsField(): React.ReactElement {
       </Field>
       {terms === "Other" ? (
         <Field label="Terms notes" className="sm:col-span-2 xl:col-span-3">
-          <Textarea name="terms_notes" rows={3} placeholder="Add notes for other terms" />
+          <Textarea name="terms_notes" rows={3} placeholder="Add notes for other terms" defaultValue={defaultTermsNotes} />
         </Field>
       ) : null}
     </>
