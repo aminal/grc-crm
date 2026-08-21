@@ -20,7 +20,6 @@ import { EditPackagesDialog } from './edit-packages-dialog';
 import { MetrcPackageIdsDialog } from './metrc-package-ids-dialog';
 import { OrderActionsMenu } from './order-actions-menu';
 import { EditPaymentsDialog, RecordPaymentDialog } from './record-payment-dialog';
-import { color } from 'motion';
 
 export default async function OrderPage({ params }: {
     params: Promise<{ orderId: string }>
@@ -123,7 +122,7 @@ export default async function OrderPage({ params }: {
                 title={`Order #${order.data.order_number}`}
                 description={order.data.company_name}
                 actions={
-                    <OrderActionsMenu orderId={orderId} orderNumber={order.data.order_number} actions={actions} approvalInvoice={approvalInvoice} canManage={canManage} canDelete={canDeleteOrder} hasInvoice={Boolean(order.data.invoice)} canRecordPayment={canRecordPayment} recordPaymentBalanceCents={invoice?.balance_cents ?? 0} defaultPaidAt={defaultPaidAt} />}
+                    <OrderActionsMenu orderId={orderId} orderNumber={order.data.order_number} actions={actions} approvalInvoice={approvalInvoice} canManage={canManage} canDelete={canDeleteOrder} hasInvoice={Boolean(invoice)} canRecordPayment={canRecordPayment} recordPaymentBalanceCents={invoice?.balance_cents ?? 0} defaultPaidAt={defaultPaidAt} />}
             >
                 <div className='flex flex-wrap gap-2'>
                     <StatusBadge status={order.data.status} />

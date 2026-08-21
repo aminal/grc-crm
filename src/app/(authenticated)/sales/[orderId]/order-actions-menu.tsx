@@ -82,7 +82,7 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                     <ChevronDownIcon data-slot='icon' aria-hidden='true' />
                 </DropdownButton>
                 <DropdownMenu anchor='bottom end' className='min-w-56'>
-                    {visibleActions.length === 0 && !canShowRecordPayment && !canDelete ? (
+                    {visibleActions.length === 0 && !canShowRecordPayment && !hasInvoice && !canDelete ? (
                         <div className='col-span-full px-3 py-2 text-sm text-zinc-500 dark:text-zinc-400'>
                             No actions are available for this status.
                         </div>
@@ -128,6 +128,14 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                         <DropdownItem onClick={() => setConfirmationAction('close')}>
                             <DropdownLabel>Close Order</DropdownLabel>
                         </DropdownItem>
+                    ) : null}
+                    {hasInvoice ? (
+                        <>
+                            <DropdownDivider />
+                            <DropdownItem href={`/sales/${orderId}/invoice/pdf`} target='_blank'>
+                                <DropdownLabel>Generate PDF Invoice</DropdownLabel>
+                            </DropdownItem>
+                        </>
                     ) : null}
                     {canDelete ? (
                         <>

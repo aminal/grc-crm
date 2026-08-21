@@ -266,6 +266,9 @@ export type InvoiceData = {
   issued_by?: ActorSnapshot;
   issued_at?: FirestoreDate;
   voided_at?: FirestoreDate;
+  pdf_path?: string;
+  pdf_generated_at?: FirestoreDate;
+  pdf_template_version?: number;
   created_by: ActorSnapshot;
   created_at: FirestoreDate;
   updated_at: FirestoreDate;
