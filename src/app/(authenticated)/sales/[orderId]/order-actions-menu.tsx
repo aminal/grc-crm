@@ -92,16 +92,6 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                             <DropdownLabel>Mark as Approved</DropdownLabel>
                         </DropdownItem>
                     ) : null}
-                    {visibleActions.includes('reject') ? (
-                        <DropdownItem onClick={() => setConfirmationAction('reject')}>
-                            <DropdownLabel>Mark as Rejected</DropdownLabel>
-                        </DropdownItem>
-                    ) : null}
-                    {visibleActions.includes('cancel') ? (
-                        <DropdownItem onClick={() => setConfirmationAction('cancel')}>
-                            <DropdownLabel>Mark as Cancelled</DropdownLabel>
-                        </DropdownItem>
-                    ) : null}
                     {visibleActions.includes('unapprove') ? (
                         <MenuActionForm action={unapproveOrderAction.bind(null, orderId)} label='Mark as Pending' />
                     ) : null}
@@ -113,20 +103,30 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                             <DropdownLabel>Mark Delivered</DropdownLabel>
                         </DropdownItem>
                     ) : null}
-                    {visibleActions.includes('delivery_reject') ? (
-                        <MenuActionForm action={deliveryRejectOrderAction.bind(null, orderId)} label='Mark as Delivery Rejected' />
-                    ) : null}
-                    {visibleActions.includes('close') ? (
-                        <DropdownItem onClick={() => setConfirmationAction('close')}>
-                            <DropdownLabel>Close Order</DropdownLabel>
-                        </DropdownItem>
-                    ) : null}
                     {visibleActions.includes('reopen') ? (
                         <MenuActionForm action={reopenOrderAction.bind(null, orderId)} label='Reopen Order' />
                     ) : null}
                     {canShowRecordPayment ? (
                         <DropdownItem onClick={() => setIsRecordPaymentDialogOpen(true)}>
                             <DropdownLabel>Record Payment</DropdownLabel>
+                        </DropdownItem>
+                    ) : null}
+                    {visibleActions.includes('delivery_reject') ? (
+                        <MenuActionForm action={deliveryRejectOrderAction.bind(null, orderId)} label='Mark as Delivery Rejected' />
+                    ) : null}
+                    {visibleActions.includes('reject') ? (
+                        <DropdownItem onClick={() => setConfirmationAction('reject')}>
+                            <DropdownLabel>Mark as Rejected</DropdownLabel>
+                        </DropdownItem>
+                    ) : null}
+                    {visibleActions.includes('cancel') ? (
+                        <DropdownItem onClick={() => setConfirmationAction('cancel')}>
+                            <DropdownLabel>Mark as Cancelled</DropdownLabel>
+                        </DropdownItem>
+                    ) : null}
+                    {visibleActions.includes('close') ? (
+                        <DropdownItem onClick={() => setConfirmationAction('close')}>
+                            <DropdownLabel>Close Order</DropdownLabel>
                         </DropdownItem>
                     ) : null}
                     {canDelete ? (

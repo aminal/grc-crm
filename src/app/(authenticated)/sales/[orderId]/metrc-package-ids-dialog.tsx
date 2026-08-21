@@ -6,14 +6,21 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
+type CopiedIndicator =
+  | { type: "packageTag"; packageTag: string }
+  | { type: "all" };
+
 type MetrcPackageIdsDialogProps = {
   productName: string;
   packageTags: string[];
+  children?: React.ReactNode;
+  triggerClassName?: string;
+  triggerAriaLabel?: string;
 };
 
-export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackageIdsDialogProps): React.ReactElement {
+export function MetrcPackageIdsDialog({ productName, packageTags, children, triggerClassName, triggerAriaLabel }: MetrcPackageIdsDialogProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false);
-  const [copiedPackageTag, setCopiedPackageTag] = useState<string | null>(null);
+  const [copiedIndicator, setCopiedIndicator] = useState<CopiedIndicator | null>(null);
   const [isCopiedVisible, setIsCopiedVisible] = useState(false);
   const fadeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const removeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -30,9 +37,7 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
     };
   }, []);
 
-  async function copyPackageTag(packageTag: string): Promise<void> {
-    await navigator.clipboard.writeText(packageTag);
-
+  function showCopiedIndicator(copiedIndicator: CopiedIndicator): void {
     if (fadeTimeout.current) {
       clearTimeout(fadeTimeout.current);
     }
@@ -41,23 +46,44 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
       clearTimeout(removeTimeout.current);
     }
 
-    setCopiedPackageTag(packageTag);
+    setCopiedIndicator(copiedIndicator);
     setIsCopiedVisible(true);
     fadeTimeout.current = setTimeout(() => setIsCopiedVisible(false), 600);
-    removeTimeout.current = setTimeout(() => setCopiedPackageTag(null), 1600);
+    removeTimeout.current = setTimeout(() => setCopiedIndicator(null), 1600);
+  }
+
+  async function copyPackageTag(packageTag: string): Promise<void> {
+    await navigator.clipboard.writeText(packageTag);
+    showCopiedIndicator({ type: "packageTag", packageTag });
+  }
+
+  async function copyAllPackageTags(): Promise<void> {
+    await navigator.clipboard.writeText(packageTags.join(", "));
+    showCopiedIndicator({ type: "all" });
   }
 
   return (
     <>
-      <Button
-        type="button"
-        color="emerald"
-        className="px-2! py-1! *:data-[slot=icon]:size-4! [--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)] data-active:[--btn-icon:var(--color-white)] dark:data-hover:[--btn-icon:var(--color-white)] dark:data-active:[--btn-icon:var(--color-white)]"
-        onClick={() => setIsOpen(true)}
-        aria-label="Package details"
-      >
-        <Package data-slot="icon" aria-hidden="true" />
-      </Button>
+      {children ? (
+        <button
+          type="button"
+          className={triggerClassName}
+          onClick={() => setIsOpen(true)}
+          aria-label={triggerAriaLabel}
+        >
+          {children}
+        </button>
+      ) : (
+        <Button
+          type="button"
+          color="emerald"
+          className="px-2! py-1! *:data-[slot=icon]:size-4! [--btn-icon:var(--color-white)] data-hover:[--btn-icon:var(--color-white)] data-active:[--btn-icon:var(--color-white)] dark:data-hover:[--btn-icon:var(--color-white)] dark:data-active:[--btn-icon:var(--color-white)]"
+          onClick={() => setIsOpen(true)}
+          aria-label="Package details"
+        >
+          <Package data-slot="icon" aria-hidden="true" />
+        </Button>
+      )}
       <Dialog size="md" open={isOpen} onClose={setIsOpen} className="relative">
         <Headless.CloseButton
           className="absolute top-4 right-4 cursor-pointer rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
@@ -82,7 +108,7 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
                     >
                       <Copy className="size-4" aria-hidden="true" />
                     </button>
-                    {copiedPackageTag === packageTag ? (
+                    {copiedIndicator?.type === "packageTag" && copiedIndicator.packageTag === packageTag ? (
                       <span className={`pointer-events-none absolute z-50 -top-5 right-0 rounded-md bg-zinc-950 px-2 py-1 text-xs font-semibold text-white shadow-sm transition-opacity duration-[400ms] dark:bg-zinc-950 dark:text-white/85 ${isCopiedVisible ? "opacity-100" : "opacity-0"}`}>
                         Copied!
                       </span>
@@ -91,6 +117,19 @@ export function MetrcPackageIdsDialog({ productName, packageTags }: MetrcPackage
                 </li>
               ))}
             </ul>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <span className="relative">
+              <Button type="button" color="emerald" onClick={() => void copyAllPackageTags()}>
+                <Copy data-slot="icon" aria-hidden="true" />
+                Copy All
+              </Button>
+              {copiedIndicator?.type === "all" ? (
+                <span className={`pointer-events-none absolute z-50 -top-8 right-0 rounded-md bg-zinc-950 px-2 py-1 text-xs font-semibold text-white shadow-sm transition-opacity duration-[400ms] dark:bg-zinc-950 dark:text-white/85 ${isCopiedVisible ? "opacity-100" : "opacity-0"}`}>
+                  Copied!
+                </span>
+              ) : null}
+            </span>
           </div>
         </DialogBody>
       </Dialog>

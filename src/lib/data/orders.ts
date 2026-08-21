@@ -510,7 +510,7 @@ export async function rejectOrder(orderId: string, user: AuthenticatedUser): Pro
 }
 
 export async function cancelOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
-  return transitionOrder(orderId, "cancelled", user, "cancelled");
+  return transitionAndVoidInvoiceWithoutPayments(orderId, "cancelled", user, "cancelled", "Orders with invoice payments cannot be cancelled.");
 }
 
 export async function closeOrder(orderId: string, user: AuthenticatedUser): Promise<FirestoreRecord<OrderData>> {
@@ -632,6 +632,7 @@ export async function addPayment(orderId: string, paymentData: { amount: number;
 
     const orderData = snapshot.data() as OrderData;
     orderStatus = orderData.status;
+    assertPaymentsEditable(orderData);
     const invoice = invoiceFromOrder(orderData);
     if (!invoice) {
       throw new Error("An active invoice is required before payments can be added.");
@@ -706,6 +707,7 @@ export async function updatePayment(orderId: string, paymentId: string, paymentD
 
     const orderData = snapshot.data() as OrderData;
     orderStatus = orderData.status;
+    assertPaymentsEditable(orderData);
     orderForReopen = { id: orderId, data: orderData };
     const invoice = orderData.invoice;
     if (!invoice || invoice.status === "void") {
@@ -773,6 +775,7 @@ export async function deletePayment(orderId: string, paymentId: string, user: Au
 
     const orderData = snapshot.data() as OrderData;
     orderStatus = orderData.status;
+    assertPaymentsEditable(orderData);
     orderForReopen = { id: orderId, data: orderData };
     const invoice = orderData.invoice;
     if (!invoice || invoice.status === "void") {
@@ -860,6 +863,12 @@ export async function updateInvoiceDiscount(orderId: string, input: { type: "per
   }
 
   return markPaidIfSettled(updated, user);
+}
+
+function assertPaymentsEditable(orderData: OrderData): void {
+  if ((orderData.state ?? "open") === "closed") {
+    throw new Error("Payments cannot be changed after an order is closed.");
+  }
 }
 
 function assertItemsEditable(order: FirestoreRecord<OrderData>): void {

@@ -2,7 +2,7 @@ import type { OrderState, OrderStatus } from "@/lib/domain/types";
 
 export const ORDER_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ["approved", "rejected", "cancelled"],
-  approved: ["delivered", "delivery_rejected", "pending"],
+  approved: ["delivered", "delivery_rejected", "pending", "cancelled"],
   delivered: [],
   rejected: ["pending"],
   cancelled: ["pending"],
@@ -34,7 +34,7 @@ function statusActions(status: OrderStatus): string[] {
     case "rejected":
       return ["unapprove"];
     case "approved":
-      return ["deliver", "delivery_reject", "unapprove"];
+      return ["deliver", "delivery_reject", "unapprove", "cancel"];
     case "delivered":
       return [];
     case "cancelled":

@@ -9,6 +9,7 @@ describe("order status rules", () => {
     expect(canTransition("approved", "delivered")).toBe(true);
     expect(canTransition("approved", "delivery_rejected")).toBe(true);
     expect(canTransition("approved", "pending")).toBe(true);
+    expect(canTransition("approved", "cancelled")).toBe(true);
     expect(canTransition("delivered", "approved")).toBe(false);
     expect(canTransition("delivered", "paid")).toBe(false);
     expect(canTransition("rejected", "approved")).toBe(false);
@@ -21,7 +22,7 @@ describe("order status rules", () => {
   it("returns the valid action set for each status", () => {
     expect(availableOrderActions("pending")).toEqual(["approve", "reject", "cancel"]);
     expect(availableOrderActions("rejected")).toEqual(["unapprove", "close"]);
-    expect(availableOrderActions("approved")).toEqual(["deliver", "delivery_reject", "unapprove"]);
+    expect(availableOrderActions("approved")).toEqual(["deliver", "delivery_reject", "unapprove", "cancel"]);
     expect(availableOrderActions("delivered")).toEqual([]);
     expect(availableOrderActions("cancelled")).toEqual(["mark_pending", "close"]);
     expect(availableOrderActions("paid")).toEqual(["close"]);
