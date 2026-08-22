@@ -95,7 +95,7 @@ export default async function BillingPage({ searchParams }: {
 
     return (
         <div>
-            <PageHeader title='Billing' description='Invoices generated from sales orders.' />
+            <PageHeader title='Billing' />
 
             <div className='space-y-6'>
                 <TableSearch query={query} placeholder='Filter invoices by invoice, order, company, status, or payment' preservedParams={sortParams} />
