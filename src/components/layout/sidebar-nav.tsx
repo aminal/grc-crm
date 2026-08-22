@@ -6,6 +6,7 @@ import {
   BanknotesIcon,
   BuildingOffice2Icon,
   CubeIcon,
+  DocumentCurrencyDollarIcon,
   HomeIcon,
   TagIcon,
   UserGroupIcon,
@@ -35,6 +36,12 @@ const navItems = [
     label: "Sales",
     icon: BanknotesIcon,
     isCurrent: (pathname: string) => pathname === "/sales" || pathname.startsWith("/sales/"),
+  },
+  {
+    href: "/billing",
+    label: "Billing",
+    icon: DocumentCurrencyDollarIcon,
+    isCurrent: (pathname: string) => pathname === "/billing" || pathname.startsWith("/billing/"),
   },
   {
     href: "/inventory",
@@ -75,7 +82,7 @@ const navItems = [
   },
 ] as const;
 
-const guestHiddenNavHrefs = new Set(["/sales", "/inventory", "/companies", "/brands", "/strains", "/products", "/users"]);
+const guestHiddenNavHrefs = new Set(["/sales", "/billing", "/inventory", "/companies", "/brands", "/strains", "/products", "/users"]);
 
 const sidebarItemClasses = cn(
   "relative flex cursor-pointer w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5",
