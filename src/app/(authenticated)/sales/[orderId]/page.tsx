@@ -300,7 +300,7 @@ export default async function OrderPage({ params }: {
                                     <div className='min-w-0 flex-1'>
                                         <div className='flex items-center gap-3'>
                                             {canManage && entry.data.actor_user_id ? (
-                                                <Link href={`/users?user=${encodeURIComponent(entry.data.actor_user_id)}`} className='shrink-0' aria-label={entry.data.actor_name}>
+                                                <Link href={`/users/${encodeURIComponent(entry.data.actor_user_id)}`} className='shrink-0' aria-label={entry.data.actor_name}>
                                                     <Avatar name={entry.data.actor_name} picture={entry.data.actor_picture} className='size-8 rounded-md text-sm' />
                                                 </Link>
                                             ) : (

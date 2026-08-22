@@ -33,6 +33,7 @@ export async function updateUserAction(uid: string, formData: FormData): Promise
 
   await adminUpdateUserProfile(uid, input);
   revalidatePath("/users");
+  revalidatePath(`/users/${encodeURIComponent(uid)}`);
 }
 
 export async function updateUserFormAction(uid: string, _: UserFormState, formData: FormData): Promise<UserFormState> {
