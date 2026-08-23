@@ -1,5 +1,12 @@
 import { cn } from '@/lib/utils';
 
+type LabelProps =
+    | (React.LabelHTMLAttributes<HTMLLabelElement> & {
+        as?: 'label';
+    })
+    | (React.HTMLAttributes<HTMLDivElement> & {
+        as: 'div';
+    });
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     leadingIcon?: React.ReactNode;
     trailingIcon?: React.ReactNode;
@@ -28,8 +35,16 @@ const dateClasses = [
     '[&::-webkit-datetime-edit-hour-field]:p-0 [&::-webkit-datetime-edit-minute-field]:p-0 [&::-webkit-datetime-edit-second-field]:p-0 [&::-webkit-datetime-edit-millisecond-field]:p-0 [&::-webkit-datetime-edit-meridiem-field]:p-0',
 ];
 
-export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>): React.ReactElement {
-    return <label data-slot='label' className={cn('text-sm/6 select-none font-bold uppercase tracking-[0.2em] text-zinc-500', className)} {...props} />;
+export function Label(props: LabelProps): React.ReactElement {
+    if (props.as === 'div') {
+        const { as: Component, className, ...divProps } = props;
+
+        return <Component data-slot='label' className={cn('text-sm/6 select-none font-semibold uppercase tracking-[0.2em] text-zinc-500', className)} {...divProps} />;
+    }
+
+    const { as: Component = 'label', className, ...labelProps } = props;
+
+    return <Component data-slot='label' className={cn('text-sm/6 select-none font-semibold uppercase tracking-[0.2em] text-zinc-500', className)} {...labelProps} />;
 }
 
 export function Input({ className, type, leadingIcon, trailingIcon, ...props }: InputProps): React.ReactElement {
