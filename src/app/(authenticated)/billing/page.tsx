@@ -2,11 +2,28 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { TableSearch } from '@/components/ui/table-search';
-import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
+import {
+    activeTableSortDirection,
+    paginatedTableItems,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    tablePageFromSearchParam,
+    TablePagination,
+    TableRow,
+    type TableSortDirection,
+    tableSortDirectionFromSearchParam,
+    tableSortHref,
+    tableSortKeyFromSearchParam,
+    tableSortParams
+} from '@/components/ui/table';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { listOrders } from '@/lib/data/orders';
 import { dateFromFirestore, formatDate, formatMoney, invoiceStatusLabel } from '@/lib/domain/format';
 import type { FirestoreRecord, InvoiceData, OrderData } from '@/lib/domain/types';
+import { Label } from '@/components/ui/label';
 
 const billingSortKeys = ['invoice', 'status', 'issued', 'due', 'total', 'balance'] as const;
 
@@ -23,6 +40,15 @@ type BillingSearchParams = {
 type InvoiceRow = {
     order: FirestoreRecord<OrderData>;
     invoice: InvoiceData;
+};
+
+type BillingStats = {
+    revenueYtdCents: number;
+    invoicedYtdCents: number;
+    outstandingCents: number;
+    overdueCents: number;
+    openInvoiceCount: number;
+    paidInvoiceCount: number;
 };
 
 function firstSearchParam(value: string | string[] | undefined): string {
@@ -78,6 +104,42 @@ function filterInvoices(invoices: InvoiceRow[], query: string): InvoiceRow[] {
     });
 }
 
+function billingStatsFromInvoices(invoices: InvoiceRow[], today: Date): BillingStats {
+    const currentYear = today.getUTCFullYear();
+    const todayValue = today.toISOString().slice(0, 10);
+
+    return invoices.reduce<BillingStats>((stats, { invoice }) => {
+        if (invoice.status === 'void') {
+            return stats;
+        }
+
+        const balanceCents = Number(invoice.balance_cents ?? 0);
+        const issuedYear = yearFromDate(invoice.issued_at ?? invoice.created_at);
+        const revenueYtdCents = invoice.payments.reduce((sum, payment) => yearFromDate(payment.paid_at) === currentYear ? sum + Number(payment.amount_cents ?? 0) : sum, 0);
+
+        return {
+            revenueYtdCents: stats.revenueYtdCents + revenueYtdCents,
+            invoicedYtdCents: stats.invoicedYtdCents + (issuedYear === currentYear ? Number(invoice.total_cents ?? 0) : 0),
+            outstandingCents: stats.outstandingCents + balanceCents,
+            overdueCents: stats.overdueCents + (balanceCents > 0 && invoice.due_date && invoice.due_date < todayValue ? balanceCents : 0),
+            openInvoiceCount: stats.openInvoiceCount + (balanceCents > 0 ? 1 : 0),
+            paidInvoiceCount: stats.paidInvoiceCount + (invoice.status === 'paid' ? 1 : 0),
+        };
+    }, {
+        revenueYtdCents: 0,
+        invoicedYtdCents: 0,
+        outstandingCents: 0,
+        overdueCents: 0,
+        openInvoiceCount: 0,
+        paidInvoiceCount: 0,
+    });
+}
+
+function yearFromDate(value: InvoiceData['created_at'] | undefined): number | null {
+    const date = dateFromFirestore(value);
+    return date ? date.getUTCFullYear() : null;
+}
+
 export default async function BillingPage({ searchParams }: {
     searchParams: Promise<BillingSearchParams>
 }): Promise<React.ReactElement> {
@@ -88,7 +150,9 @@ export default async function BillingPage({ searchParams }: {
     const sortKey = tableSortKeyFromSearchParam(params.sort, billingSortKeys);
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
-    const invoiceRows = sortInvoices(filterInvoices(invoiceRowsFromOrders(await listOrders()), query), sortKey, sortDirection);
+    const allInvoiceRows = invoiceRowsFromOrders(await listOrders());
+    const billingStats = billingStatsFromInvoices(allInvoiceRows, new Date());
+    const invoiceRows = sortInvoices(filterInvoices(allInvoiceRows, query), sortKey, sortDirection);
     const currentPage = tablePageFromSearchParam(params.page, invoiceRows.length);
     const paginatedInvoiceRows = paginatedTableItems(invoiceRows, currentPage);
     const paginationHref = billingHref(query, sortParams);
@@ -97,7 +161,8 @@ export default async function BillingPage({ searchParams }: {
         <div>
             <PageHeader title='Billing' />
 
-            <div className='space-y-6'>
+            <div className='-mt-2 space-y-6'>
+                <BillingStatsBar stats={billingStats} />
                 <TableSearch query={query} placeholder='Filter invoices by invoice, order, company, status, or payment' preservedParams={sortParams} />
                 {invoiceRows.length > 0 ? (
                     <>
@@ -125,7 +190,8 @@ export default async function BillingPage({ searchParams }: {
                                                 <Link href={href} className='flex flex-col items-start gap-1 text-zinc-950 group-hover:text-purple-700 dark:text-white dark:group-hover:text-purple-400'>
                                                     <div className='font-semibold text-lg'>{invoice.invoice_number}</div>
                                                     <div className='font-medium text-zinc-500 dark:text-zinc-400'>{invoice.company_name}</div>
-                                                    <div className='text-sm font-medium text-zinc-400 dark:text-zinc-500'>Order #{orderNumber}</div>
+                                                    <div className='text-sm font-medium text-zinc-400 dark:text-zinc-500'>Order
+                                                        #{orderNumber}</div>
                                                 </Link>
                                             </TableCell>
                                             <TableCell>
@@ -166,10 +232,70 @@ export default async function BillingPage({ searchParams }: {
                         <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={invoiceRows.length} />
                     </>
                 ) : (
-                    <p className='py-12 text-sm/6 text-center font-semibold uppercase text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950/20 rounded-xl'>No matching invoices</p>
+                    <p className='py-12 text-sm/6 text-center font-semibold uppercase text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-950/20 rounded-xl'>No
+                        matching invoices</p>
                 )}
             </div>
         </div>
+    );
+}
+
+function formatBillingStatMoney(cents: number): string {
+    if (Math.abs(cents) > 100000) {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
+        }).format(cents / 100);
+    }
+
+    return formatMoney(cents);
+}
+
+function BillingStatsBar({ stats }: { stats: BillingStats }): React.ReactElement {
+    const items = [
+        {
+            label: 'Paid Invoices',
+            value: stats.paidInvoiceCount.toLocaleString(),
+            valueClassName: 'text-emerald-700 dark:text-emerald-500/90',
+        },
+        {
+            label: 'Open Invoices',
+            value: stats.openInvoiceCount.toLocaleString(),
+            valueClassName: 'text-sky-700 dark:text-sky-500/90',
+        },
+        {
+            label: 'Outstanding',
+            value: formatBillingStatMoney(stats.outstandingCents),
+            valueClassName: 'text-amber-700 dark:text-amber-400/95',
+        },
+        {
+            label: 'Invoiced YTD',
+            value: formatBillingStatMoney(stats.invoicedYtdCents),
+            valueClassName: 'text-indigo-700 dark:text-indigo-400',
+        },
+        {
+            label: 'Overdue',
+            value: formatBillingStatMoney(stats.overdueCents),
+            valueClassName: 'text-red-700 dark:text-red-400/95',
+        },
+        {
+            label: 'Revenue YTD',
+            value: formatBillingStatMoney(stats.revenueYtdCents),
+            valueClassName: 'text-purple-700 dark:text-emerald-400/95',
+        },
+    ];
+
+    return (
+        <dl className='grid gap-4 rounded-xl bg-zinc-50 p-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 dark:bg-zinc-950/30'>
+            {items.map((item) => (
+                <div key={item.label} className='px-4 pt-1.5 pb-2'>
+                    <Label as='div' className='flex justify-end tracking-[0.16em]!'>{item.label}</Label>
+                    <dd className={`text-right text-2xl/7 font-semibold ${item.valueClassName}`}>{item.value}</dd>
+                </div>
+            ))}
+        </dl>
     );
 }
 
