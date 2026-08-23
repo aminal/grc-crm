@@ -1,14 +1,14 @@
 import "server-only";
 
 import { adminAuth, db } from "@/lib/firebase/admin";
-import type { AuthenticatedUser, FirestoreRecord, UserProfileData, UserRole } from "@/lib/domain/types";
+import type { AuthenticatedUser, FirestoreRecord, UserPermissions, UserProfileData, UserRole } from "@/lib/domain/types";
+import { isSeededAdminEmail as isSeededAdminEmailAddress, normalizePermissions } from "@/lib/auth/permissions";
 import { getDocument, listCollection, now } from "./firestore";
 
 const USERS = "users";
-const INITIAL_ADMIN_EMAILS: readonly string[] = ["mark.dare@greenroomcannabis.com", "jeana.dare@greenroomcannabis.com"];
 
 export function isSeededAdminEmail(email: string | null | undefined): boolean {
-  return typeof email === "string" && INITIAL_ADMIN_EMAILS.includes(email.trim().toLowerCase());
+  return isSeededAdminEmailAddress(email);
 }
 
 function userProfileLabel(profile: FirestoreRecord<UserProfileData>): string {
@@ -28,6 +28,7 @@ export async function syncProfileFromSignIn(
   name: string | null;
   role: UserRole;
   title: string | null;
+  permissions: UserPermissions;
 }> {
   const existing = await getUserProfile(uid);
   const data = existing?.data ?? {};
@@ -38,10 +39,12 @@ export async function syncProfileFromSignIn(
 
   const role = isSeededAdminEmail(email) ? "Admin" : data.role || "Guest";
   const title = data.title?.trim() || null;
+  const permissions = normalizePermissions(role, data.permissions, email);
 
   const payload: Partial<UserProfileData> = {
     email,
     role,
+    permissions,
     updated_at: now(),
   };
 
@@ -59,6 +62,7 @@ export async function syncProfileFromSignIn(
     name: displayName || null,
     role,
     title: title || null,
+    permissions,
   };
 }
 
@@ -77,19 +81,22 @@ export async function updateUserProfile(user: AuthenticatedUser, fields: { displ
   ]);
 }
 
-export async function adminUpdateUserProfile(uid: string, fields: { display_name: string; role: UserRole; title: string }): Promise<void> {
+export async function adminUpdateUserProfile(uid: string, fields: { display_name: string; role: UserRole; title: string; permissions?: UserProfileData["permissions"] | UserPermissions }): Promise<void> {
   const displayName = fields.display_name.trim();
+  const payload: Partial<UserProfileData> = {
+    display_name: displayName,
+    role: fields.role,
+    title: fields.title.trim(),
+    updated_at: now(),
+  };
+
+  if (fields.permissions) {
+    payload.permissions = normalizePermissions(fields.role, fields.permissions);
+  }
+
   await Promise.all([
     adminAuth.updateUser(uid, { displayName }),
-    db.doc(`${USERS}/${uid}`).set(
-      {
-        display_name: displayName,
-        role: fields.role,
-        title: fields.title.trim(),
-        updated_at: now(),
-      } satisfies Partial<UserProfileData>,
-      { merge: true },
-    ),
+    db.doc(`${USERS}/${uid}`).set(payload, { merge: true }),
   ]);
 }
 

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
-import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { findBrand, listBrands } from '@/lib/data/sales-settings';
 import type { BrandData, FirestoreRecord } from '@/lib/domain/types';
 
@@ -70,8 +71,10 @@ function filterBrands(brands: FirestoreRecord<BrandData>[], query: string): Fire
 export default async function BrandsPage({ searchParams }: {
     searchParams: Promise<BrandsSearchParams>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
-    const canManage = canManageRestrictedResources(user);
+    const user = await requireSectionEnabled('brands');
+    const canCreate = isFeatureEnabled(user, 'brands', 'create_brands');
+    const canUpdate = isFeatureEnabled(user, 'brands', 'update_brands');
+    const canArchive = isFeatureEnabled(user, 'brands', 'archive_brands');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -79,8 +82,8 @@ export default async function BrandsPage({ searchParams }: {
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
     const brandParam = firstSearchParam(params.brand).trim();
-    const showCreateBrandDialog = canManage && brandParam === 'new';
-    const showEditBrandDialog = canManage && brandParam !== '' && brandParam !== 'new';
+    const showCreateBrandDialog = canCreate && brandParam === 'new';
+    const showEditBrandDialog = canUpdate && brandParam !== '' && brandParam !== 'new';
 
     let brands: FirestoreRecord<BrandData>[] = [];
     let selectedBrand: FirestoreRecord<BrandData> | null = null;
@@ -112,7 +115,7 @@ export default async function BrandsPage({ searchParams }: {
         <div>
             <PageHeader
                 title='Brands'
-                actions={canManage ? (
+                actions={canCreate ? (
                     <Button color='purple' href={createBrandHref}>
                         <Plus data-slot='icon' aria-hidden='true' />
                         Add Brand
@@ -123,14 +126,14 @@ export default async function BrandsPage({ searchParams }: {
                 <TableSearch query={query} placeholder='Filter brands by name, acronym, or website' preservedParams={sortParams} />
                 {query && filteredBrands.length === 0 ? <EmptyState title='No brands found' /> : (
                     <>
-                        <BrandTable brands={paginatedBrands} selectedBrandId={selectedBrand?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <BrandTable brands={paginatedBrands} selectedBrandId={selectedBrand?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
                         <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedBrands.length} />
                     </>
                 )}
             </div>
             {showCreateBrandDialog ? <BrandDialog mode='create' closeHref={filteredHref} /> : null}
             {showEditBrandDialog && serializedBrand ?
-                <BrandDialog mode='edit' brand={serializedBrand} closeHref={filteredHref} /> : null}
+                <BrandDialog mode='edit' brand={serializedBrand} closeHref={filteredHref} canArchive={canArchive} /> : null}
         </div>
     );
 }

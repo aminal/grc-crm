@@ -17,6 +17,7 @@ type StrainDialogProps = {
   mode: "create" | "edit";
   strain?: StrainDialogStrain;
   closeHref: string;
+  canArchive?: boolean;
 };
 
 type StrainFormState = {
@@ -29,7 +30,7 @@ const initialState: StrainFormState = {
   success: false,
 };
 
-export function StrainDialog({ mode, strain, closeHref }: StrainDialogProps): React.ReactElement {
+export function StrainDialog({ mode, strain, closeHref, canArchive = false }: StrainDialogProps): React.ReactElement {
   const router = useRouter();
   const action = mode === "edit" && strain
     ? updateStrainFormAction.bind(null, strain.id)
@@ -74,11 +75,11 @@ export function StrainDialog({ mode, strain, closeHref }: StrainDialogProps): Re
             error={state.error}
             showReason={mode === "edit"}
             onCancel={close}
-            onArchive={mode === "edit" && strain ? () => setShowArchiveConfirmation(true) : undefined}
+            onArchive={mode === "edit" && strain && canArchive ? () => setShowArchiveConfirmation(true) : undefined}
           />
         </DialogBody>
       </Dialog>
-      {mode === "edit" && strain ? (
+      {mode === "edit" && strain && canArchive ? (
         <DeleteConfirmationDialog
           open={showArchiveConfirmation}
           onClose={() => setShowArchiveConfirmation(false)}

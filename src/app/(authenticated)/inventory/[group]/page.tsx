@@ -4,7 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { compactNumber, formatDate, formatInventoryCategory } from '@/lib/domain/format';
 import type { PackageData } from '@/lib/domain/types';
@@ -21,7 +22,8 @@ const packageStatusOrder = {
 export default async function InventoryGroupPage({ params }: {
     params: Promise<{ group: string }>
 }): Promise<React.ReactElement> {
-    await requireNonGuest();
+    const user = await requireSectionEnabled('inventory');
+    const canCreateOrder = isFeatureEnabled(user, 'sales', 'create_orders');
 
     const { group: encodedGroup } = await params;
     const key = decodeURIComponent(encodedGroup);
@@ -55,7 +57,7 @@ export default async function InventoryGroupPage({ params }: {
         <div>
             <PageHeader
                 title={group.item}
-                actions={<Button color='purple' href='/sales/create'>Create Order</Button>}
+                actions={canCreateOrder ? <Button color='purple' href='/sales/create'>Create Order</Button> : null}
                 description={'Source Package: ' + (group.source_packages || 'unknown source')}
             >
                 <div className='flex flex-wrap items-center gap-2 text-base/6 font-medium text-zinc-500 sm:text-base/6 dark:text-zinc-400'>

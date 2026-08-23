@@ -3,7 +3,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
 import { TableSearch } from '@/components/ui/table-search';
 import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
-import { requireNonGuest } from '@/lib/auth/session';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { listOrders } from '@/lib/data/orders';
 import { dateFromFirestore, formatDate, formatMoney, invoiceStatusLabel } from '@/lib/domain/format';
 import type { FirestoreRecord, InvoiceData, OrderData } from '@/lib/domain/types';
@@ -81,7 +81,7 @@ function filterInvoices(invoices: InvoiceRow[], query: string): InvoiceRow[] {
 export default async function BillingPage({ searchParams }: {
     searchParams: Promise<BillingSearchParams>
 }): Promise<React.ReactElement> {
-    await requireNonGuest();
+    await requireSectionEnabled('billing');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();

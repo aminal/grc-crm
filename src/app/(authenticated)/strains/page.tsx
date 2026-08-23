@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from "@/components/ui/table";
 import { TableSearch } from "@/components/ui/table-search";
-import { canManageRestrictedResources, requireNonGuest } from "@/lib/auth/session";
+import { isFeatureEnabled } from "@/lib/auth/permissions";
+import { requireSectionEnabled } from "@/lib/auth/session";
 import { findStrain, listStrains } from "@/lib/data/sales-settings";
 import type { FirestoreRecord, StrainData } from "@/lib/domain/types";
 
@@ -89,8 +90,10 @@ function filterStrains(strains: FirestoreRecord<StrainData>[], query: string): F
 }
 
 export default async function StrainsPage({ searchParams }: { searchParams: Promise<StrainsSearchParams> }): Promise<React.ReactElement> {
-  const user = await requireNonGuest();
-  const canManage = canManageRestrictedResources(user);
+  const user = await requireSectionEnabled("strains");
+  const canCreate = isFeatureEnabled(user, "strains", "create_strains");
+  const canUpdate = isFeatureEnabled(user, "strains", "update_strains");
+  const canArchive = isFeatureEnabled(user, "strains", "archive_strains");
 
   const params = await searchParams;
   const query = firstSearchParam(params.q).trim();
@@ -98,8 +101,8 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
   const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
   const sortParams = tableSortParams(sortKey, sortDirection);
   const strainParam = firstSearchParam(params.strain).trim();
-  const showCreateStrainDialog = canManage && strainParam === "new";
-  const showEditStrainDialog = canManage && strainParam !== "" && strainParam !== "new";
+  const showCreateStrainDialog = canCreate && strainParam === "new";
+  const showEditStrainDialog = canUpdate && strainParam !== "" && strainParam !== "new";
 
   let strains: FirestoreRecord<StrainData>[] = [];
   let selectedStrain: FirestoreRecord<StrainData> | null = null;
@@ -132,7 +135,7 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
     <div>
       <PageHeader
         title="Strains"
-        actions={canManage ? (
+        actions={canCreate ? (
           <Button color="purple" href={createStrainHref}>
             <Plus data-slot="icon" aria-hidden="true" />
             Add Strain
@@ -143,13 +146,13 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
         <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, or composition" preservedParams={sortParams} />
         {query && filteredStrains.length === 0 ? <EmptyState title="No strains found" /> : (
           <>
-            <StrainTable strains={serializedStrains} selectedStrainId={selectedStrain?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+            <StrainTable strains={serializedStrains} selectedStrainId={selectedStrain?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
             <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedStrains.length} />
           </>
         )}
       </div>
       {showCreateStrainDialog ? <StrainDialog mode="create" closeHref={filteredHref} /> : null}
-      {showEditStrainDialog && serializedStrain ? <StrainDialog mode="edit" strain={serializedStrain} closeHref={filteredHref} /> : null}
+      {showEditStrainDialog && serializedStrain ? <StrainDialog mode="edit" strain={serializedStrain} closeHref={filteredHref} canArchive={canArchive} /> : null}
     </div>
   );
 }

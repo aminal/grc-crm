@@ -5,7 +5,8 @@ import { Badge, StatusBadge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { TableSearch } from '@/components/ui/table-search';
 import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
-import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { listProducts } from '@/lib/data/sales-settings';
 import { compactNumber, formatInventoryCategory, formatMoney } from '@/lib/domain/format';
@@ -31,8 +32,9 @@ type InventorySearchParams = {
 export default async function InventoryPage({ searchParams }: {
     searchParams: Promise<InventorySearchParams>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
-    const canManage = canManageRestrictedResources(user);
+    const user = await requireSectionEnabled('inventory');
+    const canManageInventory = isFeatureEnabled(user, 'inventory', 'upload_metrc');
+    const canCreateOrder = isFeatureEnabled(user, 'sales', 'create_orders');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).toLowerCase().trim();
@@ -62,11 +64,13 @@ export default async function InventoryPage({ searchParams }: {
                 title='Inventory'
                 actions={(
                     <>
-                        {canManage ? <MetrcUploadDialog /> : null}
-                        <Button color='purple' href='/sales/create'>
-                            <Plus data-slot='icon' aria-hidden='true' />
-                            New Order
-                        </Button>
+                        {canManageInventory ? <MetrcUploadDialog /> : null}
+                        {canCreateOrder ? (
+                            <Button color='purple' href='/sales/create'>
+                                <Plus data-slot='icon' aria-hidden='true' />
+                                New Order
+                            </Button>
+                        ) : null}
                     </>
                 )}
             />

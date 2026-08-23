@@ -7,7 +7,8 @@ import { Dropdown, DropdownButton, DropdownItem, DropdownLabel, DropdownMenu } f
 import { TableSearch } from '@/components/ui/table-search';
 import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { dateFromFirestore, formatDate, formatMoney, orderStatusLabel } from '@/lib/domain/format';
-import { requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { listOrders } from '@/lib/data/orders';
 import type { FirestoreRecord, OrderData } from '@/lib/domain/types';
 import { cn } from '@/lib/utils';
@@ -90,7 +91,8 @@ function filterOrders(orders: FirestoreRecord<OrderData>[], query: string): Fire
 export default async function SalesPage({ searchParams }: {
     searchParams: Promise<SalesSearchParams>
 }): Promise<React.ReactElement> {
-    await requireNonGuest();
+    const user = await requireSectionEnabled('sales');
+    const canCreateOrder = isFeatureEnabled(user, 'sales', 'create_orders');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -108,11 +110,12 @@ export default async function SalesPage({ searchParams }: {
 
     return (
         <div>
-            <PageHeader title='Sales' actions={
+            <PageHeader title='Sales' actions={canCreateOrder ? (
                 <Button color='purple' href='/sales/create'>
                     <Plus data-slot='icon' aria-hidden='true' />
                     New Order
-                </Button>} />
+                </Button>
+            ) : null} />
 
             <div className='mb-5 sm:hidden'>
                 <Dropdown>

@@ -8,13 +8,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { listContacts } from "@/lib/data/crm";
 import { formatCompanySubheading } from "@/lib/domain/format";
 import { e164Phone, formatPhone, googleVoiceCallUrl } from "@/lib/domain/phone";
-import { canManageRestrictedResources, requireNonGuest } from "@/lib/auth/session";
+import { isFeatureEnabled } from "@/lib/auth/permissions";
+import { requireSectionEnabled } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import { loadCompanyRoute } from "../company-route";
 
 export default async function CompanyContactsPage({ params, searchParams }: { params: Promise<{ companyId: string }>; searchParams: Promise<{ contact?: string }> }): Promise<React.ReactElement> {
-  const user = await requireNonGuest();
-  const canManageCompany = canManageRestrictedResources(user);
+  const user = await requireSectionEnabled("companies");
+  const canManageCompany = isFeatureEnabled(user, "companies", "manage_contacts");
   const { companyId: routeSegment } = await params;
   const query = await searchParams;
   const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, "/contacts");
@@ -29,7 +30,7 @@ export default async function CompanyContactsPage({ params, searchParams }: { pa
 
   return (
     <div>
-      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={<AddContactDialog companyId={companyId} />} />
+      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={canManageCompany ? <AddContactDialog companyId={companyId} /> : null} />
       <CompanyTabs companySlug={companySlug} active="contacts" />
 
       <div className="mt-4">

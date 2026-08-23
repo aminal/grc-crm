@@ -3,7 +3,8 @@ import { PageHeader } from '@/components/layout/page-header';
 import { EmptyState } from '@/components/ui/empty-state';
 import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
-import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { searchCompanies } from '@/lib/data/crm';
 import type { CompanyData, FirestoreRecord } from '@/lib/domain/types';
 import { NewCompanyDialog } from './new-company-dialog';
@@ -21,8 +22,8 @@ type CompaniesSearchParams = {
 export default async function CompaniesPage({ searchParams }: {
     searchParams: Promise<CompaniesSearchParams>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
-    const canManage = canManageRestrictedResources(user);
+    const user = await requireSectionEnabled('companies');
+    const canManage = isFeatureEnabled(user, 'companies', 'manage_companies');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q);

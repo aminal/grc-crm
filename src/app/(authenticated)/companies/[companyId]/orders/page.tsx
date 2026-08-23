@@ -5,13 +5,15 @@ import { StatusBadge } from "@/components/ui/badge";
 import { CompanyTabs } from "@/components/company/company-tabs";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { requireNonGuest } from "@/lib/auth/session";
+import { isFeatureEnabled } from "@/lib/auth/permissions";
+import { requireSectionEnabled } from "@/lib/auth/session";
 import { listOrdersForCompany } from "@/lib/data/orders";
 import { formatCompanySubheading, formatDateTime, formatMoney } from "@/lib/domain/format";
 import { loadCompanyRoute } from "../company-route";
 
 export default async function CompanyOrdersPage({ params }: { params: Promise<{ companyId: string }> }): Promise<React.ReactElement> {
-  await requireNonGuest();
+  const user = await requireSectionEnabled("companies");
+  const canCreateOrder = isFeatureEnabled(user, "sales", "create_orders");
 
   const { companyId: routeSegment } = await params;
   const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, "/orders");
@@ -19,7 +21,7 @@ export default async function CompanyOrdersPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={<Button color="purple" href={`/sales/create?company_slug=${encodeURIComponent(companySlug)}`}>Create Order</Button>} />
+      <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={canCreateOrder ? <Button color="purple" href={`/sales/create?company_slug=${encodeURIComponent(companySlug)}`}>Create Order</Button> : null} />
       <CompanyTabs companySlug={companySlug} active="orders" />
 
       <div className="mt-4">

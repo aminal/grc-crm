@@ -19,6 +19,7 @@ type ProductDialogProps = {
   brands: ProductFormBrandOption[];
   strains: ProductFormStrainOption[];
   closeHref: string;
+  canArchive?: boolean;
 };
 
 type ProductFormState = {
@@ -31,7 +32,7 @@ const initialState: ProductFormState = {
   success: false,
 };
 
-export function ProductDialog({ mode, product, brands, strains, closeHref }: ProductDialogProps): React.ReactElement {
+export function ProductDialog({ mode, product, brands, strains, closeHref, canArchive = false }: ProductDialogProps): React.ReactElement {
   const router = useRouter();
   const action = mode === "edit" && product
     ? updateProductFormAction.bind(null, product.id)
@@ -78,11 +79,11 @@ export function ProductDialog({ mode, product, brands, strains, closeHref }: Pro
             error={state.error}
             showReason={mode === "edit"}
             onCancel={close}
-            onArchive={mode === "edit" && product ? () => setShowArchiveConfirmation(true) : undefined}
+            onArchive={mode === "edit" && product && canArchive ? () => setShowArchiveConfirmation(true) : undefined}
           />
         </DialogBody>
       </Dialog>
-      {mode === "edit" && product ? (
+      {mode === "edit" && product && canArchive ? (
         <DeleteConfirmationDialog
           open={showArchiveConfirmation}
           onClose={() => setShowArchiveConfirmation(false)}

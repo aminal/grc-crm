@@ -6,7 +6,8 @@ import { adminAuth } from "@/lib/firebase/admin";
 import { SESSION_COOKIE_NAME, SESSION_MAX_AGE_SECONDS } from "@/lib/domain/constants";
 import { getAllowedEmailDomain } from "@/lib/env";
 import { isAllowedEmailForDomain } from "@/lib/auth/domain";
-import type { AuthenticatedUser } from "@/lib/domain/types";
+import { canWriteSection, defaultAuthorizedPath, isFeatureEnabled, isSectionEnabled, normalizePermissions } from "@/lib/auth/permissions";
+import type { AppSection, AuthenticatedUser, SectionFeature } from "@/lib/domain/types";
 import { getUserProfile, syncProfileFromSignIn } from "@/lib/data/profiles";
 
 export function isAllowedEmail(email: string | null | undefined, emailVerified: boolean | null | undefined): boolean {
@@ -62,6 +63,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
     const picture = profile?.data.picture?.trim() || (typeof decoded.picture === "string" ? decoded.picture : "");
     const role = profile?.data.role || "Guest";
     const title = profile?.data.title?.trim() || null;
+    const permissions = normalizePermissions(role, profile?.data.permissions, email);
 
     return {
       uid: decoded.uid,
@@ -70,6 +72,7 @@ export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
       picture: picture || null,
       role,
       title: title || null,
+      permissions,
     };
   } catch {
     return null;
@@ -89,10 +92,14 @@ export function canManageRestrictedResources(user: Pick<AuthenticatedUser, "role
   return user.role === "Manager" || user.role === "Admin";
 }
 
+function redirectToDefaultAuthorizedPath(user: AuthenticatedUser): never {
+  redirect(defaultAuthorizedPath(user));
+}
+
 export async function requireNonGuest(): Promise<AuthenticatedUser> {
   const user = await requireUser();
   if (user.role === "Guest") {
-    redirect("/dashboard");
+    redirectToDefaultAuthorizedPath(user);
   }
 
   return user;
@@ -101,7 +108,38 @@ export async function requireNonGuest(): Promise<AuthenticatedUser> {
 export async function requireManagerOrAdmin(): Promise<AuthenticatedUser> {
   const user = await requireNonGuest();
   if (!canManageRestrictedResources(user)) {
-    redirect("/dashboard");
+    redirectToDefaultAuthorizedPath(user);
+  }
+
+  return user;
+}
+
+export async function requireSectionEnabled(section: AppSection): Promise<AuthenticatedUser> {
+  const user = await requireUser();
+  if (!isSectionEnabled(user, section)) {
+    redirectToDefaultAuthorizedPath(user);
+  }
+
+  return user;
+}
+
+export async function requireSectionRead(section: AppSection): Promise<AuthenticatedUser> {
+  return requireSectionEnabled(section);
+}
+
+export async function requireFeature<Section extends AppSection>(section: Section, feature: SectionFeature<Section>): Promise<AuthenticatedUser> {
+  const user = await requireUser();
+  if (!isFeatureEnabled(user, section, feature)) {
+    redirectToDefaultAuthorizedPath(user);
+  }
+
+  return user;
+}
+
+export async function requireSectionWrite(section: AppSection): Promise<AuthenticatedUser> {
+  const user = await requireUser();
+  if (!canWriteSection(user, section)) {
+    redirectToDefaultAuthorizedPath(user);
   }
 
   return user;
@@ -110,7 +148,7 @@ export async function requireManagerOrAdmin(): Promise<AuthenticatedUser> {
 export async function requireAdmin(): Promise<AuthenticatedUser> {
   const user = await requireUser();
   if (user.role !== "Admin") {
-    redirect("/dashboard");
+    redirectToDefaultAuthorizedPath(user);
   }
 
   return user;
@@ -141,5 +179,6 @@ export async function syncVerifiedUserFromIdToken(idToken: string): Promise<Auth
     picture: picture || null,
     role: profile.role,
     title: profile.title,
+    permissions: profile.permissions,
   };
 }

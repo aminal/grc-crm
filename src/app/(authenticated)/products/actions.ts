@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { requireFeature } from "@/lib/auth/session";
 import { archiveProduct, createProduct, updateProduct } from "@/lib/data/sales-settings";
 import {
   editReasonSchema,
@@ -17,14 +17,14 @@ type ProductFormState = {
 };
 
 export async function createProductAction(formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("products", "create_products");
   const input = productCreateSchema.parse(formEntries(formData));
   await createProduct(input, user);
   revalidatePath("/products");
 }
 
 export async function updateProductAction(productId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("products", "update_products");
   const values = formEntries(formData);
   const input = productCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
@@ -33,7 +33,7 @@ export async function updateProductAction(productId: string, formData: FormData)
 }
 
 export async function archiveProductAction(productId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("products", "archive_products");
   if (formData.get("confirmation") !== "ARCHIVE") {
     throw new Error("Type ARCHIVE to confirm product archive.");
   }

@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
-import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { findBrand, findProduct, findStrain, listBrands, listProducts, listStrains, } from '@/lib/data/sales-settings';
 import type { BrandData, FirestoreRecord, ProductData, StrainData } from '@/lib/domain/types';
 
@@ -161,8 +162,10 @@ function filterProducts(
 export default async function ProductsPage({ searchParams }: {
     searchParams: Promise<ProductsSearchParams>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
-    const canManage = canManageRestrictedResources(user);
+    const user = await requireSectionEnabled('products');
+    const canCreate = isFeatureEnabled(user, 'products', 'create_products');
+    const canUpdate = isFeatureEnabled(user, 'products', 'update_products');
+    const canArchive = isFeatureEnabled(user, 'products', 'archive_products');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -170,8 +173,8 @@ export default async function ProductsPage({ searchParams }: {
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
     const productParam = firstSearchParam(params.product).trim();
-    const showCreateProductDialog = canManage && productParam === 'new';
-    const showEditProductDialog = canManage && productParam !== '' && productParam !== 'new';
+    const showCreateProductDialog = canCreate && productParam === 'new';
+    const showEditProductDialog = canUpdate && productParam !== '' && productParam !== 'new';
 
     let activeBrands: FirestoreRecord<BrandData>[] = [];
     let products: FirestoreRecord<ProductData>[] = [];
@@ -215,7 +218,7 @@ export default async function ProductsPage({ searchParams }: {
         <div>
             <PageHeader
                 title='Products'
-                actions={canManage ? (
+                actions={canCreate ? (
                     <Button color='purple' href={createProductHref}>
                         <Plus data-slot='icon' aria-hidden='true' />
                         Add Product
@@ -226,7 +229,7 @@ export default async function ProductsPage({ searchParams }: {
                 <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, or category' preservedParams={sortParams} />
                 {query && filteredProducts.length === 0 ? <EmptyState title='No products found' /> : (
                     <>
-                        <ProductTable products={paginatedProducts} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={filteredHref} canManage={canManage} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <ProductTable products={paginatedProducts} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
                         <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedProducts.length} />
                     </>
                 )}
@@ -234,7 +237,7 @@ export default async function ProductsPage({ searchParams }: {
             {showCreateProductDialog ?
                 <ProductDialog mode='create' brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} /> : null}
             {showEditProductDialog && serializedProduct ?
-                <ProductDialog mode='edit' product={serializedProduct} brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} /> : null}
+                <ProductDialog mode='edit' product={serializedProduct} brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} canArchive={canArchive} /> : null}
         </div>
     );
 }

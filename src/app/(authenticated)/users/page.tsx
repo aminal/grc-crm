@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/layout/page-header';
 import { UserTable, type UserTableSortKey } from '@/components/users/user-table';
 import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { TableSearch } from '@/components/ui/table-search';
-import { requireManagerOrAdmin } from '@/lib/auth/session';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { listUsers } from '@/lib/data/profiles';
 import type { FirestoreRecord, UserProfileData } from '@/lib/domain/types';
 
@@ -50,7 +50,7 @@ export default async function UsersPage({
 }: {
     searchParams: Promise<UsersSearchParams>;
 }): Promise<React.ReactElement> {
-    await requireManagerOrAdmin();
+    await requireSectionEnabled('users');
     const users = await listUsers();
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { UserPermissions } from "@/lib/domain/types";
+import { defaultPermissionsForRole } from "@/lib/auth/permissions";
 
 const firestoreMocks = vi.hoisted(() => {
   const docSet = vi.fn(() => Promise.resolve());
@@ -54,6 +56,7 @@ describe("profiles data logic", () => {
 
     expect(result.role).toBe("Admin");
     expect(result.title).toBeNull();
+    expect(result.permissions).toEqual(defaultPermissionsForRole("Admin"));
     expect(firestoreMocks.docSet).toHaveBeenCalledWith(
       expect.objectContaining({
         role: "Admin",
@@ -79,6 +82,7 @@ describe("profiles data logic", () => {
 
     expect(result.role).toBe("Guest");
     expect(result.title).toBeNull();
+    expect(result.permissions).toEqual(defaultPermissionsForRole("Guest"));
     expect(firestoreMocks.docSet).toHaveBeenCalledWith(
       expect.objectContaining({
         role: "Guest",
@@ -96,6 +100,10 @@ describe("profiles data logic", () => {
       data: {
         role: "Employee",
         title: "Sales Rep",
+        permissions: {
+          sales: "read",
+          inventory: "none",
+        },
       },
     });
 
@@ -108,9 +116,25 @@ describe("profiles data logic", () => {
 
     expect(result.role).toBe("Employee");
     expect(result.title).toBe("Sales Rep");
+    expect(result.permissions.sales.enabled).toBe(true);
+    expect(result.permissions.sales.features.create_orders).toBe(false);
+    expect(result.permissions.inventory.enabled).toBe(false);
+    expect(result.permissions.companies.enabled).toBe(true);
+    expect(result.permissions.companies.features.manage_companies).toBe(true);
     expect(firestoreMocks.docSet).toHaveBeenCalledWith(
       expect.objectContaining({
         role: "Employee",
+        permissions: expect.objectContaining({
+          sales: expect.objectContaining({
+            enabled: true,
+            features: expect.objectContaining({
+              create_orders: false,
+            }),
+          }),
+          inventory: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
       }),
       { merge: true }
     );
@@ -120,11 +144,70 @@ describe("profiles data logic", () => {
     );
   });
 
+  it("preserves stored nested permissions during sign-in sync", async () => {
+    const permissions: UserPermissions = {
+      ...defaultPermissionsForRole("Manager"),
+      sales: {
+        enabled: true,
+        features: {
+          ...defaultPermissionsForRole("Manager").sales.features,
+          create_orders: false,
+        },
+      },
+      inventory: {
+        enabled: false,
+        features: {
+          upload_metrc: true,
+        },
+      },
+    };
+
+    firestoreMocks.docGet.mockResolvedValueOnce({
+      data: {
+        role: "Manager",
+        permissions,
+      },
+    });
+
+    const result = await syncProfileFromSignIn(
+      "manager-uid",
+      "manager@greenroomcannabis.com",
+      "Manager User",
+      null
+    );
+
+    expect(result.permissions.sales.features.create_orders).toBe(false);
+    expect(result.permissions.inventory.enabled).toBe(false);
+    expect(result.permissions.inventory.features.upload_metrc).toBe(true);
+    expect(firestoreMocks.docSet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        permissions: expect.objectContaining({
+          sales: expect.objectContaining({
+            features: expect.objectContaining({
+              create_orders: false,
+            }),
+          }),
+          inventory: expect.objectContaining({
+            enabled: false,
+            features: expect.objectContaining({
+              upload_metrc: true,
+            }),
+          }),
+        }),
+      }),
+      { merge: true }
+    );
+  });
+
   it("forces Admin role for specified admin emails even if they have an existing role, but returns existing title", async () => {
     firestoreMocks.docGet.mockResolvedValueOnce({
       data: {
         role: "Guest",
         title: "CEO",
+        permissions: {
+          sales: "none",
+          users: "none",
+        },
       },
     });
 
@@ -137,6 +220,7 @@ describe("profiles data logic", () => {
 
     expect(result.role).toBe("Admin");
     expect(result.title).toBe("CEO");
+    expect(result.permissions).toEqual(defaultPermissionsForRole("Admin"));
     expect(firestoreMocks.docSet).toHaveBeenCalledWith(
       expect.objectContaining({
         role: "Admin",
@@ -150,10 +234,23 @@ describe("profiles data logic", () => {
   });
 
   it("updates auth and profile data when an admin edits a user", async () => {
+    const permissions: UserPermissions = {
+      ...defaultPermissionsForRole("Manager"),
+      users: {
+        enabled: true,
+        features: {
+          edit_user_profiles: false,
+          edit_user_permissions: false,
+          assign_admin_role: false,
+        },
+      },
+    };
+
     await adminUpdateUserProfile("user-uid", {
       display_name: " Updated User ",
       role: "Manager",
       title: " Sales Lead ",
+      permissions,
     });
 
     expect(authMocks.updateUser).toHaveBeenCalledWith("user-uid", { displayName: "Updated User" });
@@ -163,6 +260,7 @@ describe("profiles data logic", () => {
         display_name: "Updated User",
         role: "Manager",
         title: "Sales Lead",
+        permissions,
         updated_at: "server-now",
       },
       { merge: true }

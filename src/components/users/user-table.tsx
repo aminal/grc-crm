@@ -3,7 +3,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
-import type { FirestoreRecord, UserProfileData, UserRole } from "@/lib/domain/types";
+import { APP_SECTIONS, normalizePermissions, SECTION_FEATURES } from "@/lib/auth/permissions";
+import type { FirestoreRecord, UserPermissions, UserProfileData, UserRole } from "@/lib/domain/types";
 
 const roleColors: Record<UserRole, "purple" | "blue" | "emerald" | "zinc"> = {
   Admin: "purple",
@@ -38,6 +39,7 @@ export function UserTable({
           <TableHead sortHref={userSortHref("email", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("email", sortKey, sortDirection)}>Email</TableHead>
           <TableHead sortHref={userSortHref("role", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("role", sortKey, sortDirection)}>Role</TableHead>
           <TableHead sortHref={userSortHref("title", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("title", sortKey, sortDirection)}>Title</TableHead>
+          <TableHead>Permissions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -47,6 +49,7 @@ export function UserTable({
           const role = user.data.role || "Guest";
           const displayName = user.data.display_name || "—";
           const avatarName = user.data.display_name || user.data.email;
+          const permissions = normalizePermissions(role, user.data.permissions, user.data.email);
 
           return (
             <TableRow key={user.id} className="group cursor-pointer">
@@ -80,12 +83,32 @@ export function UserTable({
                 </Link>
                 {user.data.title || "Guest"}
               </TableCell>
+              <TableCell>
+                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                  <span className="sr-only">{label}</span>
+                </Link>
+                <span className="text-sm text-zinc-600 dark:text-zinc-300">{permissionSummary(permissions)}</span>
+              </TableCell>
             </TableRow>
           );
         })}
       </TableBody>
     </Table>
   );
+}
+
+function permissionSummary(permissions: UserPermissions): string {
+  const enabledCount = APP_SECTIONS.filter((section) => permissions[section].enabled).length;
+  const enabledFeatureCount = APP_SECTIONS.reduce((count, section) => {
+    const features = permissions[section].features as Record<string, boolean | undefined>;
+    return count + SECTION_FEATURES[section].filter((feature) => features[feature.key] === true).length;
+  }, 0);
+
+  if (enabledCount === APP_SECTIONS.length && enabledFeatureCount === APP_SECTIONS.reduce((count, section) => count + SECTION_FEATURES[section].length, 0)) {
+    return "All access";
+  }
+
+  return `${enabledCount} sections • ${enabledFeatureCount} features`;
 }
 
 function userSortHref(column: UserTableSortKey, query: string, sortKey: UserTableSortKey | null, sortDirection: TableSortDirection | null): string {

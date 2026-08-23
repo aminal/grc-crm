@@ -164,10 +164,12 @@ export function ViewContactDialog({
                                 <Button type='button' plain onClick={close}>Close</Button>
                                 {callUrl ?
                                     <Button href={callUrl} target='_blank' rel='noreferrer' color='emerald'>Call</Button> : null}
-                                <Button type='button' color='purple' onClick={() => setIsEditing(true)}>
-                                    <Pencil data-slot='icon' aria-hidden='true' />
-                                    Edit
-                                </Button>
+                                {canManageCompany ? (
+                                    <Button type='button' color='purple' onClick={() => setIsEditing(true)}>
+                                        <Pencil data-slot='icon' aria-hidden='true' />
+                                        Edit
+                                    </Button>
+                                ) : null}
                             </DialogActions>
                         </>
                     )}

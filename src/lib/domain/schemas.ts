@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { APP_SECTIONS, SECTION_FEATURES } from "@/lib/auth/permissions";
+import type { UserPermissions } from "./types";
 import {
   COMPANY_STATUSES,
   FACILITY_TYPES,
@@ -62,6 +64,19 @@ const optionalNonnegativeInteger = z.preprocess((value) => {
 
   return value;
 }, z.coerce.number().int().min(0));
+function checkboxValue(value: unknown): boolean {
+  const values = Array.isArray(value) ? value : [value];
+  return values.some((entry) => entry === true || entry === "on" || entry === "true" || entry === "1");
+}
+
+function permissionsFromUserFields(value: Record<string, unknown>): UserPermissions {
+  return Object.fromEntries(APP_SECTIONS.map((section) => [section, {
+    enabled: section === "dashboard" ? true : checkboxValue(value[`section_${section}_enabled`]),
+    features: Object.fromEntries(
+      SECTION_FEATURES[section].map((feature) => [feature.key, checkboxValue(value[`feature_${section}_${feature.key}`])]),
+    ),
+  }])) as UserPermissions;
+}
 
 function socialHandleFromInput(value: string, hosts: string[]): string {
   const trimmed = value.trim();
@@ -276,7 +291,12 @@ export const userUpdateSchema = z.object({
   display_name: requiredShortString,
   role: z.enum(["Guest", "Employee", "Manager", "Admin"]),
   title: optionalShortString,
-});
+}).catchall(z.unknown()).transform((value) => ({
+  display_name: value.display_name,
+  role: value.role,
+  title: value.title,
+  permissions: permissionsFromUserFields(value),
+}));
 
 export function formEntries(formData: FormData): Record<string, FormDataEntryValue | FormDataEntryValue[]> {
   const output: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {};

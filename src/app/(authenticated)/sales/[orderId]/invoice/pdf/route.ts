@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireNonGuest } from '@/lib/auth/session';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { ensureInvoicePdf } from '@/lib/data/orders';
 
 export async function GET(
@@ -7,7 +7,7 @@ export async function GET(
     { params }: { params: Promise<{ orderId: string }> }
 ): Promise<Response> {
     try {
-        await requireNonGuest();
+        await requireSectionEnabled('sales');
         const { orderId } = await params;
         const url = await ensureInvoicePdf(orderId);
         return NextResponse.redirect(url);

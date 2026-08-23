@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireManagerOrAdmin, requireNonGuest } from "@/lib/auth/session";
+import { requireFeature } from "@/lib/auth/session";
 import {
   addPackages,
   addPayment,
@@ -35,7 +35,7 @@ import {
 } from "@/lib/domain/schemas";
 
 export async function createOrderAction(formData: FormData): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "create_orders");
   const input = createOrderSchema.parse({
     company_id: String(formData.get("company_id") ?? ""),
     salesperson_user_id: formData.get("salesperson_user_id"),
@@ -59,7 +59,7 @@ export async function createOrderAction(formData: FormData): Promise<void> {
 }
 
 export async function approveOrderAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "approve_invoices");
   const input = createInvoiceSchema.parse({
     invoice_number: formData.get("invoice_number") ?? "",
     terms: formData.get("terms"),
@@ -71,35 +71,35 @@ export async function approveOrderAction(orderId: string, formData: FormData): P
 }
 
 export async function rejectOrderAction(orderId: string): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_status");
   await rejectOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function cancelOrderAction(orderId: string): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_status");
   await cancelOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function closeOrderAction(orderId: string): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_status");
   await closeOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function reopenOrderAction(orderId: string): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_status");
   await reopenOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function deleteOrderAction(orderId: string, formData: FormData): Promise<void> {
-  await requireAdmin();
+  await requireFeature("sales", "delete_orders");
   if (formData.get("confirmation") !== "DELETE") {
     throw new Error("Type DELETE to confirm order deletion.");
   }
@@ -110,14 +110,14 @@ export async function deleteOrderAction(orderId: string, formData: FormData): Pr
 }
 
 export async function unapproveOrderAction(orderId: string): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "unapprove_invoices");
   await unapproveOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function deliverOrderAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("sales", "confirm_delivery");
   const input = deliverySchema.parse({ delivered_at: formData.get("delivered_at") ?? "" });
   await deliverOrder(orderId, user, input.delivered_at);
   revalidateOrder(orderId);
@@ -125,14 +125,14 @@ export async function deliverOrderAction(orderId: string, formData: FormData): P
 }
 
 export async function deliveryRejectOrderAction(orderId: string): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("sales", "confirm_delivery");
   await deliveryRejectOrder(orderId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function addPaymentAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "manage_payments");
   const input = paymentSchema.parse({
     amount: formData.get("amount"),
     method: formData.get("method"),
@@ -145,7 +145,7 @@ export async function addPaymentAction(orderId: string, formData: FormData): Pro
 }
 
 export async function updatePaymentAction(orderId: string, paymentId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "manage_payments");
   const input = paymentSchema.parse({
     amount: formData.get("amount"),
     method: formData.get("method"),
@@ -158,14 +158,14 @@ export async function updatePaymentAction(orderId: string, paymentId: string, fo
 }
 
 export async function deletePaymentAction(orderId: string, paymentId: string): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "manage_payments");
   await deletePayment(orderId, paymentId, user);
   revalidateOrder(orderId);
   redirect(`/sales/${orderId}`);
 }
 
 export async function updateDiscountAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("billing", "manage_discounts");
   const input = discountSchema.parse({
     discount_type: formData.get("discount_type"),
     discount_value: formData.get("discount_value") ?? "",
@@ -176,7 +176,7 @@ export async function updateDiscountAction(orderId: string, formData: FormData):
 }
 
 export async function addPackagesAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_packages");
   const input = addPackagesSchema.parse({
     package_tags: packageTagsFromForm(formData),
     package_prices: packagePricesFromForm(formData),
@@ -187,7 +187,7 @@ export async function addPackagesAction(orderId: string, formData: FormData): Pr
 }
 
 export async function updatePackagesAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_packages");
   const input = addPackagesSchema.parse({
     package_tags: packageTagsFromForm(formData),
     package_prices: packagePricesFromForm(formData),
@@ -198,7 +198,7 @@ export async function updatePackagesAction(orderId: string, formData: FormData):
 }
 
 export async function removePackagesAction(orderId: string, formData: FormData): Promise<void> {
-  const user = await requireNonGuest();
+  const user = await requireFeature("sales", "manage_order_packages");
   const input = removePackagesSchema.parse({
     package_tags: packageTagsFromForm(formData),
   });

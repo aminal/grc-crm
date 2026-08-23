@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { requireFeature } from "@/lib/auth/session";
 import { uploadAndSyncMetrcFile } from "@/lib/data/inventory";
 import { validationMessage } from "@/lib/domain/schemas";
 
@@ -11,7 +11,7 @@ type InventoryUploadFormState = {
 };
 
 export async function uploadInventoryAction(formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("inventory", "upload_metrc");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) {
     throw new Error("Choose a METRC .xlsx file to upload.");

@@ -6,7 +6,8 @@ import { FacilityBadge } from '@/components/company/facility-badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
 import { Avatar } from '@/components/ui/avatar';
-import { canManageRestrictedResources, requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled, isSectionEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { findCompany } from '@/lib/data/crm';
 import { listPackages } from '@/lib/data/inventory';
 import { availableOrderActions, findOrder, listActivity } from '@/lib/data/orders';
@@ -24,8 +25,16 @@ import { EditPaymentsDialog, RecordPaymentDialog } from './record-payment-dialog
 export default async function OrderPage({ params }: {
     params: Promise<{ orderId: string }>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
-    const canManage = canManageRestrictedResources(user);
+    const user = await requireSectionEnabled('sales');
+    const canManageOrderStatus = isFeatureEnabled(user, 'sales', 'manage_order_status');
+    const canManageOrderPackages = isFeatureEnabled(user, 'sales', 'manage_order_packages');
+    const canConfirmDelivery = isFeatureEnabled(user, 'sales', 'confirm_delivery');
+    const canDeleteOrders = isFeatureEnabled(user, 'sales', 'delete_orders');
+    const canApproveInvoices = isFeatureEnabled(user, 'billing', 'approve_invoices');
+    const canUnapproveInvoices = isFeatureEnabled(user, 'billing', 'unapprove_invoices');
+    const canManagePayments = isFeatureEnabled(user, 'billing', 'manage_payments');
+    const canManageDiscounts = isFeatureEnabled(user, 'billing', 'manage_discounts');
+    const canViewUsers = isSectionEnabled(user, 'users');
 
     const { orderId } = await params;
     const [order, activity, packages, products] = await Promise.all([findOrder(orderId), listActivity(orderId), listPackages(false), listProducts()]);
@@ -39,9 +48,9 @@ export default async function OrderPage({ params }: {
     const orderState = order.data.state ?? 'open';
     const actions = availableOrderActions(order.data.status, orderState);
     const invoice = order.data.invoice?.status === 'void' ? null : order.data.invoice;
-    const canDeleteOrder = user.role === 'Admin' && order.data.status === 'cancelled';
-    const canEditDiscount = invoice ? canManage && (order.data.status === 'approved' || order.data.status === 'delivered') && !hasInvoicePayments(invoice) : false;
-    const canRecordPayment = invoice ? canManage && orderState !== 'closed' && invoice.status !== 'paid' && invoice.balance_cents > 0 : false;
+    const canDeleteOrder = canDeleteOrders && order.data.status === 'cancelled';
+    const canEditDiscount = invoice ? canManageDiscounts && (order.data.status === 'approved' || order.data.status === 'delivered') && !hasInvoicePayments(invoice) : false;
+    const canRecordPayment = invoice ? canManagePayments && orderState !== 'closed' && invoice.status !== 'paid' && invoice.balance_cents > 0 : false;
     const defaultPaidAt = new Date().toISOString().slice(0, 10);
     const availablePackages = packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
     const existingSourcePrices = new Map(order.data.items.map((item) => [item.source_package_key, {
@@ -107,7 +116,7 @@ export default async function OrderPage({ params }: {
         paid_at: payment.paid_at,
         check_number: payment.check_number,
     })) : [];
-    const canEditPayments = canManage && orderState !== 'closed' && invoicePayments.length > 0;
+    const canEditPayments = canManagePayments && orderState !== 'closed' && invoicePayments.length > 0;
     const approvalInvoice = {
         invoiceNumber: `INV-${order.data.order_number}`,
         terms: order.data.terms,
@@ -122,7 +131,7 @@ export default async function OrderPage({ params }: {
                 title={`Order #${order.data.order_number}`}
                 description={order.data.company_name}
                 actions={
-                    <OrderActionsMenu orderId={orderId} orderNumber={order.data.order_number} actions={actions} approvalInvoice={approvalInvoice} canManage={canManage} canDelete={canDeleteOrder} hasInvoice={Boolean(invoice)} canRecordPayment={canRecordPayment} recordPaymentBalanceCents={invoice?.balance_cents ?? 0} defaultPaidAt={defaultPaidAt} />}
+                    <OrderActionsMenu orderId={orderId} orderNumber={order.data.order_number} actions={actions} approvalInvoice={approvalInvoice} canManageOrderStatus={canManageOrderStatus} canConfirmDelivery={canConfirmDelivery} canApproveInvoices={canApproveInvoices} canUnapproveInvoices={canUnapproveInvoices} canDelete={canDeleteOrder} hasInvoice={Boolean(invoice)} canRecordPayment={canRecordPayment} recordPaymentBalanceCents={invoice?.balance_cents ?? 0} defaultPaidAt={defaultPaidAt} />}
             >
                 <div className='flex flex-wrap gap-2'>
                     <StatusBadge status={order.data.status} />
@@ -143,7 +152,7 @@ export default async function OrderPage({ params }: {
                                     <CardTitle>Packages</CardTitle>
                                     <p className='mt-1 text-sm text-zinc-500 dark:text-zinc-400'>{order.data.items.length} package{order.data.items.length !== 1 ? 's' : ''} for {formatMoney(order.data.total_cents)}</p>
                                 </div>
-                                {editableItems ?
+                                {canManageOrderPackages && editableItems ?
                                     <EditPackagesDialog orderId={orderId} packages={editPackageRows} initialSelectedTags={initialSelectedTags} initialPackagePrices={initialPackagePrices} /> : null}
                             </CardHeader>
                             <CardContent className='space-y-3'>
@@ -299,7 +308,7 @@ export default async function OrderPage({ params }: {
                                     </div>
                                     <div className='min-w-0 flex-1'>
                                         <div className='flex items-center gap-3'>
-                                            {canManage && entry.data.actor_user_id ? (
+                                            {canViewUsers && entry.data.actor_user_id ? (
                                                 <Link href={`/users/${encodeURIComponent(entry.data.actor_user_id)}`} className='shrink-0' aria-label={entry.data.actor_name}>
                                                     <Avatar name={entry.data.actor_name} picture={entry.data.actor_picture} className='size-8 rounded-md text-sm' />
                                                 </Link>

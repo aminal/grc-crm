@@ -11,13 +11,15 @@ import { listInteractions } from '@/lib/data/crm';
 import { dateFromFirestore, formatCompanySubheading, formatDateTime } from '@/lib/domain/format';
 import type { FirestoreDate, InteractionMethod, InteractionRecord } from '@/lib/domain/types';
 import { loadCompanyRoute } from '../company-route';
-import { requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { LogInteractionDialog } from './log-interaction-dialog';
 
 export default async function CompanyActivityPage({ params }: {
     params: Promise<{ companyId: string }>
 }): Promise<React.ReactElement> {
-    await requireNonGuest();
+    const user = await requireSectionEnabled('companies');
+    const canManageCompany = isFeatureEnabled(user, 'companies', 'manage_interactions');
 
     const { companyId: routeSegment } = await params;
     const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment, '/activity');
@@ -26,7 +28,7 @@ export default async function CompanyActivityPage({ params }: {
     return (
         <div>
             <PageHeader title={company.data.company_name} description={formatCompanySubheading(company.data)} actions={
-                <LogInteractionDialog companyId={companyId} />} />
+                canManageCompany ? <LogInteractionDialog companyId={companyId} /> : null} />
             <CompanyTabs companySlug={companySlug} active='activity' />
 
             <div className='flex flex-col gap-6 sm:flex-row'>
@@ -76,15 +78,17 @@ export default async function CompanyActivityPage({ params }: {
                                             </div>
                                         ) : null}
 
-                                        <details className='mt-4 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900'>
-                                            <summary className='cursor-pointer text-md uppercase font-semibold text-zinc-400/75'>
-                                                Add Reply
-                                            </summary>
-                                            <form action={createInteractionEntryAction.bind(null, companyId, interaction.id)} className='text-right mt-4 space-y-3 '>
-                                                <Textarea name='discussion_notes' required placeholder='' />
-                                                <Button type='submit' color='purple'>Add Reply</Button>
-                                            </form>
-                                        </details>
+                                        {canManageCompany ? (
+                                            <details className='mt-4 rounded-lg bg-zinc-50 p-4 dark:bg-zinc-900'>
+                                                <summary className='cursor-pointer text-md uppercase font-semibold text-zinc-400/75'>
+                                                    Add Reply
+                                                </summary>
+                                                <form action={createInteractionEntryAction.bind(null, companyId, interaction.id)} className='text-right mt-4 space-y-3 '>
+                                                    <Textarea name='discussion_notes' required placeholder='' />
+                                                    <Button type='submit' color='purple'>Add Reply</Button>
+                                                </form>
+                                            </details>
+                                        ) : null}
                                     </div>
                                 </div>
                             </details>

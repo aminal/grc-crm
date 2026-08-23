@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireManagerOrAdmin } from "@/lib/auth/session";
+import { requireFeature } from "@/lib/auth/session";
 import { archiveBrand, createBrand, updateBrand } from "@/lib/data/sales-settings";
 import {
   brandCreateSchema,
@@ -17,14 +17,14 @@ type BrandFormState = {
 };
 
 export async function createBrandAction(formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("brands", "create_brands");
   const input = brandCreateSchema.parse(formEntries(formData));
   await createBrand(input, user);
   revalidatePath("/brands");
 }
 
 export async function updateBrandAction(brandId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("brands", "update_brands");
   const values = formEntries(formData);
   const input = brandCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
@@ -33,7 +33,7 @@ export async function updateBrandAction(brandId: string, formData: FormData): Pr
 }
 
 export async function archiveBrandAction(brandId: string, formData: FormData): Promise<void> {
-  const user = await requireManagerOrAdmin();
+  const user = await requireFeature("brands", "archive_brands");
   if (formData.get("confirmation") !== "ARCHIVE") {
     throw new Error("Type ARCHIVE to confirm brand archive.");
   }

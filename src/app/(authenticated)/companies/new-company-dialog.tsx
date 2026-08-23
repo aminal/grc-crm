@@ -43,7 +43,7 @@ export function NewCompanyDialog({ initialOpen = false }: { initialOpen?: boolea
     );
 }
 
-export function EditCompanyDialog({ companyId, company }: { companyId: string; company: CompanyFormValues }): React.ReactElement {
+export function EditCompanyDialog({ companyId, company, canDelete = false }: { companyId: string; company: CompanyFormValues; canDelete?: boolean }): React.ReactElement {
     const [isOpen, setIsOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -81,7 +81,7 @@ export function EditCompanyDialog({ companyId, company }: { companyId: string; c
                         company={company}
                         action={updateCompanyAction.bind(null, companyId)}
                         submitLabel='Save Company'
-                        footerStart={<Button type='button' color='red' onClick={() => setIsDeleteOpen(true)}>Delete Company</Button>}
+                        footerStart={canDelete ? <Button type='button' color='red' onClick={() => setIsDeleteOpen(true)}>Delete Company</Button> : undefined}
                         footerEnd={<Button type='button' plain onClick={closeEditDialog}>Cancel</Button>}
                     />
                 </DialogBody>

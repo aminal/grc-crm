@@ -1,34 +1,21 @@
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { Avatar } from '@/components/ui/avatar';
+import { notFound, redirect } from 'next/navigation';
+import { UserHeaderCard } from '@/components/users/user-header-card';
 import { Badge, StatusBadge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { EditUserDialog } from '@/components/users/edit-user-dialog';
 import { UserActivityLog, type UserActivityLogEntry } from './user-activity-log';
-import { requireManagerOrAdmin } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireSectionEnabled } from '@/lib/auth/session';
 import { listActivity, listOrders } from '@/lib/data/orders';
 import { getUserProfile, isSeededAdminEmail } from '@/lib/data/profiles';
-import { dateFromFirestore, formatDate, formatDateTime, formatMoney } from '@/lib/domain/format';
-import type { ActivityData, FirestoreRecord, OrderData, UserProfileData, UserRole } from '@/lib/domain/types';
-
-const roleColors: Record<UserRole, 'purple' | 'blue' | 'emerald' | 'zinc'> = {
-    Admin: 'purple',
-    Manager: 'blue',
-    Employee: 'emerald',
-    Guest: 'zinc',
-};
+import { dateFromFirestore, formatDateTime, formatMoney } from '@/lib/domain/format';
+import type { ActivityData, FirestoreRecord, OrderData } from '@/lib/domain/types';
 
 const involvementPriority = ['Salesperson', 'Payment', 'Invoice', 'Discount', 'Created', 'Activity'] as const;
 
 type UserDetailSearchParams = {
     edit?: string | string[];
-};
-
-type SerializedUser = {
-    id: string;
-    data: Omit<UserProfileData, 'updated_at'>;
 };
 
 type UserOrderActivity = FirestoreRecord<ActivityData> & {
@@ -47,7 +34,7 @@ export default async function UserDetailPage({
     params: Promise<{ userId: string }>;
     searchParams: Promise<UserDetailSearchParams>;
 }): Promise<React.ReactElement> {
-    const currentUser = await requireManagerOrAdmin();
+    const currentUser = await requireSectionEnabled('users');
     const { userId } = await params;
     const [profile, orders] = await Promise.all([getUserProfile(userId), listOrders()]);
 
@@ -57,6 +44,16 @@ export default async function UserDetailPage({
 
     const search = await searchParams;
     const userHref = userPath(profile.id);
+    const editHref = `${userHref}/edit`;
+    const selectedUserIsAdmin = profile.data.role === 'Admin' || isSeededAdminEmail(profile.data.email);
+    const canEditUserProfiles = isFeatureEnabled(currentUser, 'users', 'edit_user_profiles');
+    const canEditUserPermissions = isFeatureEnabled(currentUser, 'users', 'edit_user_permissions');
+    const canEditUser = (canEditUserProfiles || canEditUserPermissions) && (currentUser.role === 'Admin' || !selectedUserIsAdmin);
+
+    if (firstSearchParam(search.edit)) {
+        redirect(canEditUser ? editHref : userHref);
+    }
+
     const activity = await listUserOrderActivity(orders, profile.id);
     const activityLogEntries = serializeActivityLogEntries(activity);
     const activityOrderIds = new Set(activity.map((entry) => entry.order.id));
@@ -67,15 +64,6 @@ export default async function UserDetailPage({
         }))
         .filter((row) => row.involvement.length > 0)
         .sort((a, b) => firestoreMillis(b.order.data.created_at) - firestoreMillis(a.order.data.created_at));
-    const selectedUserIsAdmin = profile.data.role === 'Admin' || isSeededAdminEmail(profile.data.email);
-    const canEditUser = currentUser.role === 'Admin' || !selectedUserIsAdmin;
-    const lockedRole: UserRole | null = isSeededAdminEmail(profile.data.email)
-        ? 'Admin'
-        : currentUser.role === 'Manager' && profile.id === currentUser.uid
-            ? currentUser.role
-            : null;
-    const editHref = `${userHref}?edit=1`;
-    const editOpen = Boolean(firstSearchParam(search.edit));
 
     return (
         <div className='space-y-6'>
@@ -85,46 +73,7 @@ export default async function UserDetailPage({
                 <RelatedOrdersCard rows={relatedOrders} />
                 <UserActivityLog activity={activityLogEntries} />
             </div>
-
-            {canEditUser && editOpen ? (
-                <EditUserDialog user={serializeUser(profile)} closeHref={userHref} viewerRole={currentUser.role} lockedRole={lockedRole} />
-            ) : null}
         </div>
-    );
-}
-
-function UserHeaderCard({ user, editHref }: {
-    user: FirestoreRecord<UserProfileData>;
-    editHref: string | null
-}): React.ReactElement {
-    const role = user.data.role || 'Guest';
-    const displayName = user.data.display_name?.trim() || '—';
-    const email = user.data.email?.trim() || 'No email';
-    const title = user.data.title?.trim() || 'No title';
-    const avatarName = user.data.display_name || user.data.email || user.id;
-
-    return (
-        <Card>
-            <CardContent className='flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between'>
-                <div className='flex min-w-0 items-center gap-4'>
-                    <Avatar name={avatarName} picture={user.data.picture} className='size-16 rounded-xl text-2xl' />
-                    <div className='min-w-0'>
-                        <div className='flex flex-wrap items-center gap-2'>
-                            <h2 className='truncate text-2xl/7 font-semibold text-zinc-950 dark:text-white'>{displayName}</h2>
-                            <Badge color={roleColors[role]}>{role}</Badge>
-                        </div>
-                        <p className='mt-1 break-words text-sm font-medium text-zinc-500 dark:text-zinc-400'>{email}</p>
-                        <p className='mt-1 text-sm font-medium text-zinc-600 dark:text-zinc-300'>{title}</p>
-                    </div>
-                </div>
-                <div className='flex flex-col items-start gap-4 sm:items-end'>
-                    {editHref ? <Button href={editHref} color='purple'>Edit User</Button> : null}
-                    <dl className='sm:text-right'>
-                        <UserMetaItem label='Last Updated' value={formatDate(user.data.updated_at)} />
-                    </dl>
-                </div>
-            </CardContent>
-        </Card>
     );
 }
 
@@ -203,19 +152,6 @@ function RelatedOrdersCard({ rows }: { rows: RelatedOrderRow[] }): React.ReactEl
     );
 }
 
-function UserMetaItem({ label, value, breakAll = false }: {
-    label: string;
-    value: string;
-    breakAll?: boolean
-}): React.ReactElement {
-    return (
-        <div>
-            <dt className='text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500'>{label}</dt>
-            <dd className={breakAll ? 'mt-2 break-all font-semibold text-zinc-950 dark:text-white' : 'mt-2 font-semibold text-zinc-950 dark:text-white'}>{value}</dd>
-        </div>
-    );
-}
-
 async function listUserOrderActivity(orders: FirestoreRecord<OrderData>[], userId: string): Promise<UserOrderActivity[]> {
     const activityByOrder = await Promise.all(orders.map(async (order) => {
         const entries = await listActivity(order.id);
@@ -274,19 +210,6 @@ function userInvolvementLabels(order: FirestoreRecord<OrderData>, userId: string
     }
 
     return labels;
-}
-
-function serializeUser(user: FirestoreRecord<UserProfileData>): SerializedUser {
-    return {
-        id: user.id,
-        data: {
-            email: user.data.email,
-            display_name: user.data.display_name,
-            picture: user.data.picture,
-            role: user.data.role,
-            title: user.data.title,
-        },
-    };
 }
 
 function firstSearchParam(value: string | string[] | undefined): string {

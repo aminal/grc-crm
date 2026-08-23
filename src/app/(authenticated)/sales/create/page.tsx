@@ -6,7 +6,8 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 import { DeliveryDateField } from '@/components/sales/delivery-date-field';
 import { PackagePicker } from '@/components/sales/package-picker';
 import { OrderTermsField } from '@/components/sales/order-terms-field';
-import { requireNonGuest } from '@/lib/auth/session';
+import { isFeatureEnabled } from '@/lib/auth/permissions';
+import { requireFeature } from '@/lib/auth/session';
 import { listCompanies } from '@/lib/data/crm';
 import { listPackages } from '@/lib/data/inventory';
 import { listUsers } from '@/lib/data/profiles';
@@ -22,7 +23,8 @@ type CreateOrderSearchParams = {
 export default async function CreateOrderPage({ searchParams }: {
     searchParams: Promise<CreateOrderSearchParams>
 }): Promise<React.ReactElement> {
-    const user = await requireNonGuest();
+    const user = await requireFeature('sales', 'create_orders');
+    const canCreateCompany = isFeatureEnabled(user, 'companies', 'manage_companies');
     const params = await searchParams;
     const [companies, packages, users, products] = await Promise.all([listCompanies(), listPackages(false), listUsers(), listProducts()]);
     const companyId = firstSearchParam(params.company_id);
@@ -87,7 +89,7 @@ export default async function CreateOrderPage({ searchParams }: {
                                 emptyMessage='No companies matched your search.'
                                 maxResults={4}
                                 required
-                                footerAction={{ href: '/companies?newCompany=1', label: '+ Add New Company' }}
+                                footerAction={canCreateCompany ? { href: '/companies?newCompany=1', label: '+ Add New Company' } : undefined}
                             />
                         </Field>
                         <Field label='Salesperson'>

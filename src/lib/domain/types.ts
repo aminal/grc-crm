@@ -26,6 +26,36 @@ export type FirestoreRecord<T> = {
 };
 
 export type UserRole = "Guest" | "Employee" | "Manager" | "Admin";
+export type AppSection = "dashboard" | "sales" | "billing" | "inventory" | "companies" | "brands" | "strains" | "products" | "users";
+export type SectionAccessLevel = "none" | "read" | "write";
+export type SectionPermissions = Record<AppSection, SectionAccessLevel>;
+export type DashboardFeature = "view_metrics" | "view_recent_orders" | "view_recent_companies" | "view_inventory_groups" | "view_sales_status";
+export type SalesFeature = "create_orders" | "manage_order_status" | "manage_order_packages" | "confirm_delivery" | "delete_orders";
+export type BillingFeature = "approve_invoices" | "unapprove_invoices" | "manage_payments" | "manage_discounts";
+export type InventoryFeature = "upload_metrc";
+export type CompaniesFeature = "manage_companies" | "manage_contacts" | "manage_interactions" | "delete_companies";
+export type BrandsFeature = "create_brands" | "update_brands" | "archive_brands";
+export type StrainsFeature = "create_strains" | "update_strains" | "archive_strains";
+export type ProductsFeature = "create_products" | "update_products" | "archive_products";
+export type UsersFeature = "edit_user_profiles" | "edit_user_permissions" | "assign_admin_role";
+export type SectionFeatureMap = {
+  dashboard: DashboardFeature;
+  sales: SalesFeature;
+  billing: BillingFeature;
+  inventory: InventoryFeature;
+  companies: CompaniesFeature;
+  brands: BrandsFeature;
+  strains: StrainsFeature;
+  products: ProductsFeature;
+  users: UsersFeature;
+};
+export type SectionFeature<S extends AppSection = AppSection> = SectionFeatureMap[S];
+export type SectionPermissionConfig<S extends AppSection = AppSection> = {
+  enabled: boolean;
+  features: Partial<Record<SectionFeatureMap[S], boolean>>;
+};
+export type UserPermissions = { [Section in AppSection]: SectionPermissionConfig<Section> };
+export type StoredUserPermissions = Partial<Record<AppSection, unknown>>;
 
 export type AuthenticatedUser = {
   uid: string;
@@ -34,6 +64,7 @@ export type AuthenticatedUser = {
   picture: string | null;
   role: UserRole;
   title: string | null;
+  permissions: UserPermissions;
 };
 
 export type UserProfileData = {
@@ -42,6 +73,7 @@ export type UserProfileData = {
   picture?: string;
   role?: UserRole;
   title?: string;
+  permissions?: StoredUserPermissions;
   updated_at?: FirestoreDate;
 };
 

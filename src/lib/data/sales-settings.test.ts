@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { defaultPermissionsForRole } from "@/lib/auth/permissions";
 
 const firestoreMocks = vi.hoisted(() => {
   const batchSet = vi.fn();
@@ -344,6 +345,7 @@ describe("sales settings data helpers", () => {
         picture: null,
         role: "Guest",
         title: null,
+        permissions: defaultPermissionsForRole("Guest"),
       },
       [{
         field: "name",

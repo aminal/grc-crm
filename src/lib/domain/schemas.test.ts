@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMPANY_STATUSES } from "./constants";
-import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema } from "./schemas";
+import { APP_SECTIONS, SECTION_FEATURES } from "@/lib/auth/permissions";
+import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, userUpdateSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
@@ -90,5 +91,42 @@ describe("domain schemas", () => {
 
     expect(parsed.package_tags).toEqual(["tag-a", "tag-b"]);
     expect(parsed.package_prices).toEqual({ "tag-a": 1250, "tag-b": 1300 });
+  });
+
+  it("parses user section and feature permissions from form fields", () => {
+    const parsed = userUpdateSchema.parse({
+      display_name: " User ",
+      role: "Manager",
+      title: " Lead ",
+      section_sales_enabled: "on",
+      feature_sales_create_orders: "on",
+      feature_sales_manage_order_status: "true",
+      feature_users_edit_user_profiles: "1",
+    });
+
+    expect(parsed).toMatchObject({
+      display_name: "User",
+      role: "Manager",
+      title: "Lead",
+      permissions: {
+        dashboard: { enabled: true },
+        sales: {
+          enabled: true,
+          features: {
+            create_orders: true,
+            manage_order_status: true,
+            manage_order_packages: false,
+          },
+        },
+        users: {
+          enabled: false,
+          features: {
+            edit_user_profiles: true,
+            edit_user_permissions: false,
+          },
+        },
+      },
+    });
+    expect(APP_SECTIONS.every((section) => SECTION_FEATURES[section].every((feature) => typeof (parsed.permissions[section].features as Record<string, boolean | undefined>)[feature.key] === "boolean"))).toBe(true);
   });
 });

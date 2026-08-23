@@ -29,7 +29,7 @@ const dateClasses = [
 ];
 
 export function Label({ className, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>): React.ReactElement {
-    return <label data-slot='label' className={cn('text-base/6 text-zinc-950 select-none uppercase sm:text-sm/6 dark:text-zinc-500', className)} {...props} />;
+    return <label data-slot='label' className={cn('text-sm/6 select-none font-bold uppercase tracking-[0.2em] text-zinc-500', className)} {...props} />;
 }
 
 export function Input({ className, type, leadingIcon, trailingIcon, ...props }: InputProps): React.ReactElement {

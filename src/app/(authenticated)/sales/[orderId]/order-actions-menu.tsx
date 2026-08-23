@@ -35,7 +35,10 @@ type OrderActionsMenuProps = {
     orderNumber: number;
     actions: string[];
     approvalInvoice: InvoiceApprovalDefaults;
-    canManage: boolean;
+    canManageOrderStatus: boolean;
+    canConfirmDelivery: boolean;
+    canApproveInvoices: boolean;
+    canUnapproveInvoices: boolean;
     canDelete: boolean;
     hasInvoice: boolean;
     canRecordPayment: boolean;
@@ -45,14 +48,19 @@ type OrderActionsMenuProps = {
 
 type ConfirmableOrderAction = 'reject' | 'cancel' | 'close';
 
-export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoice, canManage, canDelete, hasInvoice, canRecordPayment, recordPaymentBalanceCents, defaultPaidAt }: OrderActionsMenuProps): React.ReactElement {
+export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoice, canManageOrderStatus, canConfirmDelivery, canApproveInvoices, canUnapproveInvoices, canDelete, hasInvoice, canRecordPayment, recordPaymentBalanceCents, defaultPaidAt }: OrderActionsMenuProps): React.ReactElement {
     const [isCreateInvoiceDialogOpen, setIsCreateInvoiceDialogOpen] = useState(false);
     const [isDeliverDialogOpen, setIsDeliverDialogOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRecordPaymentDialogOpen, setIsRecordPaymentDialogOpen] = useState(false);
     const [confirmationAction, setConfirmationAction] = useState<ConfirmableOrderAction | null>(null);
-    const visibleActions = canManage ? actions : actions.filter((action) => action === 'reject' || action === 'cancel' || action === 'close' || action === 'reopen');
-    const canShowRecordPayment = canManage && canRecordPayment;
+    const visibleActions = actions.filter((action) => canUseOrderAction(action, {
+        canManageOrderStatus,
+        canConfirmDelivery,
+        canApproveInvoices,
+        canUnapproveInvoices,
+    }));
+    const canShowRecordPayment = canRecordPayment;
 
     function closeCreateInvoiceDialog(): void {
         setIsCreateInvoiceDialogOpen(false);
@@ -294,6 +302,26 @@ function confirmationServerAction(actionType: ConfirmableOrderAction, orderId: s
             return cancelOrderAction.bind(null, orderId);
         case 'close':
             return closeOrderAction.bind(null, orderId);
+    }
+}
+
+function canUseOrderAction(action: string, permissions: Pick<OrderActionsMenuProps, 'canManageOrderStatus' | 'canConfirmDelivery' | 'canApproveInvoices' | 'canUnapproveInvoices'>): boolean {
+    switch (action) {
+        case 'approve':
+            return permissions.canApproveInvoices;
+        case 'unapprove':
+        case 'mark_pending':
+            return permissions.canUnapproveInvoices;
+        case 'deliver':
+        case 'delivery_reject':
+            return permissions.canConfirmDelivery;
+        case 'reject':
+        case 'cancel':
+        case 'close':
+        case 'reopen':
+            return permissions.canManageOrderStatus;
+        default:
+            return false;
     }
 }
 

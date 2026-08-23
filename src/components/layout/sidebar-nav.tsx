@@ -18,71 +18,84 @@ import { LayoutGroup, motion } from "motion/react";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { TouchTarget } from "@/components/ui/button";
-import type { AuthenticatedUser } from "@/lib/domain/types";
+import { isSectionEnabled } from "@/lib/auth/permissions";
+import type { AppSection, AuthenticatedUser } from "@/lib/domain/types";
 
 function StrainsIcon(props: React.ComponentProps<typeof Cannabis>): React.ReactElement {
   return <Cannabis {...props} className={cn("[&_*]:fill-none", props.className)} />;
 }
 
-const navItems = [
+const navItems: readonly {
+  href: string;
+  label: string;
+  section: AppSection;
+  icon: React.ElementType;
+  isCurrent: (pathname: string) => boolean;
+}[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
+    section: "dashboard",
     icon: HomeIcon,
     isCurrent: (pathname: string) => pathname === "/dashboard",
   },
   {
     href: "/sales",
     label: "Sales",
+    section: "sales",
     icon: BanknotesIcon,
     isCurrent: (pathname: string) => pathname === "/sales" || pathname.startsWith("/sales/"),
   },
   {
     href: "/billing",
     label: "Billing",
+    section: "billing",
     icon: DocumentCurrencyDollarIcon,
     isCurrent: (pathname: string) => pathname === "/billing" || pathname.startsWith("/billing/"),
   },
   {
     href: "/inventory",
     label: "Inventory",
+    section: "inventory",
     icon: ArchiveBoxIcon,
     isCurrent: (pathname: string) => pathname === "/inventory" || pathname.startsWith("/inventory/"),
   },
   {
     href: "/companies",
     label: "Companies",
+    section: "companies",
     icon: BuildingOffice2Icon,
     isCurrent: (pathname: string) => pathname === "/companies" || pathname.startsWith("/companies/"),
   },
   {
     href: "/brands",
     label: "Brands",
+    section: "brands",
     icon: TagIcon,
     isCurrent: (pathname: string) => pathname === "/brands" || pathname.startsWith("/brands/"),
   },
   {
     href: "/strains",
     label: "Strains",
+    section: "strains",
     icon: StrainsIcon,
     isCurrent: (pathname: string) => pathname === "/strains" || pathname.startsWith("/strains/"),
   },
   {
     href: "/products",
     label: "Products",
+    section: "products",
     icon: CubeIcon,
     isCurrent: (pathname: string) => pathname === "/products" || pathname.startsWith("/products/"),
   },
   {
     href: "/users",
     label: "Users",
+    section: "users",
     icon: UserGroupIcon,
     isCurrent: (pathname: string) => pathname === "/users" || pathname.startsWith("/users/"),
-    allowedRoles: ["Manager", "Admin"] as readonly AuthenticatedUser["role"][],
   },
 ] as const;
-
-const guestHiddenNavHrefs = new Set(["/sales", "/billing", "/inventory", "/companies", "/brands", "/strains", "/products", "/users"]);
 
 const sidebarItemClasses = cn(
   "relative flex cursor-pointer w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5",
@@ -107,31 +120,30 @@ export function SidebarNav({ user, onNavigate }: { user: AuthenticatedUser; onNa
     <LayoutGroup id={id}>
       <div data-slot="section" className="flex flex-col gap-0.5">
         {navItems
-          .filter((item) => user.role !== "Guest" || !guestHiddenNavHrefs.has(item.href))
-          .filter((item) => !("allowedRoles" in item) || item.allowedRoles.includes(user.role))
+          .filter((item) => isSectionEnabled(user, item.section))
           .map((item) => {
-          const Icon = item.icon;
-          const current = item.isCurrent(pathname);
+            const Icon = item.icon;
+            const current = item.isCurrent(pathname);
 
-          return (
-            <span key={item.href} className="relative">
-              {current ? <motion.span layoutId="current-indicator" className="absolute inset-y-2 -left-4 w-0.5 rounded-full bg-zinc-950 dark:bg-white" /> : null}
-              <Headless.CloseButton
-                as={Link}
-                href={item.href}
-                aria-current={current ? "page" : undefined}
-                onClick={onNavigate}
-                data-current={current ? "true" : undefined}
-                className={sidebarItemClasses}
-              >
-                <TouchTarget>
-                  <Icon data-slot="icon" aria-hidden="true" />
-                  <span className="truncate">{item.label}</span>
-                </TouchTarget>
-              </Headless.CloseButton>
-            </span>
-          );
-        })}
+            return (
+              <span key={item.href} className="relative">
+                {current ? <motion.span layoutId="current-indicator" className="absolute inset-y-2 -left-4 w-0.5 rounded-full bg-zinc-950 dark:bg-white" /> : null}
+                <Headless.CloseButton
+                  as={Link}
+                  href={item.href}
+                  aria-current={current ? "page" : undefined}
+                  onClick={onNavigate}
+                  data-current={current ? "true" : undefined}
+                  className={sidebarItemClasses}
+                >
+                  <TouchTarget>
+                    <Icon data-slot="icon" aria-hidden="true" />
+                    <span className="truncate">{item.label}</span>
+                  </TouchTarget>
+                </Headless.CloseButton>
+              </span>
+            );
+          })}
       </div>
     </LayoutGroup>
   );

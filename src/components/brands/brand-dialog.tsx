@@ -17,6 +17,7 @@ type BrandDialogProps = {
   mode: "create" | "edit";
   brand?: BrandDialogBrand;
   closeHref: string;
+  canArchive?: boolean;
 };
 
 type BrandFormState = {
@@ -29,7 +30,7 @@ const initialState: BrandFormState = {
   success: false,
 };
 
-export function BrandDialog({ mode, brand, closeHref }: BrandDialogProps): React.ReactElement {
+export function BrandDialog({ mode, brand, closeHref, canArchive = false }: BrandDialogProps): React.ReactElement {
   const router = useRouter();
   const action = mode === "edit" && brand
     ? updateBrandFormAction.bind(null, brand.id)
@@ -74,11 +75,11 @@ export function BrandDialog({ mode, brand, closeHref }: BrandDialogProps): React
             error={state.error}
             showReason={mode === "edit"}
             onCancel={close}
-            onArchive={mode === "edit" && brand ? () => setShowArchiveConfirmation(true) : undefined}
+            onArchive={mode === "edit" && brand && canArchive ? () => setShowArchiveConfirmation(true) : undefined}
           />
         </DialogBody>
       </Dialog>
-      {mode === "edit" && brand ? (
+      {mode === "edit" && brand && canArchive ? (
         <DeleteConfirmationDialog
           open={showArchiveConfirmation}
           onClose={() => setShowArchiveConfirmation(false)}
