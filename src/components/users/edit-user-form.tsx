@@ -111,16 +111,16 @@ export function EditUserForm({
                         : null
                     }
                 </div>
-                <div className='grid gap-4 lg:gap-6'>
+                <div className='grid gap-4 lg:gap-6 lg:grid-cols-2'>
                     {APP_SECTIONS.map((section) => {
                         const sectionConfig = permissionsLocked ? effectivePermissions[section] : permissions[section];
                         const sectionEnabled = sectionConfig.enabled;
                         const sectionDisabled = permissionsLocked || !viewerCanEditPermissions || section === 'dashboard';
 
                         return (
-                            <div key={section} className='rounded-lg bg-white/70 dark:bg-white/5'>
+                            <div key={section} className='rounded-lg bg-zinc-200/25 dark:bg-white/5'>
                                 <input type='hidden' name={`section_${section}_enabled`} value={sectionEnabled ? 'true' : 'false'} />
-                                <div className='flex items-start gap-3 bg-zinc-950/20 px-6 py-4 rounded-t-lg'>
+                                <div className='flex items-start gap-3 bg-zinc-950/5 px-6 py-4 rounded-t-lg'>
                                     <div className='flex items-center gap-x-2 text-sm text-zinc-700 dark:text-zinc-300'>
                                         <Switch
                                             color='purple'
