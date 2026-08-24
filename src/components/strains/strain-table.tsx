@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui/empty-state";
 import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
-import { cn } from "@/lib/utils";
 
 export type StrainTableSortKey = "name" | "composition";
 
@@ -19,17 +18,11 @@ function formatComposition(sativaPercentage: number): string {
 
 export function StrainTable({
   strains,
-  selectedStrainId,
-  hrefBase = "/strains",
-  canManage = true,
   query = "",
   sortKey = null,
   sortDirection = null,
 }: {
   strains: StrainTableStrain[];
-  selectedStrainId?: string;
-  hrefBase?: string;
-  canManage?: boolean;
   query?: string;
   sortKey?: StrainTableSortKey | null;
   sortDirection?: TableSortDirection | null;
@@ -48,28 +41,21 @@ export function StrainTable({
       </TableHeader>
       <TableBody>
         {strains.map((strain) => {
-          const separator = hrefBase.includes("?") ? "&" : "?";
-          const href = `${hrefBase}${separator}strain=${strain.id}`;
-          const label = `Edit ${strain.data.name}`;
+          const href = `/strains/${encodeURIComponent(strain.id)}`;
+          const label = `View ${strain.data.name}`;
 
           return (
-            <TableRow key={strain.id} className={cn(canManage && "group cursor-pointer", canManage && selectedStrainId === strain.id && "bg-zinc-950/2.5 dark:bg-white/5")}>
+            <TableRow key={strain.id} className="group cursor-pointer">
               <TableCell>
-                {canManage ? (
-                  <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
-                    <span className="absolute inset-0" />
-                    {strain.data.name}
-                  </Link>
-                ) : (
-                  <span className="font-semibold text-zinc-950 dark:text-white">{strain.data.name}</span>
-                )}
+                <Link href={href} className="font-semibold text-zinc-950 group-hover:text-zinc-700 dark:text-white dark:group-hover:text-zinc-300">
+                  <span className="absolute inset-0" />
+                  {strain.data.name}
+                </Link>
               </TableCell>
               <TableCell className="max-w-sm truncate">
-                {canManage ? (
-                  <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
-                    <span className="sr-only">{label}</span>
-                  </Link>
-                ) : null}
+                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                  <span className="sr-only">{label}</span>
+                </Link>
                 {formatComposition(strain.data.sativa_percentage)}
               </TableCell>
             </TableRow>

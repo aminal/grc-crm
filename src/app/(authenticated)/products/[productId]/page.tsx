@@ -30,10 +30,11 @@ export default async function ProductDetailPage({ params }: {
     const canEditProduct = isFeatureEnabled(currentUser, 'products', 'update_products');
     const brandName = displayBrandName(brand);
     const strainNames = displayStrainNames(product.data.strain_ids, strains);
+    const primaryStrain = strains[0] ?? null;
 
     return (
         <div className='space-y-6'>
-            <ProductHeaderCard product={product} brandName={brandName} strainNames={strainNames} editHref={canEditProduct ? `${productHref}/edit` : null} />
+            <ProductHeaderCard product={product} strainSativaPercentage={primaryStrain?.data.sativa_percentage} editHref={canEditProduct ? `${productHref}/edit` : null} />
             <ProductDetailsCard product={product} brandName={brandName} strainNames={strainNames} />
         </div>
     );

@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/layout/page-header";
 import { StrainDialog } from "@/components/strains/strain-dialog";
@@ -8,7 +9,7 @@ import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSo
 import { TableSearch } from "@/components/ui/table-search";
 import { isFeatureEnabled } from "@/lib/auth/permissions";
 import { requireSectionEnabled } from "@/lib/auth/session";
-import { findStrain, listStrains } from "@/lib/data/sales-settings";
+import { listStrains } from "@/lib/data/sales-settings";
 import type { FirestoreRecord, StrainData } from "@/lib/domain/types";
 
 const strainsHref = "/strains";
@@ -22,24 +23,6 @@ type StrainsSearchParams = {
   dir?: string | string[];
 };
 
-type StrainDialogStrain = {
-  id: string;
-  data: Pick<StrainData, "name" | "breeder" | "genetics" | "sativa_percentage" | "notes">;
-};
-
-function serializeStrain(record: FirestoreRecord<StrainData>): StrainDialogStrain {
-  return {
-    id: record.id,
-    data: {
-      name: record.data.name,
-      breeder: record.data.breeder,
-      genetics: record.data.genetics,
-      sativa_percentage: record.data.sativa_percentage,
-      notes: record.data.notes,
-    },
-  };
-}
-
 function serializeTableStrain(record: FirestoreRecord<StrainData>): StrainTableStrain {
   return {
     id: record.id,
@@ -48,11 +31,6 @@ function serializeTableStrain(record: FirestoreRecord<StrainData>): StrainTableS
       sativa_percentage: record.data.sativa_percentage,
     },
   };
-}
-
-function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
-  const archived = strain.data.archived_at ?? strain.data.deleted_at;
-  return archived !== null && archived !== undefined;
 }
 
 function firstSearchParam(value: string | string[] | undefined): string {
@@ -92,8 +70,6 @@ function filterStrains(strains: FirestoreRecord<StrainData>[], query: string): F
 export default async function StrainsPage({ searchParams }: { searchParams: Promise<StrainsSearchParams> }): Promise<React.ReactElement> {
   const user = await requireSectionEnabled("strains");
   const canCreate = isFeatureEnabled(user, "strains", "create_strains");
-  const canUpdate = isFeatureEnabled(user, "strains", "update_strains");
-  const canArchive = isFeatureEnabled(user, "strains", "archive_strains");
 
   const params = await searchParams;
   const query = firstSearchParam(params.q).trim();
@@ -102,23 +78,12 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
   const sortParams = tableSortParams(sortKey, sortDirection);
   const strainParam = firstSearchParam(params.strain).trim();
   const showCreateStrainDialog = canCreate && strainParam === "new";
-  const showEditStrainDialog = canUpdate && strainParam !== "" && strainParam !== "new";
 
-  let strains: FirestoreRecord<StrainData>[] = [];
-  let selectedStrain: FirestoreRecord<StrainData> | null = null;
-
-  if (showEditStrainDialog) {
-    [strains, selectedStrain] = await Promise.all([
-      listStrains(),
-      findStrain(strainParam),
-    ]);
-  } else {
-    strains = await listStrains();
+  if (strainParam && strainParam !== "new") {
+    redirect(`/strains/${encodeURIComponent(strainParam)}`);
   }
 
-  if (selectedStrain && strainIsArchived(selectedStrain)) {
-    selectedStrain = null;
-  }
+  const strains = await listStrains();
 
   const filteredStrains = filterStrains(strains, query);
   const sortedStrains = sortStrains(filteredStrains, sortKey, sortDirection);
@@ -129,7 +94,6 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
   const filteredHref = hrefWithQuery(strainsHref, query, pageParams);
   const createStrainHref = hrefWithQuery(strainsHref, query, { ...pageParams, strain: "new" });
   const serializedStrains = paginatedStrains.map(serializeTableStrain);
-  const serializedStrain = selectedStrain ? serializeStrain(selectedStrain) : null;
 
   return (
     <div>
@@ -146,13 +110,12 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
         <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, or composition" preservedParams={sortParams} />
         {query && filteredStrains.length === 0 ? <EmptyState title="No strains found" /> : (
           <>
-            <StrainTable strains={serializedStrains} selectedStrainId={selectedStrain?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+            <StrainTable strains={serializedStrains} query={query} sortKey={sortKey} sortDirection={sortDirection} />
             <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedStrains.length} />
           </>
         )}
       </div>
       {showCreateStrainDialog ? <StrainDialog mode="create" closeHref={filteredHref} /> : null}
-      {showEditStrainDialog && serializedStrain ? <StrainDialog mode="edit" strain={serializedStrain} closeHref={filteredHref} canArchive={canArchive} /> : null}
     </div>
   );
 }

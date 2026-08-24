@@ -15,10 +15,14 @@ export function HeaderCard({ title, badge, media, meta = [], actions, className 
     actions?: React.ReactNode;
     className?: string;
 }): React.ReactElement {
+    console.log('HeaderCard', title, badge, media, meta);
     return (
         <Card className={className}>
             <CardContent className='flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between'>
-                <div className='flex min-w-0 items-start gap-4'>
+                <div className={cn(
+                    'flex min-w-0 gap-4',
+                    meta.length > 0 ? 'items-start' : 'items-center',
+                )}>
                     {media ? <div className='shrink-0'>{media}</div> : null}
                     <div className='min-w-0'>
                         <div className='flex flex-wrap items-center gap-2'>

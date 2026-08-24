@@ -31,6 +31,8 @@ export async function updateStrainAction(strainId: string, formData: FormData): 
   const reason = editReasonSchema.parse(values);
   await updateStrain(strainId, input, user, reason.reason);
   revalidatePath("/strains");
+  revalidatePath(`/strains/${encodeURIComponent(strainId)}`);
+  revalidatePath(`/strains/${encodeURIComponent(strainId)}/edit`);
 }
 
 export async function archiveStrainAction(strainId: string, formData: FormData): Promise<void> {
@@ -41,6 +43,8 @@ export async function archiveStrainAction(strainId: string, formData: FormData):
 
   await archiveStrain(strainId, user, "Archived from Strains settings.");
   revalidatePath("/strains");
+  revalidatePath(`/strains/${encodeURIComponent(strainId)}`);
+  revalidatePath(`/strains/${encodeURIComponent(strainId)}/edit`);
   revalidatePath("/products");
   redirect("/strains");
 }

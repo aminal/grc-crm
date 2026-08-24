@@ -54,13 +54,12 @@ export default async function EditProductPage({ params }: {
         includeProductStrains(activeStrains, product),
     ]);
     const productHref = productPath(product.id);
-    const brandName = displayBrandName(brands.find((brand) => brand.id === product.data.brand_id) ?? null);
-    const strainNames = displayStrainNames(product.data.strain_ids, strains);
     const canArchive = isFeatureEnabled(currentUser, 'products', 'archive_products');
+    const primaryStrain = firstProductStrain(product, strains);
 
     return (
         <div className='space-y-6'>
-            <ProductHeaderCard product={product} brandName={brandName} strainNames={strainNames} />
+            <ProductHeaderCard product={product} strainSativaPercentage={primaryStrain?.data.sativa_percentage} />
             <Card>
                 <CardHeader>
                     <CardTitle>Product Details</CardTitle>
@@ -153,22 +152,8 @@ async function includeProductStrains(activeStrains: FirestoreRecord<StrainData>[
     ].sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
-function displayBrandName(brand: FirestoreRecord<BrandData> | null): string {
-    if (!brand) {
-        return 'Unknown Brand';
-    }
-
-    return `${brand.data.name}${brandIsArchived(brand) ? ' (archived)' : ''}`;
+function firstProductStrain(product: FirestoreRecord<ProductData>, strains: FirestoreRecord<StrainData>[]): FirestoreRecord<StrainData> | null {
+    const firstStrainId = product.data.strain_ids[0];
+    return firstStrainId ? (strains.find((strain) => strain.id === firstStrainId) ?? null) : null;
 }
 
-function displayStrainNames(strainIds: string[], strains: FirestoreRecord<StrainData>[]): string[] {
-    const strainById = new Map(strains.map((strain) => [strain.id, strain]));
-    return strainIds.map((strainId) => {
-        const strain = strainById.get(strainId);
-        if (!strain) {
-            return strainId;
-        }
-
-        return `${strain.data.name}${strainIsArchived(strain) ? ' (archived)' : ''}`;
-    });
-}
