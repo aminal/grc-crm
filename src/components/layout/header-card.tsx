@@ -15,7 +15,6 @@ export function HeaderCard({ title, badge, media, meta = [], actions, className 
     actions?: React.ReactNode;
     className?: string;
 }): React.ReactElement {
-    console.log('HeaderCard', title, badge, media, meta);
     return (
         <Card className={className}>
             <CardContent className='flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between'>
