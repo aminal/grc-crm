@@ -30,6 +30,8 @@ export async function updateProductAction(productId: string, formData: FormData)
   const reason = editReasonSchema.parse(values);
   await updateProduct(productId, input, user, reason.reason);
   revalidatePath("/products");
+  revalidatePath(`/products/${encodeURIComponent(productId)}`);
+  revalidatePath(`/products/${encodeURIComponent(productId)}/edit`);
 }
 
 export async function archiveProductAction(productId: string, formData: FormData): Promise<void> {
@@ -40,6 +42,8 @@ export async function archiveProductAction(productId: string, formData: FormData
 
   await archiveProduct(productId, user, "Archived from Products settings.");
   revalidatePath("/products");
+  revalidatePath(`/products/${encodeURIComponent(productId)}`);
+  revalidatePath(`/products/${encodeURIComponent(productId)}/edit`);
   redirect("/products");
 }
 

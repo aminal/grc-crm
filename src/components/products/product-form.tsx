@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogActions } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { formatProductCategory } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
 import type { ProductData } from "@/lib/domain/types";
 
@@ -22,7 +23,7 @@ export type ProductFormStrainOption = {
 };
 
 const PRODUCT_CATEGORY_OPTIONS = [
-  "Buds",
+  "Flower",
   "Pre-roll",
   "Concentrate",
   "Shake/Trim",
@@ -88,7 +89,8 @@ export function ProductForm({
     ...archivedSelectedStrains.map((strain) => `${strain.name} (archived)`),
   ];
   const strainSelectionLabel = selectedStrainNames.length > 0 ? selectedStrainNames.join(", ") : hasActiveStrains ? "Select strains" : "No strains available";
-  const categoryOptions = product?.category && !PRODUCT_CATEGORY_OPTIONS.includes(product.category) ? [product.category, ...PRODUCT_CATEGORY_OPTIONS] : PRODUCT_CATEGORY_OPTIONS;
+  const selectedCategory = formatProductCategory(product?.category);
+  const categoryOptions = selectedCategory && !PRODUCT_CATEGORY_OPTIONS.includes(selectedCategory) ? [selectedCategory, ...PRODUCT_CATEGORY_OPTIONS] : PRODUCT_CATEGORY_OPTIONS;
 
   return (
     <form action={action} className="space-y-4">
@@ -141,7 +143,7 @@ export function ProductForm({
         </Headless.Listbox>
       </Field>
       <Field label="Category">
-        <Select name="category" defaultValue={product?.category ?? ""} disabled={pending}>
+        <Select name="category" defaultValue={selectedCategory} disabled={pending}>
           <option value="">Select a category</option>
           {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
         </Select>

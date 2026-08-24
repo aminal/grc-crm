@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { ProductDialog } from '@/components/products/product-dialog';
@@ -8,7 +9,8 @@ import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSo
 import { TableSearch } from '@/components/ui/table-search';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
-import { findBrand, findProduct, findStrain, listBrands, listProducts, listStrains, } from '@/lib/data/sales-settings';
+import { findBrand, findStrain, listBrands, listProducts, listStrains, } from '@/lib/data/sales-settings';
+import { formatProductCategory } from '@/lib/domain/format';
 import type { BrandData, FirestoreRecord, ProductData, StrainData } from '@/lib/domain/types';
 
 const productsHref = '/products';
@@ -20,11 +22,6 @@ type ProductsSearchParams = {
     page?: string | string[];
     sort?: string | string[];
     dir?: string | string[];
-};
-
-type ProductDialogProduct = {
-    id: string;
-    data: Pick<ProductData, 'name' | 'brand_id' | 'strain_ids' | 'category' | 'unit_base_price_cents' | 'case_quantity' | 'sku' | 'upc' | 'notes'>;
 };
 
 type ProductDialogBrand = {
@@ -39,23 +36,6 @@ type ProductDialogStrain = {
     archived: boolean;
 };
 
-function serializeProduct(record: FirestoreRecord<ProductData>): ProductDialogProduct {
-    return {
-        id: record.id,
-        data: {
-            name: record.data.name,
-            brand_id: record.data.brand_id,
-            strain_ids: record.data.strain_ids,
-            category: record.data.category,
-            unit_base_price_cents: record.data.unit_base_price_cents,
-            case_quantity: record.data.case_quantity,
-            sku: record.data.sku,
-            upc: record.data.upc,
-            notes: record.data.notes,
-        },
-    };
-}
-
 function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
     return brand.data.archived_at !== null && brand.data.archived_at !== undefined;
 }
@@ -66,10 +46,6 @@ function serializeBrand(record: FirestoreRecord<BrandData>): ProductDialogBrand 
         name: record.data.name,
         archived: brandIsArchived(record),
     };
-}
-
-function productIsArchived(product: FirestoreRecord<ProductData>): boolean {
-    return product.data.archived_at !== null && product.data.archived_at !== undefined;
 }
 
 function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
@@ -146,15 +122,15 @@ function filterProducts(
         return products;
     }
 
-    const brandNames = new Map(brands.map((brand) => [brand.id, brand.data.name]));
+    const brandSearchText = new Map(brands.map((brand) => [brand.id, `${brand.data.name} ${brand.data.acronym}`]));
     const strainNames = new Map(strains.map((strain) => [strain.id, strain.data.name]));
 
     return products.filter((product) => [
         product.data.name,
         product.data.sku,
         product.data.upc,
-        product.data.category,
-        brandNames.get(product.data.brand_id),
+        formatProductCategory(product.data.category),
+        brandSearchText.get(product.data.brand_id),
         ...product.data.strain_ids.map((strainId) => strainNames.get(strainId) ?? strainId),
     ].join(' ').toLowerCase().includes(normalized));
 }
@@ -164,8 +140,6 @@ export default async function ProductsPage({ searchParams }: {
 }): Promise<React.ReactElement> {
     const user = await requireSectionEnabled('products');
     const canCreate = isFeatureEnabled(user, 'products', 'create_products');
-    const canUpdate = isFeatureEnabled(user, 'products', 'update_products');
-    const canArchive = isFeatureEnabled(user, 'products', 'archive_products');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -174,31 +148,16 @@ export default async function ProductsPage({ searchParams }: {
     const sortParams = tableSortParams(sortKey, sortDirection);
     const productParam = firstSearchParam(params.product).trim();
     const showCreateProductDialog = canCreate && productParam === 'new';
-    const showEditProductDialog = canUpdate && productParam !== '' && productParam !== 'new';
 
-    let activeBrands: FirestoreRecord<BrandData>[] = [];
-    let products: FirestoreRecord<ProductData>[] = [];
-    let activeStrains: FirestoreRecord<StrainData>[] = [];
-    let selectedProduct: FirestoreRecord<ProductData> | null = null;
-
-    if (showEditProductDialog) {
-        [activeBrands, products, activeStrains, selectedProduct] = await Promise.all([
-            listBrands(),
-            listProducts(),
-            listStrains(),
-            findProduct(productParam),
-        ]);
-    } else {
-        [activeBrands, products, activeStrains] = await Promise.all([
-            listBrands(),
-            listProducts(),
-            listStrains(),
-        ]);
+    if (productParam && productParam !== 'new') {
+        redirect(`/products/${encodeURIComponent(productParam)}`);
     }
 
-    if (selectedProduct && productIsArchived(selectedProduct)) {
-        selectedProduct = null;
-    }
+    const [activeBrands, products, activeStrains] = await Promise.all([
+        listBrands(),
+        listProducts(),
+        listStrains(),
+    ]);
 
     const brands = await includeReferencedBrands(activeBrands, products);
     const strains = await includeReferencedStrains(activeStrains, products);
@@ -212,7 +171,6 @@ export default async function ProductsPage({ searchParams }: {
     const createProductHref = hrefWithQuery(productsHref, query, { ...pageParams, product: 'new' });
     const serializedBrands = brands.map(serializeBrand);
     const serializedStrains = strains.map(serializeStrain);
-    const serializedProduct = selectedProduct ? serializeProduct(selectedProduct) : null;
 
     return (
         <div>
@@ -229,15 +187,13 @@ export default async function ProductsPage({ searchParams }: {
                 <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, or category' preservedParams={sortParams} />
                 {query && filteredProducts.length === 0 ? <EmptyState title='No products found' /> : (
                     <>
-                        <ProductTable products={paginatedProducts} brands={brands} strains={strains} selectedProductId={selectedProduct?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <ProductTable products={paginatedProducts} brands={brands} strains={strains} query={query} sortKey={sortKey} sortDirection={sortDirection} />
                         <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedProducts.length} />
                     </>
                 )}
             </div>
             {showCreateProductDialog ?
                 <ProductDialog mode='create' brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} /> : null}
-            {showEditProductDialog && serializedProduct ?
-                <ProductDialog mode='edit' product={serializedProduct} brands={serializedBrands} strains={serializedStrains} closeHref={filteredHref} canArchive={canArchive} /> : null}
         </div>
     );
 }
@@ -248,23 +204,23 @@ function sortProducts(products: FirestoreRecord<ProductData>[], sortKey: Product
     }
 
     const direction = sortDirection === 'asc' ? 1 : -1;
-    const brandNames = new Map(brands.map((brand) => [brand.id, brand.data.name]));
+    const brandLabels = new Map(brands.map((brand) => [brand.id, brand.data.acronym || brand.data.name]));
     const strainNames = new Map(strains.map((strain) => [strain.id, strain.data.name]));
-    return [...products].sort((a, b) => compareStrings(productSortValue(a, sortKey, brandNames, strainNames), productSortValue(b, sortKey, brandNames, strainNames)) * direction);
+    return [...products].sort((a, b) => compareStrings(productSortValue(a, sortKey, brandLabels, strainNames), productSortValue(b, sortKey, brandLabels, strainNames)) * direction);
 }
 
-function productSortValue(product: FirestoreRecord<ProductData>, sortKey: ProductTableSortKey, brandNames: Map<string, string>, strainNames: Map<string, string>): string {
+function productSortValue(product: FirestoreRecord<ProductData>, sortKey: ProductTableSortKey, brandLabels: Map<string, string>, strainNames: Map<string, string>): string {
     switch (sortKey) {
         case 'name':
             return product.data.name;
         case 'sku':
             return product.data.sku ?? '';
         case 'brand':
-            return brandNames.get(product.data.brand_id) ?? '';
+            return brandLabels.get(product.data.brand_id) ?? '';
         case 'strain':
             return product.data.strain_ids.map((strainId) => strainNames.get(strainId) ?? strainId).join(', ');
         case 'category':
-            return product.data.category ?? '';
+            return formatProductCategory(product.data.category);
     }
 }
 

@@ -22,7 +22,7 @@ const colors = {
   zinc: "bg-zinc-600/10 text-zinc-700 group-data-hover:bg-zinc-600/20 dark:bg-white/5 dark:text-zinc-400 dark:group-data-hover:bg-white/10",
 };
 
-type BadgeColor = keyof typeof colors;
+export type BadgeColor = keyof typeof colors;
 
 export function Badge({ color = "zinc", className, ...props }: React.HTMLAttributes<HTMLSpanElement> & { color?: BadgeColor }): React.ReactElement {
   return <span className={cn("inline-flex items-center gap-x-1.5 rounded-md px-1.5 py-0.5 text-sm/5 font-bold sm:text-sm/5 uppercase forced-colors:outline", colors[color], className)} {...props} />;

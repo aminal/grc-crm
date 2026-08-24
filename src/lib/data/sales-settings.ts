@@ -13,6 +13,7 @@ import type {
   StrainData,
 } from "@/lib/domain/types";
 import { brandAcronymFromName } from "@/lib/domain/brand";
+import { formatProductCategory } from "@/lib/domain/format";
 import { getDocument, listCollection, millis, normalizedText, now } from "./firestore";
 
 const ACTIVITY = "activity";
@@ -104,7 +105,7 @@ function productFields(data: Partial<ProductInput>): ProductInput {
     name: normalizedText(data.name),
     brand_id: normalizedText(data.brand_id),
     strain_ids: strainIdsFromInput(data.strain_ids),
-    category: normalizedText(data.category),
+    category: formatProductCategory(normalizedText(data.category)),
     unit_base_price_cents: nonnegativeInteger(data.unit_base_price_cents),
     case_quantity: nonnegativeInteger(data.case_quantity),
     sku: normalizedText(data.sku),
