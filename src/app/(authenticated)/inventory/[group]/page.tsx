@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
+import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { compactNumber, formatDate, formatInventoryCategory } from '@/lib/domain/format';
 import type { PackageData } from '@/lib/domain/types';
 
@@ -24,11 +25,15 @@ export default async function InventoryGroupPage({ params }: {
 }): Promise<React.ReactElement> {
     const user = await requireSectionEnabled('inventory');
     const canCreateOrder = isFeatureEnabled(user, 'sales', 'create_orders');
+    const canViewPrivateStrains = isFeatureEnabled(user, 'strains', 'view_private_strains');
 
     const { group: encodedGroup } = await params;
     const key = decodeURIComponent(encodedGroup);
-    const packages = await listPackages(false);
-    const group = groupInventory(packages).find((row) => row.key === key);
+    const [packages, products, strains] = await Promise.all([listPackages(false), listProducts(), listStrains()]);
+    const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
+    const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));
+    const permissionedPackages = canViewPrivateStrains ? packages : packages.filter((packageRecord) => !packageRecord.data.product_id || !privateProductIds.has(packageRecord.data.product_id));
+    const group = groupInventory(permissionedPackages).find((row) => row.key === key);
     if (!group) {
         notFound();
     }

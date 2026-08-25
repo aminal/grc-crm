@@ -2,7 +2,7 @@ import { Cannabis } from 'lucide-react';
 import { HeaderCard } from '@/components/layout/header-card';
 import { Badge, type BadgeColor } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { FirestoreRecord, StrainData } from '@/lib/domain/types';
+import type { FirestoreRecord, StrainData, StrainStatus } from '@/lib/domain/types';
 
 type StrainHeaderCardProps = {
     strain: FirestoreRecord<StrainData>;
@@ -13,7 +13,12 @@ export function StrainHeaderCard({ strain, editHref = null }: StrainHeaderCardPr
     return (
         <HeaderCard
             title={strain.data.name || 'Strain'}
-            badge={<Badge color={compositionBadgeColor(strain.data.sativa_percentage)}>{compositionKind(strain.data.sativa_percentage)}</Badge>}
+            badge={(
+                <>
+                    <Badge color={compositionBadgeColor(strain.data.sativa_percentage)}>{compositionKind(strain.data.sativa_percentage)}</Badge>
+                    <StrainStatusBadge status={strain.data.status} />
+                </>
+            )}
             media={(
                 <div className='flex size-16 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300'>
                     <Cannabis className='size-8 [&_*]:fill-none' aria-hidden='true' />
@@ -26,6 +31,18 @@ export function StrainHeaderCard({ strain, editHref = null }: StrainHeaderCardPr
 
 export function compositionLabel(sativaPercentage: number): string {
     return `${100 - sativaPercentage}% Indica / ${sativaPercentage}% Sativa`;
+}
+
+function StrainStatusBadge({ status }: { status: StrainStatus }): React.ReactElement {
+    const statusColors = {
+        Active: 'emerald',
+        Hidden: 'purple',
+        'Coming Soon': 'sky',
+        Sunsetting: 'amber',
+        Archived: 'zinc',
+    } satisfies Record<StrainStatus, BadgeColor>;
+
+    return <Badge color={statusColors[status]}>{status}</Badge>;
 }
 
 function compositionKind(sativaPercentage: number): 'Indica' | 'Hybrid' | 'Sativa' {

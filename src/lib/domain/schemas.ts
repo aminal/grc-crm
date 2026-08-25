@@ -8,6 +8,8 @@ import {
   ORDER_TERMS,
   PAYMENT_METHODS,
   PREFERRED_COMMUNICATION_METHODS,
+  PRODUCT_STATUSES,
+  STRAIN_STATUSES,
   US_STATE_ABBREVIATIONS,
 } from "./constants";
 import { e164Phone } from "./phone";
@@ -264,6 +266,7 @@ export const strainCreateSchema = z.object({
   breeder: optionalShortString,
   genetics: optionalShortString,
   sativa_percentage: z.coerce.number().int().min(0).max(100),
+  status: z.enum(STRAIN_STATUSES).optional().default("Active"),
   notes: optionalLongString,
 });
 
@@ -274,6 +277,7 @@ export const productCreateSchema = z.object({
   brand_id: requiredString,
   strain_ids: requiredStringArray,
   category: optionalString.pipe(z.string().max(255)),
+  status: z.enum(PRODUCT_STATUSES).optional().default("Active"),
   unit_base_price_cents: optionalCentsFromMoney,
   case_quantity: optionalNonnegativeInteger,
   sku: optionalString.pipe(z.string().max(255)),

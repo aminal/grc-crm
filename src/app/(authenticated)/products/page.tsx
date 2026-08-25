@@ -14,7 +14,7 @@ import { formatProductCategory } from '@/lib/domain/format';
 import type { BrandData, FirestoreRecord, ProductData, StrainData } from '@/lib/domain/types';
 
 const productsHref = '/products';
-const productSortKeys = ['name', 'sku', 'brand', 'strain', 'category'] as const;
+const productSortKeys = ['name', 'sku', 'brand', 'strain', 'category', 'status'] as const;
 
 type ProductsSearchParams = {
     product?: string | string[];
@@ -130,6 +130,7 @@ function filterProducts(
         product.data.sku,
         product.data.upc,
         formatProductCategory(product.data.category),
+        product.data.status,
         brandSearchText.get(product.data.brand_id),
         ...product.data.strain_ids.map((strainId) => strainNames.get(strainId) ?? strainId),
     ].join(' ').toLowerCase().includes(normalized));
@@ -140,6 +141,7 @@ export default async function ProductsPage({ searchParams }: {
 }): Promise<React.ReactElement> {
     const user = await requireSectionEnabled('products');
     const canCreate = isFeatureEnabled(user, 'products', 'create_products');
+    const canViewPrivateStrains = isFeatureEnabled(user, 'strains', 'view_private_strains');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -159,9 +161,12 @@ export default async function ProductsPage({ searchParams }: {
         listStrains(),
     ]);
 
-    const brands = await includeReferencedBrands(activeBrands, products);
-    const strains = await includeReferencedStrains(activeStrains, products);
-    const filteredProducts = filterProducts(products, brands, strains, query);
+    const privateStrainIds = new Set(activeStrains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
+    const visibleProducts = canViewPrivateStrains ? products : products.filter((product) => product.data.status !== 'Hidden' && !product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId)));
+    const visibleStrains = canViewPrivateStrains ? activeStrains : activeStrains.filter((strain) => strain.data.status !== 'Hidden');
+    const brands = await includeReferencedBrands(activeBrands, visibleProducts);
+    const strains = await includeReferencedStrains(visibleStrains, visibleProducts);
+    const filteredProducts = filterProducts(visibleProducts, brands, strains, query);
     const sortedProducts = sortProducts(filteredProducts, sortKey, sortDirection, brands, strains);
     const currentPage = tablePageFromSearchParam(params.page, sortedProducts.length);
     const paginatedProducts = paginatedTableItems(sortedProducts, currentPage);
@@ -184,7 +189,7 @@ export default async function ProductsPage({ searchParams }: {
                 ) : null}
             />
             <div className='space-y-6'>
-                <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, or category' preservedParams={sortParams} />
+                <TableSearch query={query} placeholder='Filter products by name, SKU, UPC, brand, strain, category, or status' preservedParams={sortParams} />
                 {query && filteredProducts.length === 0 ? <EmptyState title='No products found' /> : (
                     <>
                         <ProductTable products={paginatedProducts} brands={brands} strains={strains} query={query} sortKey={sortKey} sortDirection={sortDirection} />
@@ -221,6 +226,8 @@ function productSortValue(product: FirestoreRecord<ProductData>, sortKey: Produc
             return product.data.strain_ids.map((strainId) => strainNames.get(strainId) ?? strainId).join(', ');
         case 'category':
             return formatProductCategory(product.data.category);
+        case 'status':
+            return product.data.status;
     }
 }
 

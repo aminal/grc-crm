@@ -57,6 +57,7 @@ function product(id: string, overrides: Partial<ProductData>): FirestoreRecord<P
     brand_id: "brand-a",
     strain_ids: [],
     category: "",
+    status: "Active",
     unit_base_price_cents: 0,
     case_quantity: 0,
     sku: "",

@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { Plus } from 'lucide-react';
 import { PageHeader } from '@/components/layout/page-header';
 import { BrandDialog } from '@/components/brands/brand-dialog';
@@ -8,7 +9,7 @@ import { paginatedTableItems, TablePagination, tablePageFromSearchParam, tableSo
 import { TableSearch } from '@/components/ui/table-search';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
-import { findBrand, listBrands } from '@/lib/data/sales-settings';
+import { listBrands } from '@/lib/data/sales-settings';
 import type { BrandData, FirestoreRecord } from '@/lib/domain/types';
 
 const brandsHref = '/brands';
@@ -21,27 +22,6 @@ type BrandsSearchParams = {
     sort?: string | string[];
     dir?: string | string[];
 };
-
-type BrandDialogBrand = {
-    id: string;
-    data: Pick<BrandData, 'name' | 'acronym' | 'website' | 'notes'>;
-};
-
-function serializeBrand(record: FirestoreRecord<BrandData>): BrandDialogBrand {
-    return {
-        id: record.id,
-        data: {
-            name: record.data.name,
-            acronym: record.data.acronym,
-            website: record.data.website,
-            notes: record.data.notes,
-        },
-    };
-}
-
-function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
-    return brand.data.archived_at !== null && brand.data.archived_at !== undefined;
-}
 
 function firstSearchParam(value: string | string[] | undefined): string {
     return Array.isArray(value) ? (value[0] ?? '') : (value ?? '');
@@ -73,8 +53,6 @@ export default async function BrandsPage({ searchParams }: {
 }): Promise<React.ReactElement> {
     const user = await requireSectionEnabled('brands');
     const canCreate = isFeatureEnabled(user, 'brands', 'create_brands');
-    const canUpdate = isFeatureEnabled(user, 'brands', 'update_brands');
-    const canArchive = isFeatureEnabled(user, 'brands', 'archive_brands');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).trim();
@@ -83,23 +61,12 @@ export default async function BrandsPage({ searchParams }: {
     const sortParams = tableSortParams(sortKey, sortDirection);
     const brandParam = firstSearchParam(params.brand).trim();
     const showCreateBrandDialog = canCreate && brandParam === 'new';
-    const showEditBrandDialog = canUpdate && brandParam !== '' && brandParam !== 'new';
 
-    let brands: FirestoreRecord<BrandData>[] = [];
-    let selectedBrand: FirestoreRecord<BrandData> | null = null;
-
-    if (showEditBrandDialog) {
-        [brands, selectedBrand] = await Promise.all([
-            listBrands(),
-            findBrand(brandParam),
-        ]);
-    } else {
-        brands = await listBrands();
+    if (brandParam && brandParam !== 'new') {
+        redirect(`/brands/${encodeURIComponent(brandParam)}`);
     }
 
-    if (selectedBrand && brandIsArchived(selectedBrand)) {
-        selectedBrand = null;
-    }
+    const brands = await listBrands();
 
     const filteredBrands = filterBrands(brands, query);
     const sortedBrands = sortBrands(filteredBrands, sortKey, sortDirection);
@@ -109,7 +76,6 @@ export default async function BrandsPage({ searchParams }: {
     const pageParams: Record<string, string> = currentPage > 1 ? { ...sortParams, page: String(currentPage) } : sortParams;
     const filteredHref = hrefWithQuery(brandsHref, query, pageParams);
     const createBrandHref = hrefWithQuery(brandsHref, query, { ...pageParams, brand: 'new' });
-    const serializedBrand = selectedBrand ? serializeBrand(selectedBrand) : null;
 
     return (
         <div>
@@ -126,14 +92,12 @@ export default async function BrandsPage({ searchParams }: {
                 <TableSearch query={query} placeholder='Filter brands by name, acronym, or website' preservedParams={sortParams} />
                 {query && filteredBrands.length === 0 ? <EmptyState title='No brands found' /> : (
                     <>
-                        <BrandTable brands={paginatedBrands} selectedBrandId={selectedBrand?.id} hrefBase={filteredHref} canManage={canUpdate} query={query} sortKey={sortKey} sortDirection={sortDirection} />
+                        <BrandTable brands={paginatedBrands} query={query} sortKey={sortKey} sortDirection={sortDirection} />
                         <TablePagination baseHref={paginationHref} currentPage={currentPage} totalItems={sortedBrands.length} />
                     </>
                 )}
             </div>
             {showCreateBrandDialog ? <BrandDialog mode='create' closeHref={filteredHref} /> : null}
-            {showEditBrandDialog && serializedBrand ?
-                <BrandDialog mode='edit' brand={serializedBrand} closeHref={filteredHref} canArchive={canArchive} /> : null}
         </div>
     );
 }

@@ -1,0 +1,18 @@
+# Topmost EditorConfig file - do not look in parent directories
+root = true
+
+# All files
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# JavaScript/TypeScript/JSON files (using 2 spaces)
+[{*.js,*.ts,*.tsx,*.json}]
+indent_style = space
+indent_size = 2
+
+# Makefiles must use actual tabs for syntax
+[Makefile]
+indent_style = tab

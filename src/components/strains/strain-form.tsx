@@ -1,10 +1,11 @@
 import { StrainCompositionSlider } from "@/components/strains/strain-composition-slider";
 import { Button } from "@/components/ui/button";
 import { DialogActions } from "@/components/ui/dialog";
-import { Field, Input, Textarea } from "@/components/ui/field";
+import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { STRAIN_STATUSES } from "@/lib/domain/constants";
 import type { StrainData } from "@/lib/domain/types";
 
-export type StrainFormValues = Pick<StrainData, "name" | "breeder" | "genetics" | "notes"> & Partial<Pick<StrainData, "sativa_percentage">>;
+export type StrainFormValues = Pick<StrainData, "name" | "breeder" | "genetics" | "status" | "notes"> & Partial<Pick<StrainData, "sativa_percentage">>;
 
 type StrainFormProps = {
   strain?: StrainFormValues;
@@ -15,7 +16,6 @@ type StrainFormProps = {
   error: string | null;
   showReason: boolean;
   onCancel: () => void;
-  onArchive?: () => void;
 };
 
 export function StrainForm({
@@ -27,7 +27,6 @@ export function StrainForm({
   error,
   showReason,
   onCancel,
-  onArchive,
 }: StrainFormProps): React.ReactElement {
   return (
     <form action={action} className="space-y-4">
@@ -44,6 +43,11 @@ export function StrainForm({
       <Field label="Composition">
         <StrainCompositionSlider defaultValue={strain?.sativa_percentage ?? 50} disabled={pending} />
       </Field>
+      <Field label="Status">
+        <Select name="status" defaultValue={strain?.status ?? "Active"} required disabled={pending}>
+          {STRAIN_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+        </Select>
+      </Field>
       <Field label="Notes">
         <Textarea name="notes" defaultValue={strain?.notes ?? ""} rows={4} disabled={pending} />
       </Field>
@@ -53,7 +57,6 @@ export function StrainForm({
         </Field>
       ) : null}
       <DialogActions>
-        {onArchive ? <Button type="button" color="red" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" plain onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button type="submit" color="purple" disabled={pending}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>

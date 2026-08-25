@@ -15,10 +15,11 @@ export default async function ProductDetailPage({ params }: {
     params: Promise<ProductDetailParams>;
 }): Promise<React.ReactElement> {
     const currentUser = await requireSectionEnabled('products');
+    const canViewPrivateStrains = isFeatureEnabled(currentUser, 'strains', 'view_private_strains');
     const { productId } = await params;
     const product = await findProduct(productId);
 
-    if (!product || productIsArchived(product)) {
+    if (!product || productIsArchived(product) || (productIsPrivate(product) && !canViewPrivateStrains)) {
         notFound();
     }
 
@@ -26,6 +27,10 @@ export default async function ProductDetailPage({ params }: {
         findBrand(product.data.brand_id),
         Promise.all(product.data.strain_ids.map(findStrain)),
     ]);
+    if (productHasPrivateStrain(strains) && !canViewPrivateStrains) {
+        notFound();
+    }
+
     const productHref = productPath(product.id);
     const canEditProduct = isFeatureEnabled(currentUser, 'products', 'update_products');
     const brandName = displayBrandName(brand);
@@ -56,6 +61,7 @@ function ProductDetailsCard({ product, brandName, strainNames }: {
                     <DetailItem label='Brand' value={brandName} />
                     <DetailItem label='Strain' value={strainNames.length > 0 ? strainNames.join(', ') : '—'} />
                     <DetailItem label='Category' value={formatProductCategory(product.data.category) || '—'} />
+                    <DetailItem label='Status' value={product.data.status} />
                     <DetailItem label='Unit Base Price' value={formatMoney(product.data.unit_base_price_cents)} />
                     <DetailItem label='Case Quantity' value={product.data.case_quantity ? String(product.data.case_quantity) : '—'} />
                     <DetailItem label='SKU' value={product.data.sku || '—'} />
@@ -90,7 +96,11 @@ function productPath(productId: string): string {
 }
 
 function productIsArchived(product: FirestoreRecord<ProductData>): boolean {
-    return product.data.archived_at !== null && product.data.archived_at !== undefined;
+    return product.data.status === 'Archived' || (product.data.archived_at !== null && product.data.archived_at !== undefined);
+}
+
+function productIsPrivate(product: FirestoreRecord<ProductData>): boolean {
+    return product.data.status === 'Hidden';
 }
 
 function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
@@ -99,7 +109,11 @@ function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
 
 function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
     const archived = strain.data.archived_at ?? strain.data.deleted_at;
-    return archived !== null && archived !== undefined;
+    return strain.data.status === 'Archived' || (archived !== null && archived !== undefined);
+}
+
+function productHasPrivateStrain(strains: (FirestoreRecord<StrainData> | null)[]): boolean {
+    return strains.some((strain) => strain?.data.status === 'Hidden');
 }
 
 function displayBrandName(brand: FirestoreRecord<BrandData> | null): string {

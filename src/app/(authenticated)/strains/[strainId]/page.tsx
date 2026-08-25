@@ -15,10 +15,11 @@ export default async function StrainDetailPage({ params }: {
     params: Promise<StrainDetailParams>;
 }): Promise<React.ReactElement> {
     const currentUser = await requireSectionEnabled('strains');
+    const canViewPrivateStrains = isFeatureEnabled(currentUser, 'strains', 'view_private_strains');
     const { strainId } = await params;
     const strain = await findStrain(strainId);
 
-    if (!strain || strainIsArchived(strain)) {
+    if (!strain || strainIsArchived(strain) || (strainIsPrivate(strain) && !canViewPrivateStrains)) {
         notFound();
     }
 
@@ -45,6 +46,7 @@ function StrainDetailsCard({ strain }: { strain: FirestoreRecord<StrainData> }):
                     <DetailItem label='Breeder' value={strain.data.breeder || '—'} />
                     <DetailItem label='Genetics' value={strain.data.genetics || '—'} />
                     <DetailItem label='Composition' value={compositionLabel(strain.data.sativa_percentage)} />
+                    <DetailItem label='Status' value={strain.data.status} />
                     <DetailItem label='Created' value={formatDate(strain.data.created_at)} />
                     <DetailItem label='Last Updated' value={formatDate(strain.data.updated_at)} />
                 </dl>
@@ -76,5 +78,9 @@ function strainPath(strainId: string): string {
 
 function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
     const archived = strain.data.archived_at ?? strain.data.deleted_at;
-    return archived !== null && archived !== undefined;
+    return strain.data.status === 'Archived' || (archived !== null && archived !== undefined);
+}
+
+function strainIsPrivate(strain: FirestoreRecord<StrainData>): boolean {
+    return strain.data.status === 'Hidden';
 }

@@ -21,6 +21,22 @@ export const COMPANY_STATUSES = [
   "Blacklisted",
 ] as const;
 
+export const PRODUCT_STATUSES = [
+  "Active",
+  "Coming Soon",
+  "Sunsetting",
+  "Archived",
+  "Hidden",
+] as const;
+
+export const STRAIN_STATUSES = [
+  "Active",
+  "Coming Soon",
+  "Sunsetting",
+  "Archived",
+  "Hidden",
+] as const;
+
 export const US_STATE_ABBREVIATIONS = [
   "AL",
   "AK",

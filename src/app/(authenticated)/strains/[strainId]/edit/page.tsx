@@ -13,7 +13,7 @@ type StrainEditParams = {
 
 type StrainEditStrain = {
     id: string;
-    data: Pick<StrainData, 'name' | 'breeder' | 'genetics' | 'sativa_percentage' | 'notes'>;
+    data: Pick<StrainData, 'name' | 'breeder' | 'genetics' | 'sativa_percentage' | 'status' | 'notes'>;
 };
 
 export default async function EditStrainPage({ params }: {
@@ -21,6 +21,7 @@ export default async function EditStrainPage({ params }: {
 }): Promise<React.ReactElement> {
     const currentUser = await requireSectionEnabled('strains');
     const canEditStrain = isFeatureEnabled(currentUser, 'strains', 'update_strains');
+    const canViewPrivateStrains = isFeatureEnabled(currentUser, 'strains', 'view_private_strains');
 
     if (!canEditStrain) {
         notFound();
@@ -29,12 +30,11 @@ export default async function EditStrainPage({ params }: {
     const { strainId } = await params;
     const strain = await findStrain(strainId);
 
-    if (!strain || strainIsArchived(strain)) {
+    if (!strain || strainIsArchived(strain) || (strainIsPrivate(strain) && !canViewPrivateStrains)) {
         notFound();
     }
 
     const strainHref = strainPath(strain.id);
-    const canArchive = isFeatureEnabled(currentUser, 'strains', 'archive_strains');
 
     return (
         <div className='space-y-6'>
@@ -48,7 +48,6 @@ export default async function EditStrainPage({ params }: {
                         strain={serializeStrain(strain)}
                         cancelHref={strainHref}
                         successHref={strainHref}
-                        canArchive={canArchive}
                     />
                 </CardContent>
             </Card>
@@ -64,6 +63,7 @@ function serializeStrain(record: FirestoreRecord<StrainData>): StrainEditStrain 
             breeder: record.data.breeder,
             genetics: record.data.genetics,
             sativa_percentage: record.data.sativa_percentage,
+            status: record.data.status,
             notes: record.data.notes,
         },
     };
@@ -75,5 +75,9 @@ function strainPath(strainId: string): string {
 
 function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
     const archived = strain.data.archived_at ?? strain.data.deleted_at;
-    return archived !== null && archived !== undefined;
+    return strain.data.status === 'Archived' || (archived !== null && archived !== undefined);
+}
+
+function strainIsPrivate(strain: FirestoreRecord<StrainData>): boolean {
+    return strain.data.status === 'Hidden';
 }

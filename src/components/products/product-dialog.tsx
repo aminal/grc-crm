@@ -1,12 +1,13 @@
 "use client";
 
 import * as Headless from "@headlessui/react";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { ProductForm, type ProductFormBrandOption, type ProductFormStrainOption, type ProductFormValues } from "@/components/products/product-form";
-import { DeleteConfirmationDialog, Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { archiveProductAction, createProductFormAction, updateProductFormAction } from "@/app/(authenticated)/products/actions";
+import { Dialog, DialogBody, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { createProductFormAction, updateProductFormAction } from "@/app/(authenticated)/products/actions";
+import type { ProductStatus } from "@/lib/domain/types";
 
 type ProductDialogProduct = {
   id: string;
@@ -19,26 +20,26 @@ type ProductDialogProps = {
   brands: ProductFormBrandOption[];
   strains: ProductFormStrainOption[];
   closeHref: string;
-  canArchive?: boolean;
 };
 
 type ProductFormState = {
   error: string | null;
   success: boolean;
+  status: ProductStatus | null;
 };
 
 const initialState: ProductFormState = {
   error: null,
   success: false,
+  status: null,
 };
 
-export function ProductDialog({ mode, product, brands, strains, closeHref, canArchive = false }: ProductDialogProps): React.ReactElement {
+export function ProductDialog({ mode, product, brands, strains, closeHref }: ProductDialogProps): React.ReactElement {
   const router = useRouter();
   const action = mode === "edit" && product
     ? updateProductFormAction.bind(null, product.id)
     : createProductFormAction;
   const [state, formAction, pending] = useActionState(action, initialState);
-  const [showArchiveConfirmation, setShowArchiveConfirmation] = useState(false);
 
   useEffect(() => {
     if (state.success) {
@@ -56,45 +57,31 @@ export function ProductDialog({ mode, product, brands, strains, closeHref, canAr
     : "Update product details.";
 
   return (
-    <>
-      <Dialog size="xl" open onClose={close} className="relative">
-        <Headless.CloseButton
-          className="absolute top-4 right-4 rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 cursor-pointer transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
-          aria-label="Close dialog"
-          onClick={close}
-        >
-          <X className="size-4" aria-hidden="true" />
-        </Headless.CloseButton>
-        <DialogTitle className="pr-10">{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-        <DialogBody>
-          <ProductForm
-            brands={brands}
-            strains={strains}
-            product={product?.data}
-            action={formAction}
-            submitLabel={mode === "create" ? "Add Product" : "Save Changes"}
-            pendingLabel={mode === "create" ? "Adding Product..." : "Saving Changes..."}
-            pending={pending}
-            error={state.error}
-            showReason={mode === "edit"}
-            onCancel={close}
-            onArchive={mode === "edit" && product && canArchive ? () => setShowArchiveConfirmation(true) : undefined}
-          />
-        </DialogBody>
-      </Dialog>
-      {mode === "edit" && product && canArchive ? (
-        <DeleteConfirmationDialog
-          open={showArchiveConfirmation}
-          onClose={() => setShowArchiveConfirmation(false)}
-          title="Archive Product"
-          description={<>This will archive {product.data.name}. Existing orders and packages that reference it will keep their reference. Type ARCHIVE to confirm.</>}
-          action={archiveProductAction.bind(null, product.id)}
-          submitLabel="Archive Product"
-          confirmationValue="ARCHIVE"
+    <Dialog size="xl" open onClose={close} className="relative">
+      <Headless.CloseButton
+        className="absolute top-4 right-4 rounded-lg bg-zinc-100 text-zinc-500 hover:bg-zinc-200! p-2 cursor-pointer transition hover:bg-zinc-800 focus:outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-500 dark:bg-zinc-950/40 dark:hover:bg-zinc-950"
+        aria-label="Close dialog"
+        onClick={close}
+      >
+        <X className="size-4" aria-hidden="true" />
+      </Headless.CloseButton>
+      <DialogTitle className="pr-10">{title}</DialogTitle>
+      <DialogDescription>{description}</DialogDescription>
+      <DialogBody>
+        <ProductForm
+          brands={brands}
+          strains={strains}
+          product={product?.data}
+          action={formAction}
+          submitLabel={mode === "create" ? "Add Product" : "Save Changes"}
+          pendingLabel={mode === "create" ? "Adding Product..." : "Saving Changes..."}
+          pending={pending}
+          error={state.error}
+          showReason={mode === "edit"}
+          onCancel={close}
         />
-      ) : null}
-    </>
+      </DialogBody>
+    </Dialog>
   );
 }
 

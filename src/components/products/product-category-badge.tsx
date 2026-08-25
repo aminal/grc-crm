@@ -2,8 +2,8 @@ import { Badge, type BadgeColor } from '@/components/ui/badge';
 import { formatProductCategory } from '@/lib/domain/format';
 
 const categoryColors: Record<string, BadgeColor> = {
-    flower: 'emerald',
-    'pre-roll': 'purple',
+    flower: 'purple',
+    'pre-roll': 'orange',
     'raw pre-rolls': 'violet',
     'infused pre-rolls': 'fuchsia',
     'premium bud pre-roll': 'indigo',

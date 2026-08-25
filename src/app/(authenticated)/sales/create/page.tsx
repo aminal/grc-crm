@@ -11,7 +11,7 @@ import { requireFeature } from '@/lib/auth/session';
 import { listCompanies } from '@/lib/data/crm';
 import { listPackages } from '@/lib/data/inventory';
 import { listUsers } from '@/lib/data/profiles';
-import { listProducts } from '@/lib/data/sales-settings';
+import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { companyUrlSegment } from '@/lib/domain/company-slug';
 import { createOrderAction } from '../actions';
 
@@ -25,8 +25,9 @@ export default async function CreateOrderPage({ searchParams }: {
 }): Promise<React.ReactElement> {
     const user = await requireFeature('sales', 'create_orders');
     const canCreateCompany = isFeatureEnabled(user, 'companies', 'manage_companies');
+    const canViewPrivateStrains = isFeatureEnabled(user, 'strains', 'view_private_strains');
     const params = await searchParams;
-    const [companies, packages, users, products] = await Promise.all([listCompanies(), listPackages(false), listUsers(), listProducts()]);
+    const [companies, packages, users, products, strains] = await Promise.all([listCompanies(), listPackages(false), listUsers(), listProducts(), listStrains()]);
     const companyId = firstSearchParam(params.company_id);
     const companySlug = firstSearchParam(params.company_slug);
     const selectedCompanyId = companyId || companies.find((company) => companyUrlSegment(company) === companySlug)?.id || '';
@@ -48,8 +49,12 @@ export default async function CreateOrderPage({ searchParams }: {
     if (!userOptions.some((option) => option.value === user.uid)) {
         userOptions.unshift({ value: user.uid, label: user.name || user.email });
     }
-    const availablePackages = packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
-    const productPrices = new Map(products.map((product) => [product.id, product.data.unit_base_price_cents]));
+    const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
+    const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));
+    const visibleProducts = canViewPrivateStrains ? products : products.filter((product) => !privateProductIds.has(product.id));
+    const permissionedPackages = canViewPrivateStrains ? packages : packages.filter((packageRecord) => !packageRecord.data.product_id || !privateProductIds.has(packageRecord.data.product_id));
+    const availablePackages = permissionedPackages.filter((packageRecord) => packageRecord.data.package_status === 'available');
+    const productPrices = new Map(visibleProducts.map((product) => [product.id, product.data.unit_base_price_cents]));
     const initialPackagePrices = Object.fromEntries(
         availablePackages.flatMap((packageRecord) => {
             const productPriceCents = packageRecord.data.product_id ? productPrices.get(packageRecord.data.product_id) : undefined;

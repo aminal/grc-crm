@@ -1,29 +1,31 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { requireFeature } from "@/lib/auth/session";
-import { archiveProduct, createProduct, updateProduct } from "@/lib/data/sales-settings";
+import { createProduct, updateProduct } from "@/lib/data/sales-settings";
 import {
   editReasonSchema,
   formEntries,
   productCreateSchema,
   validationMessage,
 } from "@/lib/domain/schemas";
+import type { ProductStatus } from "@/lib/domain/types";
 
 type ProductFormState = {
   error: string | null;
   success: boolean;
+  status: ProductStatus | null;
 };
 
-export async function createProductAction(formData: FormData): Promise<void> {
+export async function createProductAction(formData: FormData): Promise<ProductStatus> {
   const user = await requireFeature("products", "create_products");
   const input = productCreateSchema.parse(formEntries(formData));
   await createProduct(input, user);
   revalidatePath("/products");
+  return input.status;
 }
 
-export async function updateProductAction(productId: string, formData: FormData): Promise<void> {
+export async function updateProductAction(productId: string, formData: FormData): Promise<ProductStatus> {
   const user = await requireFeature("products", "update_products");
   const values = formEntries(formData);
   const input = productCreateSchema.parse(values);
@@ -32,35 +34,23 @@ export async function updateProductAction(productId: string, formData: FormData)
   revalidatePath("/products");
   revalidatePath(`/products/${encodeURIComponent(productId)}`);
   revalidatePath(`/products/${encodeURIComponent(productId)}/edit`);
-}
-
-export async function archiveProductAction(productId: string, formData: FormData): Promise<void> {
-  const user = await requireFeature("products", "archive_products");
-  if (formData.get("confirmation") !== "ARCHIVE") {
-    throw new Error("Type ARCHIVE to confirm product archive.");
-  }
-
-  await archiveProduct(productId, user, "Archived from Products settings.");
-  revalidatePath("/products");
-  revalidatePath(`/products/${encodeURIComponent(productId)}`);
-  revalidatePath(`/products/${encodeURIComponent(productId)}/edit`);
-  redirect("/products");
+  return input.status;
 }
 
 export async function createProductFormAction(_: ProductFormState, formData: FormData): Promise<ProductFormState> {
   try {
-    await createProductAction(formData);
-    return { error: null, success: true };
+    const status = await createProductAction(formData);
+    return { error: null, success: true, status };
   } catch (error) {
-    return { error: validationMessage(error), success: false };
+    return { error: validationMessage(error), success: false, status: null };
   }
 }
 
 export async function updateProductFormAction(productId: string, _: ProductFormState, formData: FormData): Promise<ProductFormState> {
   try {
-    await updateProductAction(productId, formData);
-    return { error: null, success: true };
+    const status = await updateProductAction(productId, formData);
+    return { error: null, success: true, status };
   } catch (error) {
-    return { error: validationMessage(error), success: false };
+    return { error: validationMessage(error), success: false, status: null };
   }
 }

@@ -206,12 +206,31 @@ describe("sales settings data helpers", () => {
         },
       },
       {
+        id: "product-status-archived",
+        data: {
+          name: "Status Archived Product",
+          brand_id: "brand-a",
+          strain_ids: ["strain-a"],
+          category: "Flower",
+          status: "Archived",
+          unit_base_price_cents: 100,
+          case_quantity: 10,
+          sku: "STATUS-ARCHIVED",
+          upc: "",
+          notes: "",
+          archived_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
         id: "product-active",
         data: {
           name: "Active Product",
           brand_id: "brand-a",
           strain_ids: ["strain-a"],
           category: "Flower",
+          status: "Active",
           unit_base_price_cents: 100,
           case_quantity: 10,
           sku: "ACTIVE",
@@ -227,7 +246,7 @@ describe("sales settings data helpers", () => {
     await expect(listProducts()).resolves.toMatchObject([
       {
         id: "product-active",
-        data: { name: "Active Product", archived_at: null },
+        data: { name: "Active Product", status: "Active", archived_at: null },
       },
     ]);
     expect(firestoreMocks.listCollection).toHaveBeenCalledWith("products");
@@ -255,15 +274,17 @@ describe("sales settings data helpers", () => {
     expect(buildFieldChanges(previous, next)).toEqual([]);
   });
 
-  it("serializes strain composition for activity diffs", () => {
+  it("serializes strain composition and status for activity diffs", () => {
     const previous = strainActivityFields({
       name: "Blue Dream",
       sativa_percentage: 50,
+      status: "Active",
       notes: "Balanced",
     });
     const next = strainActivityFields({
       name: "Blue Dream",
       sativa_percentage: 60,
+      status: "Hidden",
       notes: "Balanced",
     });
 
@@ -273,6 +294,11 @@ describe("sales settings data helpers", () => {
         field: "sativa_percentage",
         previous_value: "50",
         next_value: "60",
+      },
+      {
+        field: "status",
+        previous_value: "Active",
+        next_value: "Hidden",
       },
     ]);
   });
@@ -293,6 +319,19 @@ describe("sales settings data helpers", () => {
           type: "Hybrid",
           notes: "Hidden",
           archived_at: "2026-08-10T12:00:00.000Z",
+          deleted_at: null,
+          created_at: null,
+          updated_at: null,
+        },
+      },
+      {
+        id: "strain-status-archived",
+        data: {
+          name: "Status Archived Strain",
+          type: "Hybrid",
+          status: "Archived",
+          notes: "Hidden",
+          archived_at: null,
           deleted_at: null,
           created_at: null,
           updated_at: null,

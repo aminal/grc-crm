@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { COMPANY_STATUSES } from "./constants";
+import { COMPANY_STATUSES, PRODUCT_STATUSES, STRAIN_STATUSES } from "./constants";
 import { APP_SECTIONS, SECTION_FEATURES } from "@/lib/auth/permissions";
-import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, userUpdateSchema } from "./schemas";
+import { companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, strainCreateSchema, userUpdateSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
@@ -43,26 +43,48 @@ describe("domain schemas", () => {
     expect(() => companySchema.parse(baseCompany)).toThrow();
   });
 
+  it("parses strain status", () => {
+    const baseStrain = {
+      name: "Blue Dream",
+      sativa_percentage: "50",
+    };
+
+    expect(strainCreateSchema.parse(baseStrain).status).toBe("Active");
+    expect(STRAIN_STATUSES[STRAIN_STATUSES.length - 1]).toBe("Hidden");
+    for (const status of STRAIN_STATUSES) {
+      expect(strainCreateSchema.parse({ ...baseStrain, status }).status).toBe(status);
+    }
+    expect(() => strainCreateSchema.parse({ ...baseStrain, status: "Discontinued" })).toThrow();
+  });
+
   it("requires check number for check payments", () => {
     expect(() => paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "" })).toThrow();
     expect(paymentSchema.parse({ amount: "10.00", method: "check", paid_at: "2026-08-10", check_number: "123" }).amount).toBe(1000);
   });
 
-  it("parses product pricing and case quantity", () => {
+  it("parses product pricing, case quantity, and status", () => {
     const parsed = productCreateSchema.parse({
       name: "Product",
       brand_id: "brand-1",
       strain_ids: ["strain-1"],
+      status: "Hidden",
       unit_base_price_cents: "12.34",
       case_quantity: "24",
     });
 
+    expect(parsed.status).toBe("Hidden");
+    expect(PRODUCT_STATUSES[PRODUCT_STATUSES.length - 1]).toBe("Hidden");
     expect(parsed.unit_base_price_cents).toBe(1234);
     expect(parsed.case_quantity).toBe(24);
     expect(productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"] })).toMatchObject({
+      status: "Active",
       unit_base_price_cents: 0,
       case_quantity: 0,
     });
+    for (const status of PRODUCT_STATUSES) {
+      expect(productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"], status }).status).toBe(status);
+    }
+    expect(() => productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"], status: "Discontinued" })).toThrow();
   });
 
   it("treats zero discounts as no discount", () => {

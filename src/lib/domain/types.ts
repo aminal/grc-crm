@@ -8,6 +8,8 @@ import type {
   ORDER_TERMS,
   PAYMENT_METHODS,
   PREFERRED_COMMUNICATION_METHODS,
+  PRODUCT_STATUSES,
+  STRAIN_STATUSES,
 } from "./constants";
 
 export type FirestoreDate = Timestamp | FieldValue | Date | string | null;
@@ -18,6 +20,8 @@ export type PreferredCommunicationMethod = (typeof PREFERRED_COMMUNICATION_METHO
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 export type OrderState = (typeof ORDER_STATES)[number];
 export type OrderTerms = (typeof ORDER_TERMS)[number];
+export type ProductStatus = (typeof PRODUCT_STATUSES)[number];
+export type StrainStatus = (typeof STRAIN_STATUSES)[number];
 export type PaymentMethod = keyof typeof PAYMENT_METHODS;
 
 export type FirestoreRecord<T> = {
@@ -35,8 +39,8 @@ export type BillingFeature = "approve_invoices" | "unapprove_invoices" | "manage
 export type InventoryFeature = "upload_metrc";
 export type CompaniesFeature = "manage_companies" | "manage_contacts" | "manage_interactions" | "delete_companies";
 export type BrandsFeature = "create_brands" | "update_brands" | "archive_brands";
-export type StrainsFeature = "create_strains" | "update_strains" | "archive_strains";
-export type ProductsFeature = "create_products" | "update_products" | "archive_products";
+export type StrainsFeature = "create_strains" | "update_strains" | "view_private_strains";
+export type ProductsFeature = "create_products" | "update_products";
 export type UsersFeature = "edit_user_profiles" | "edit_user_permissions" | "assign_admin_role";
 export type SectionFeatureMap = {
   dashboard: DashboardFeature;
@@ -361,6 +365,7 @@ export type StrainData = {
   breeder: string;
   genetics: string;
   sativa_percentage: number;
+  status: StrainStatus;
   notes: string;
   archived_at?: FirestoreDate;
   deleted_at: FirestoreDate;
@@ -373,6 +378,7 @@ export type ProductData = {
   brand_id: string;
   strain_ids: string[];
   category: string;
+  status: ProductStatus;
   unit_base_price_cents: number;
   case_quantity: number;
   sku: string;

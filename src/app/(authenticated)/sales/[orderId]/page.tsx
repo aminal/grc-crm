@@ -11,7 +11,7 @@ import { requireSectionEnabled } from '@/lib/auth/session';
 import { findCompany } from '@/lib/data/crm';
 import { listPackages } from '@/lib/data/inventory';
 import { availableOrderActions, findOrder, listActivity } from '@/lib/data/orders';
-import { listProducts } from '@/lib/data/sales-settings';
+import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { companyPath } from '@/lib/domain/company-slug';
 import { compactNumber, formatDate, formatDateTime, formatMoney, invoiceStatusLabel } from '@/lib/domain/format';
 import type { OrderItem, OrderStatus } from '@/lib/domain/types';
@@ -35,9 +35,10 @@ export default async function OrderPage({ params }: {
     const canManagePayments = isFeatureEnabled(user, 'billing', 'manage_payments');
     const canManageDiscounts = isFeatureEnabled(user, 'billing', 'manage_discounts');
     const canViewUsers = isSectionEnabled(user, 'users');
+    const canViewPrivateStrains = isFeatureEnabled(user, 'strains', 'view_private_strains');
 
     const { orderId } = await params;
-    const [order, activity, packages, products] = await Promise.all([findOrder(orderId), listActivity(orderId), listPackages(false), listProducts()]);
+    const [order, activity, packages, products, strains] = await Promise.all([findOrder(orderId), listActivity(orderId), listPackages(false), listProducts(), listStrains()]);
     if (!order) {
         notFound();
     }
@@ -52,13 +53,17 @@ export default async function OrderPage({ params }: {
     const canEditDiscount = invoice ? canManageDiscounts && (order.data.status === 'approved' || order.data.status === 'delivered') && !hasInvoicePayments(invoice) : false;
     const canRecordPayment = invoice ? canManagePayments && orderState !== 'closed' && invoice.status !== 'paid' && invoice.balance_cents > 0 : false;
     const defaultPaidAt = new Date().toISOString().slice(0, 10);
-    const availablePackages = packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
+    const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
+    const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));
+    const visibleProducts = canViewPrivateStrains ? products : products.filter((product) => !privateProductIds.has(product.id));
+    const permissionedPackages = canViewPrivateStrains ? packages : packages.filter((packageRecord) => !packageRecord.data.product_id || !privateProductIds.has(packageRecord.data.product_id));
+    const availablePackages = permissionedPackages.filter((packageRecord) => packageRecord.data.package_status === 'available');
     const existingSourcePrices = new Map(order.data.items.map((item) => [item.source_package_key, {
         priceCents: item.price_cents,
         quantity: Number(item.quantity ?? 0)
     }]));
-    const productPrices = new Map(products.map((product) => [product.id, product.data.unit_base_price_cents]));
-    const productNames = new Map(products.map((product) => [product.id, product.data.name]));
+    const productPrices = new Map(visibleProducts.map((product) => [product.id, product.data.unit_base_price_cents]));
+    const productNames = new Map(visibleProducts.map((product) => [product.id, product.data.name]));
     const packageGroups = groupOrderItemsByProduct(order.data.items, productNames);
     const orderPackageRows = order.data.items.map((item) => ({
         package_tag: item.package_tag,

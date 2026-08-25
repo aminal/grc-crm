@@ -8,7 +8,7 @@ import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableC
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
-import { listProducts } from '@/lib/data/sales-settings';
+import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { compactNumber, formatInventoryCategory, formatMoney } from '@/lib/domain/format';
 import type { ProductData } from '@/lib/domain/types';
 import {
@@ -35,22 +35,27 @@ export default async function InventoryPage({ searchParams }: {
     const user = await requireSectionEnabled('inventory');
     const canManageInventory = isFeatureEnabled(user, 'inventory', 'upload_metrc');
     const canCreateOrder = isFeatureEnabled(user, 'sales', 'create_orders');
+    const canViewPrivateStrains = isFeatureEnabled(user, 'strains', 'view_private_strains');
 
     const params = await searchParams;
     const query = firstSearchParam(params.q).toLowerCase().trim();
     const sortKey = tableSortKeyFromSearchParam(params.sort, inventorySortKeys);
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
-    const [packages, products] = await Promise.all([listPackages(false), listProducts()]);
-    const productsById = new Map(products.map((product) => [product.id, product.data]));
-    const packageAvailabilityByGroup = new Map(groupInventory(packages).map((group) => [
+    const [packages, products, strains] = await Promise.all([listPackages(false), listProducts(), listStrains()]);
+    const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
+    const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));
+    const visibleProducts = canViewPrivateStrains ? products : products.filter((product) => !privateProductIds.has(product.id));
+    const productsById = new Map(visibleProducts.map((product) => [product.id, product.data]));
+    const permissionedPackages = canViewPrivateStrains ? packages : packages.filter((packageRecord) => !packageRecord.data.product_id || !privateProductIds.has(packageRecord.data.product_id));
+    const packageAvailabilityByGroup = new Map(groupInventory(permissionedPackages).map((group) => [
         group.key,
         {
             available: group.packages.filter((packageRecord) => packageRecord.data.package_status === 'available').length,
             total: group.package_count,
         },
     ]));
-    const visiblePackages = packages.filter((packageRecord) => packageRecord.data.package_status === 'available');
+    const visiblePackages = permissionedPackages.filter((packageRecord) => packageRecord.data.package_status === 'available');
     const groups = sortInventoryGroups(filterInventoryGroups(groupInventory(visiblePackages), query), sortKey, sortDirection, productsById);
     const currentPage = tablePageFromSearchParam(params.page, groups.length);
     const paginatedGroups = paginatedTableItems(groups, currentPage);

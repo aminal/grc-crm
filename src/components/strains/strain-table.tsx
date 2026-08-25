@@ -1,14 +1,17 @@
 import Link from "next/link";
+import { Badge, type BadgeColor } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { activeTableSortDirection, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, tableSortHref, type TableSortDirection } from "@/components/ui/table";
+import type { StrainStatus } from "@/lib/domain/types";
 
-export type StrainTableSortKey = "name" | "composition";
+export type StrainTableSortKey = "name" | "composition" | "status";
 
 export type StrainTableStrain = {
   id: string;
   data: {
     name: string;
     sativa_percentage: number;
+    status: StrainStatus;
   };
 };
 
@@ -37,6 +40,7 @@ export function StrainTable({
         <TableRow>
           <TableHead sortHref={strainSortHref("name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
           <TableHead sortHref={strainSortHref("composition", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("composition", sortKey, sortDirection)}>Composition</TableHead>
+          <TableHead sortHref={strainSortHref("status", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("status", sortKey, sortDirection)}>Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -58,12 +62,30 @@ export function StrainTable({
                 </Link>
                 {formatComposition(strain.data.sativa_percentage)}
               </TableCell>
+              <TableCell>
+                <Link href={href} aria-hidden tabIndex={-1} className="absolute inset-0 z-10">
+                  <span className="sr-only">{label}</span>
+                </Link>
+                <StrainStatusBadge status={strain.data.status} />
+              </TableCell>
             </TableRow>
           );
         })}
       </TableBody>
     </Table>
   );
+}
+
+function StrainStatusBadge({ status }: { status: StrainStatus }): React.ReactElement {
+  const statusColors = {
+    Active: "emerald",
+    Hidden: "purple",
+    "Coming Soon": "sky",
+    Sunsetting: "amber",
+    Archived: "zinc",
+  } satisfies Record<StrainStatus, BadgeColor>;
+
+  return <Badge color={statusColors[status]}>{status}</Badge>;
 }
 
 function strainSortHref(column: StrainTableSortKey, query: string, sortKey: StrainTableSortKey | null, sortDirection: TableSortDirection | null): string {

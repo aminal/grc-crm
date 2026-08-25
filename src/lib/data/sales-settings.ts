@@ -8,11 +8,14 @@ import type {
   FirestoreDate,
   FirestoreRecord,
   ProductData,
+  ProductStatus,
   SettingsActivityAction,
   SettingsActivityData,
   StrainData,
+  StrainStatus,
 } from "@/lib/domain/types";
 import { brandAcronymFromName } from "@/lib/domain/brand";
+import { PRODUCT_STATUSES, STRAIN_STATUSES } from "@/lib/domain/constants";
 import { formatProductCategory } from "@/lib/domain/format";
 import { getDocument, listCollection, millis, normalizedText, now } from "./firestore";
 
@@ -23,13 +26,13 @@ const STRAINS = "strains";
 
 type BrandInput = Pick<BrandData, "name" | "website" | "notes"> & Partial<Pick<BrandData, "acronym">>;
 type BrandFields = Pick<BrandData, "name" | "acronym" | "website" | "notes">;
-type StrainInput = Pick<StrainData, "name" | "breeder" | "genetics" | "sativa_percentage" | "notes">;
+type StrainInput = Pick<StrainData, "name" | "breeder" | "genetics" | "sativa_percentage" | "status" | "notes">;
 type StrainActivityFields = Omit<StrainInput, "sativa_percentage"> & { sativa_percentage: string };
-type ProductInput = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
+type ProductInput = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "status" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
 type ProductActivityFields = Omit<ProductInput, "strain_ids" | "unit_base_price_cents" | "case_quantity"> & { strain_ids: string; unit_base_price_cents: string; case_quantity: string };
 type SettingsCollection = typeof BRANDS | typeof PRODUCTS | typeof STRAINS;
 type ListSettingsOptions = { includeArchived?: boolean };
-type ArchivableData = { archived_at?: FirestoreDate; deleted_at?: FirestoreDate };
+type ArchivableData = { archived_at?: FirestoreDate; deleted_at?: FirestoreDate; status?: unknown };
 
 function archivedAt(data: ArchivableData): FirestoreDate {
   return data.archived_at ?? data.deleted_at ?? null;
@@ -37,7 +40,7 @@ function archivedAt(data: ArchivableData): FirestoreDate {
 
 function isArchived(data: ArchivableData): boolean {
   const value = archivedAt(data);
-  return value !== null && value !== undefined;
+  return (value !== null && value !== undefined) || data.status === "Archived";
 }
 
 function brandFields(data: Partial<BrandInput>): BrandFields {
@@ -62,6 +65,24 @@ function nonnegativeInteger(value: unknown): number {
   return Number.isFinite(numeric) ? Math.max(0, Math.trunc(numeric)) : 0;
 }
 
+function isProductStatus(value: unknown): value is ProductStatus {
+  return typeof value === "string" && PRODUCT_STATUSES.includes(value as ProductStatus);
+}
+
+function productStatusFromData(data: Partial<ProductData>): ProductStatus {
+  const archived = archivedAt(data);
+  if (archived !== null && archived !== undefined) {
+    return "Archived";
+  }
+
+  const status: unknown = data.status;
+  if (status === "Private") {
+    return "Hidden";
+  }
+
+  return isProductStatus(status) ? status : "Active";
+}
+
 function normalizeSativaPercentage(value: unknown, legacyType: unknown): number {
   const numeric = typeof value === "number" ? value : typeof value === "string" && value.trim() !== "" ? Number(value) : Number.NaN;
   if (Number.isFinite(numeric)) {
@@ -82,12 +103,31 @@ function normalizeSativaPercentage(value: unknown, legacyType: unknown): number 
   return 50;
 }
 
+function isStrainStatus(value: unknown): value is StrainStatus {
+  return typeof value === "string" && STRAIN_STATUSES.includes(value as StrainStatus);
+}
+
+function strainStatusFromData(data: Partial<StrainData>): StrainStatus {
+  const archived = archivedAt(data);
+  if (archived !== null && archived !== undefined) {
+    return "Archived";
+  }
+
+  const status: unknown = data.status;
+  if (status === "Private") {
+    return "Hidden";
+  }
+
+  return isStrainStatus(status) ? status : "Active";
+}
+
 function strainFields(data: Partial<StrainInput> & { type?: unknown }): StrainInput {
   return {
     name: normalizedText(data.name),
     breeder: normalizedText(data.breeder),
     genetics: normalizedText(data.genetics),
     sativa_percentage: normalizeSativaPercentage(data.sativa_percentage, data.type),
+    status: isStrainStatus(data.status) ? data.status : "Active",
     notes: normalizedText(data.notes),
   };
 }
@@ -106,6 +146,7 @@ function productFields(data: Partial<ProductInput>): ProductInput {
     brand_id: normalizedText(data.brand_id),
     strain_ids: strainIdsFromInput(data.strain_ids),
     category: formatProductCategory(normalizedText(data.category)),
+    status: isProductStatus(data.status) ? data.status : "Active",
     unit_base_price_cents: nonnegativeInteger(data.unit_base_price_cents),
     case_quantity: nonnegativeInteger(data.case_quantity),
     sku: normalizedText(data.sku),
@@ -157,6 +198,7 @@ function strainWithDefaults(data: Partial<StrainData>): StrainData {
 
   return {
     ...strainFields(data),
+    status: strainStatusFromData(data),
     type: normalizedText(data.type),
     archived_at: archived,
     deleted_at: archived,
@@ -168,6 +210,7 @@ function strainWithDefaults(data: Partial<StrainData>): StrainData {
 function productWithDefaults(data: Partial<ProductData>): ProductData {
   return {
     ...productFields(data),
+    status: productStatusFromData(data),
     archived_at: data.archived_at ?? null,
     created_at: data.created_at ?? null,
     updated_at: data.updated_at ?? null,
@@ -381,14 +424,14 @@ export async function listBrandActivity(brandId: string): Promise<FirestoreRecor
   return listSettingsActivity(BRANDS, brandId);
 }
 
-export async function listStrains(): Promise<FirestoreRecord<StrainData>[]> {
+export async function listStrains(options: ListSettingsOptions = {}): Promise<FirestoreRecord<StrainData>[]> {
   const strains = await listCollection<StrainData>(STRAINS);
   return strains
     .map((strain) => ({
       id: strain.id,
       data: strainWithDefaults(strain.data),
     }))
-    .filter((strain) => !isArchived(strain.data))
+    .filter((strain) => options.includeArchived || !isArchived(strain.data))
     .sort((a, b) => a.data.name.localeCompare(b.data.name));
 }
 
@@ -409,10 +452,11 @@ export async function createStrain(input: StrainInput, user: AuthenticatedUser):
   const ref = db.collection(STRAINS).doc();
   const batch = db.batch();
 
+  const archived = data.status === "Archived" ? now() : null;
   batch.create(ref, {
     ...data,
-    archived_at: null,
-    deleted_at: null,
+    archived_at: archived,
+    deleted_at: archived,
     created_at: now(),
     updated_at: now(),
   } satisfies StrainData);
@@ -449,33 +493,11 @@ export async function updateStrain(strainId: string, input: StrainInput, user: A
       throw new Error("No strain changes to save.");
     }
 
-    transaction.set(ref, { ...next, updated_at: now() }, { merge: true });
+    const archived = next.status === "Archived" ? (current.archived_at ?? current.deleted_at ?? now()) : null;
+    transaction.set(ref, { ...next, archived_at: archived, deleted_at: archived, updated_at: now() }, { merge: true });
     transaction.create(
       db.collection(activityCollectionPath(STRAINS, strainId)).doc(),
-      buildSettingsActivityData("updated", user, changes, reason, now()),
-    );
-  });
-}
-
-export async function archiveStrain(strainId: string, user: AuthenticatedUser, reason: string): Promise<void> {
-  const ref = db.doc(`${STRAINS}/${strainId}`);
-
-  await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists) {
-      throw new Error("Strain not found.");
-    }
-
-    const current = strainWithDefaults(snapshot.data() as StrainData);
-    if (isArchived(current)) {
-      throw new Error("Strain not found.");
-    }
-
-    const archived = now();
-    transaction.set(ref, { archived_at: archived, deleted_at: archived, updated_at: now() }, { merge: true });
-    transaction.create(
-      db.collection(activityCollectionPath(STRAINS, strainId)).doc(),
-      buildSettingsActivityData("archived", user, buildFieldChanges(strainActivityFields(current), {}), reason, now()),
+      buildSettingsActivityData(next.status === "Archived" ? "archived" : "updated", user, changes, reason, now()),
     );
   });
 }
@@ -519,7 +541,7 @@ export async function createProduct(input: ProductInput, user: AuthenticatedUser
 
   batch.create(ref, {
     ...data,
-    archived_at: null,
+    archived_at: data.status === "Archived" ? now() : null,
     created_at: now(),
     updated_at: now(),
   } satisfies ProductData);
@@ -582,33 +604,10 @@ export async function updateProduct(productId: string, input: ProductInput, user
       throw new Error("No product changes to save.");
     }
 
-    transaction.set(ref, { ...next, updated_at: now() }, { merge: true });
+    transaction.set(ref, { ...next, archived_at: next.status === "Archived" ? (current.archived_at ?? now()) : null, updated_at: now() }, { merge: true });
     transaction.create(
       db.collection(activityCollectionPath(PRODUCTS, productId)).doc(),
-      buildSettingsActivityData("updated", user, changes, reason, now()),
-    );
-  });
-}
-
-export async function archiveProduct(productId: string, user: AuthenticatedUser, reason: string): Promise<void> {
-  const ref = db.doc(`${PRODUCTS}/${productId}`);
-
-  await db.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
-    if (!snapshot.exists) {
-      throw new Error("Product not found.");
-    }
-
-    const current = productWithDefaults(snapshot.data() as ProductData);
-    if (isArchived(current)) {
-      throw new Error("Product not found.");
-    }
-
-    const archived = now();
-    transaction.set(ref, { archived_at: archived, updated_at: now() }, { merge: true });
-    transaction.create(
-      db.collection(activityCollectionPath(PRODUCTS, productId)).doc(),
-      buildSettingsActivityData("archived", user, buildFieldChanges(productActivityFields(current), {}), reason, now()),
+      buildSettingsActivityData(next.status === "Archived" ? "archived" : "updated", user, changes, reason, now()),
     );
   });
 }

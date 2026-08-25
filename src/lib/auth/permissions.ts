@@ -87,12 +87,11 @@ export const SECTION_FEATURES = {
   strains: [
     { key: "create_strains", label: "Create strains" },
     { key: "update_strains", label: "Update strains" },
-    { key: "archive_strains", label: "Archive strains" },
+    { key: "view_private_strains", label: "Can view Hidden Strains" },
   ],
   products: [
     { key: "create_products", label: "Create products" },
     { key: "update_products", label: "Update products" },
-    { key: "archive_products", label: "Archive products" },
   ],
   users: [
     { key: "edit_user_profiles", label: "Edit user profiles" },

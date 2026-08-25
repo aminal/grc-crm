@@ -13,7 +13,7 @@ type ProductEditParams = {
 
 type ProductEditProduct = {
     id: string;
-    data: Pick<ProductData, 'name' | 'brand_id' | 'strain_ids' | 'category' | 'unit_base_price_cents' | 'case_quantity' | 'sku' | 'upc' | 'notes'>;
+    data: Pick<ProductData, 'name' | 'brand_id' | 'strain_ids' | 'category' | 'status' | 'unit_base_price_cents' | 'case_quantity' | 'sku' | 'upc' | 'notes'>;
 };
 
 type ProductEditBrand = {
@@ -33,6 +33,7 @@ export default async function EditProductPage({ params }: {
 }): Promise<React.ReactElement> {
     const currentUser = await requireSectionEnabled('products');
     const canEditProduct = isFeatureEnabled(currentUser, 'products', 'update_products');
+    const canViewPrivateStrains = isFeatureEnabled(currentUser, 'strains', 'view_private_strains');
 
     if (!canEditProduct) {
         notFound();
@@ -45,16 +46,19 @@ export default async function EditProductPage({ params }: {
         listStrains(),
     ]);
 
-    if (!product || productIsArchived(product)) {
+    if (!product || productIsArchived(product) || (productIsPrivate(product) && !canViewPrivateStrains)) {
         notFound();
     }
 
+    const visibleActiveStrains = canViewPrivateStrains ? activeStrains : activeStrains.filter((strain) => strain.data.status !== 'Hidden');
     const [brands, strains] = await Promise.all([
         includeProductBrand(activeBrands, product),
-        includeProductStrains(activeStrains, product),
+        includeProductStrains(visibleActiveStrains, product),
     ]);
+    if (productHasPrivateStrain(strains) && !canViewPrivateStrains) {
+        notFound();
+    }
     const productHref = productPath(product.id);
-    const canArchive = isFeatureEnabled(currentUser, 'products', 'archive_products');
     const primaryStrain = firstProductStrain(product, strains);
 
     return (
@@ -71,7 +75,6 @@ export default async function EditProductPage({ params }: {
                         strains={strains.map(serializeStrain)}
                         cancelHref={productHref}
                         successHref={productHref}
-                        canArchive={canArchive}
                     />
                 </CardContent>
             </Card>
@@ -87,6 +90,7 @@ function serializeProduct(record: FirestoreRecord<ProductData>): ProductEditProd
             brand_id: record.data.brand_id,
             strain_ids: record.data.strain_ids,
             category: record.data.category,
+            status: record.data.status,
             unit_base_price_cents: record.data.unit_base_price_cents,
             case_quantity: record.data.case_quantity,
             sku: record.data.sku,
@@ -117,7 +121,11 @@ function productPath(productId: string): string {
 }
 
 function productIsArchived(product: FirestoreRecord<ProductData>): boolean {
-    return product.data.archived_at !== null && product.data.archived_at !== undefined;
+    return product.data.status === 'Archived' || (product.data.archived_at !== null && product.data.archived_at !== undefined);
+}
+
+function productIsPrivate(product: FirestoreRecord<ProductData>): boolean {
+    return product.data.status === 'Hidden';
 }
 
 function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
@@ -126,7 +134,11 @@ function brandIsArchived(brand: FirestoreRecord<BrandData>): boolean {
 
 function strainIsArchived(strain: FirestoreRecord<StrainData>): boolean {
     const archived = strain.data.archived_at ?? strain.data.deleted_at;
-    return archived !== null && archived !== undefined;
+    return strain.data.status === 'Archived' || (archived !== null && archived !== undefined);
+}
+
+function productHasPrivateStrain(strains: FirestoreRecord<StrainData>[]): boolean {
+    return strains.some((strain) => strain.data.status === 'Hidden');
 }
 
 async function includeProductBrand(activeBrands: FirestoreRecord<BrandData>[], product: FirestoreRecord<ProductData>): Promise<FirestoreRecord<BrandData>[]> {

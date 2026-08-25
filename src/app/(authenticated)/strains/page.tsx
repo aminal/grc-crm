@@ -13,7 +13,7 @@ import { listStrains } from "@/lib/data/sales-settings";
 import type { FirestoreRecord, StrainData } from "@/lib/domain/types";
 
 const strainsHref = "/strains";
-const strainSortKeys = ["name", "composition"] as const;
+const strainSortKeys = ["name", "composition", "status"] as const;
 
 type StrainsSearchParams = {
   q?: string | string[];
@@ -29,6 +29,7 @@ function serializeTableStrain(record: FirestoreRecord<StrainData>): StrainTableS
     data: {
       name: record.data.name,
       sativa_percentage: record.data.sativa_percentage,
+      status: record.data.status,
     },
   };
 }
@@ -64,12 +65,14 @@ function filterStrains(strains: FirestoreRecord<StrainData>[], query: string): F
     strain.data.breeder,
     strain.data.genetics,
     compositionSearchText(strain.data.sativa_percentage),
+    strain.data.status,
   ].join(" ").toLowerCase().includes(normalized)) : strains;
 }
 
 export default async function StrainsPage({ searchParams }: { searchParams: Promise<StrainsSearchParams> }): Promise<React.ReactElement> {
   const user = await requireSectionEnabled("strains");
   const canCreate = isFeatureEnabled(user, "strains", "create_strains");
+  const canViewPrivateStrains = isFeatureEnabled(user, "strains", "view_private_strains");
 
   const params = await searchParams;
   const query = firstSearchParam(params.q).trim();
@@ -84,8 +87,9 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
   }
 
   const strains = await listStrains();
+  const visibleStrains = canViewPrivateStrains ? strains : strains.filter((strain) => strain.data.status !== "Hidden");
 
-  const filteredStrains = filterStrains(strains, query);
+  const filteredStrains = filterStrains(visibleStrains, query);
   const sortedStrains = sortStrains(filteredStrains, sortKey, sortDirection);
   const currentPage = tablePageFromSearchParam(params.page, sortedStrains.length);
   const paginatedStrains = paginatedTableItems(sortedStrains, currentPage);
@@ -107,7 +111,7 @@ export default async function StrainsPage({ searchParams }: { searchParams: Prom
         ) : null}
       />
       <div className="space-y-6">
-        <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, or composition" preservedParams={sortParams} />
+        <TableSearch query={query} placeholder="Filter strains by name, breeder, genetics, composition, or status" preservedParams={sortParams} />
         {query && filteredStrains.length === 0 ? <EmptyState title="No strains found" /> : (
           <>
             <StrainTable strains={serializedStrains} query={query} sortKey={sortKey} sortDirection={sortDirection} />
@@ -135,6 +139,8 @@ function compareStrains(a: FirestoreRecord<StrainData>, b: FirestoreRecord<Strai
       return compareStrings(a.data.name, b.data.name);
     case "composition":
       return a.data.sativa_percentage - b.data.sativa_percentage;
+    case "status":
+      return compareStrings(a.data.status, b.data.status);
   }
 }
 

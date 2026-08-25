@@ -1,8 +1,9 @@
 import { Package } from 'lucide-react';
 import { HeaderCard } from '@/components/layout/header-card';
 import { ProductCategoryBadge } from '@/components/products/product-category-badge';
+import { Badge, type BadgeColor } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { FirestoreRecord, ProductData } from '@/lib/domain/types';
+import type { FirestoreRecord, ProductData, ProductStatus } from '@/lib/domain/types';
 
 type ProductHeaderCardProps = {
     product: FirestoreRecord<ProductData>;
@@ -14,7 +15,12 @@ export function ProductHeaderCard({ product, editHref = null, strainSativaPercen
     return (
         <HeaderCard
             title={product.data.name || 'Product'}
-            badge={<ProductCategoryBadge category={product.data.category} fallback='Product' />}
+            badge={(
+                <>
+                    <ProductCategoryBadge category={product.data.category} fallback='Product' />
+                    <ProductStatusBadge status={product.data.status} />
+                </>
+            )}
             media={(
                 <div className={`flex size-16 items-center justify-center rounded-xl ${strainIconColorClasses(strainSativaPercentage)}`}>
                     <Package className='size-8' aria-hidden='true' />
@@ -23,6 +29,18 @@ export function ProductHeaderCard({ product, editHref = null, strainSativaPercen
             actions={editHref ? <Button href={editHref} color='purple'>Edit Product</Button> : null}
         />
     );
+}
+
+function ProductStatusBadge({ status }: { status: ProductStatus }): React.ReactElement {
+    const statusColors = {
+        Active: 'emerald',
+        Hidden: 'purple',
+        'Coming Soon': 'sky',
+        Sunsetting: 'amber',
+        Archived: 'zinc',
+    } satisfies Record<ProductStatus, BadgeColor>;
+
+    return <Badge color={statusColors[status]}>{status}</Badge>;
 }
 
 function strainIconColorClasses(sativaPercentage: number | null | undefined): string {

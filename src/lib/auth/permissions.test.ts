@@ -52,6 +52,11 @@ describe("section permissions", () => {
     }
 
     expectSection(manager, "users", true);
+    expectFeatures(manager, "strains", {
+      create_strains: true,
+      update_strains: true,
+      view_private_strains: true,
+    });
     expectFeatures(manager, "users", {
       edit_user_profiles: true,
       edit_user_permissions: true,
@@ -80,6 +85,9 @@ describe("section permissions", () => {
       manage_contacts: true,
       manage_interactions: true,
       delete_companies: false,
+    });
+    expectFeatures(employee, "strains", {
+      view_private_strains: false,
     });
     expectLegacyAccess({ role: "Guest", permissions: guest }, {
       dashboard: "read",

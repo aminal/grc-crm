@@ -6,11 +6,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { DialogActions } from "@/components/ui/dialog";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { PRODUCT_STATUSES } from "@/lib/domain/constants";
 import { formatProductCategory } from "@/lib/domain/format";
 import { cn } from "@/lib/utils";
 import type { ProductData } from "@/lib/domain/types";
 
-export type ProductFormValues = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
+export type ProductFormValues = Pick<ProductData, "name" | "brand_id" | "strain_ids" | "category" | "status" | "unit_base_price_cents" | "case_quantity" | "sku" | "upc" | "notes">;
 export type ProductFormBrandOption = {
   id: string;
   name: string;
@@ -58,7 +59,6 @@ type ProductFormProps = {
   error: string | null;
   showReason: boolean;
   onCancel: () => void;
-  onArchive?: () => void;
 };
 
 export function ProductForm({
@@ -72,7 +72,6 @@ export function ProductForm({
   error,
   showReason,
   onCancel,
-  onArchive,
 }: ProductFormProps): React.ReactElement {
   const selectedBrandId = product?.brand_id ?? "";
   const selectedBrand = brands.find((brand) => brand.id === selectedBrandId);
@@ -90,6 +89,7 @@ export function ProductForm({
   ];
   const strainSelectionLabel = selectedStrainNames.length > 0 ? selectedStrainNames.join(", ") : hasActiveStrains ? "Select strains" : "No strains available";
   const selectedCategory = formatProductCategory(product?.category);
+  const selectedStatus = product?.status ?? "Active";
   const categoryOptions = selectedCategory && !PRODUCT_CATEGORY_OPTIONS.includes(selectedCategory) ? [selectedCategory, ...PRODUCT_CATEGORY_OPTIONS] : PRODUCT_CATEGORY_OPTIONS;
 
   return (
@@ -148,6 +148,11 @@ export function ProductForm({
           {categoryOptions.map((category) => <option key={category} value={category}>{category}</option>)}
         </Select>
       </Field>
+      <Field label="Status">
+        <Select name="status" defaultValue={selectedStatus} required disabled={pending}>
+          {PRODUCT_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+        </Select>
+      </Field>
       <Field label="Unit Base Price">
         <Input name="unit_base_price_cents" type="number" min="0" step="0.01" inputMode="decimal" defaultValue={product?.unit_base_price_cents ? (product.unit_base_price_cents / 100).toFixed(2) : ""} placeholder="0.00" disabled={pending} />
       </Field>
@@ -169,7 +174,6 @@ export function ProductForm({
         </Field>
       ) : null}
       <DialogActions>
-        {onArchive ? <Button type="button" color="red" className="sm:mr-auto" onClick={onArchive} disabled={pending}>Archive</Button> : null}
         <Button type="button" plain onClick={onCancel} disabled={pending}>Cancel</Button>
         <Button type="submit" color="purple" disabled={pending || !canChooseBrand || !hasActiveStrains}>{pending ? pendingLabel : submitLabel}</Button>
       </DialogActions>
