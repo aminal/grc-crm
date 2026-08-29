@@ -140,7 +140,7 @@ export function OrderActionsMenu({ orderId, orderNumber, actions, approvalInvoic
                     {hasInvoice ? (
                         <>
                             <DropdownDivider />
-                            <DropdownItem href={`/sales/${orderId}/invoice/pdf`} target='_blank'>
+                            <DropdownItem href={`/sales/${orderId}/invoice/pdf`} target='_blank' rel='noopener noreferrer' prefetch={false}>
                                 <DropdownLabel>Generate PDF Invoice</DropdownLabel>
                             </DropdownItem>
                         </>
