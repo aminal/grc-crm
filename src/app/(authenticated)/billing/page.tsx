@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { PageHeader } from '@/components/layout/page-header';
 import { Badge } from '@/components/ui/badge';
+import { StatsBar, type StatsBarItem } from '@/components/ui/stats-bar';
 import { TableSearch } from '@/components/ui/table-search';
 import {
     activeTableSortDirection,
@@ -23,7 +24,6 @@ import { requireSectionEnabled } from '@/lib/auth/session';
 import { listOrders } from '@/lib/data/orders';
 import { dateFromFirestore, formatDate, formatMoney, invoiceStatusLabel } from '@/lib/domain/format';
 import type { FirestoreRecord, InvoiceData, OrderData } from '@/lib/domain/types';
-import { Label } from '@/components/ui/label';
 
 const billingSortKeys = ['invoice', 'status', 'issued', 'due', 'total', 'balance'] as const;
 
@@ -162,7 +162,7 @@ export default async function BillingPage({ searchParams }: {
             <PageHeader title='Billing' />
 
             <div className='-mt-2 space-y-6'>
-                <BillingStatsBar stats={billingStats} />
+                <StatsBar items={billingStatsItems(billingStats)} />
                 <TableSearch query={query} placeholder='Filter invoices by invoice, order, company, status, or payment' preservedParams={sortParams} />
                 {invoiceRows.length > 0 ? (
                     <>
@@ -253,8 +253,8 @@ function formatBillingStatMoney(cents: number): string {
     return formatMoney(cents);
 }
 
-function BillingStatsBar({ stats }: { stats: BillingStats }): React.ReactElement {
-    const items = [
+function billingStatsItems(stats: BillingStats): StatsBarItem[] {
+    return [
         {
             label: 'Paid Invoices',
             value: stats.paidInvoiceCount.toLocaleString(),
@@ -286,17 +286,6 @@ function BillingStatsBar({ stats }: { stats: BillingStats }): React.ReactElement
             valueClassName: 'text-purple-700 dark:text-emerald-400/95',
         },
     ];
-
-    return (
-        <dl className='grid gap-4 rounded-xl bg-zinc-50 p-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6 dark:bg-zinc-950/30'>
-            {items.map((item) => (
-                <div key={item.label} className='px-4 pt-1.5 pb-2'>
-                    <Label as='div' className='flex justify-end tracking-[0.16em]!'>{item.label}</Label>
-                    <dd className={`text-right text-2xl/7 font-semibold ${item.valueClassName}`}>{item.value}</dd>
-                </div>
-            ))}
-        </dl>
-    );
 }
 
 function InvoiceStatusBadge({ status }: { status: InvoiceData['status'] }): React.ReactElement {

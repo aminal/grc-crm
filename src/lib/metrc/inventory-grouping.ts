@@ -1,8 +1,8 @@
-import { createHash } from "node:crypto";
-import type { FirestoreRecord, InventoryProductGroup, PackageData } from "@/lib/domain/types";
+import { createHash } from 'node:crypto';
+import type { FirestoreRecord, InventoryProductGroup, PackageData } from '@/lib/domain/types';
 
-export type InventorySortField = "expiration_date" | "item" | "package_count" | "quantity";
-export type InventorySortDirection = "asc" | "desc";
+export type InventorySortField = 'expiration_date' | 'item' | 'package_count' | 'quantity';
+export type InventorySortDirection = 'asc' | 'desc';
 
 function parseMillis(value: unknown): number | null {
   if (!value) {
@@ -13,16 +13,16 @@ function parseMillis(value: unknown): number | null {
     return value.getTime();
   }
 
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     const parsed = Date.parse(value);
     return Number.isNaN(parsed) ? null : parsed;
   }
 
-  if (typeof value === "object" && value !== null && "toMillis" in value && typeof value.toMillis === "function") {
+  if (typeof value === 'object' && value !== null && 'toMillis' in value && typeof value.toMillis === 'function') {
     return value.toMillis() as number;
   }
 
-  if (typeof value === "object" && value !== null && "toDate" in value && typeof value.toDate === "function") {
+  if (typeof value === 'object' && value !== null && 'toDate' in value && typeof value.toDate === 'function') {
     return (value.toDate() as Date).getTime();
   }
 
@@ -31,7 +31,7 @@ function parseMillis(value: unknown): number | null {
 
 function groupKey(productId: string, item: string, sourcePackages: string): string {
   const productKey = productId.trim().toLowerCase() || item.toLowerCase();
-  return createHash("sha1").update(`${productKey}\u001f${sourcePackages.toLowerCase()}`).digest("hex");
+  return createHash('sha1').update(`${productKey}\u001f${sourcePackages.toLowerCase()}`).digest('hex');
 }
 
 function dominantUnit(rows: FirestoreRecord<PackageData>[]): string {
@@ -44,36 +44,36 @@ function dominantUnit(rows: FirestoreRecord<PackageData>[]): string {
     }
   }
 
-  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? "";
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? '';
 }
 
-function rollupStatus(rows: FirestoreRecord<PackageData>[]): "available" | "pending" | "sold" | "inactive" {
-  const statuses = new Set(rows.map((row) => row.data.package_status ?? "available"));
-  if (statuses.has("sold")) {
-    return "sold";
+function rollupStatus(rows: FirestoreRecord<PackageData>[]): 'available' | 'pending' | 'sold' | 'inactive' {
+  const statuses = new Set(rows.map((row) => row.data.package_status ?? 'available'));
+  if (statuses.has('sold')) {
+    return 'sold';
   }
 
-  if (statuses.has("pending")) {
-    return "pending";
+  if (statuses.has('pending')) {
+    return 'pending';
   }
 
-  if (statuses.has("inactive")) {
-    return "inactive";
+  if (statuses.has('inactive')) {
+    return 'inactive';
   }
 
-  return "available";
+  return 'available';
 }
 
 function firstNonEmpty(values: string[]): string {
-  return values.map((value) => value.trim()).find(Boolean) ?? "";
+  return values.map((value) => value.trim()).find(Boolean) ?? '';
 }
 
 export function groupInventory(packages: FirestoreRecord<PackageData>[]): InventoryProductGroup[] {
   const groups = new Map<string, FirestoreRecord<PackageData>[]>();
 
   for (const packageRecord of packages) {
-    const item = packageRecord.data.item.trim() || "—";
-    const productId = packageRecord.data.product_id?.trim() ?? "";
+    const item = packageRecord.data.item.trim() || '—';
+    const productId = packageRecord.data.product_id?.trim() ?? '';
     const sourcePackages = packageRecord.data.source_packages.trim();
     const key = groupKey(productId, item, sourcePackages);
     groups.set(key, [...(groups.get(key) ?? []), packageRecord]);
@@ -102,14 +102,14 @@ export function groupInventory(packages: FirestoreRecord<PackageData>[]): Invent
         }
         return a.data.package_tag.localeCompare(b.data.package_tag);
       });
-      const item = firstNonEmpty(rows.map((row) => row.data.item)) || "—";
+      const item = firstNonEmpty(rows.map((row) => row.data.item)) || '—';
       const sourcePackages = firstNonEmpty(rows.map((row) => row.data.source_packages));
       const strains = [...new Set(rows.map((row) => row.data.strain.trim()).filter(Boolean))].sort();
       const labStatuses = [...new Set(rows.map((row) => row.data.lab_testing_status.trim()).filter(Boolean))].sort();
 
       return {
         key,
-        product_id: firstNonEmpty(rows.map((row) => row.data.product_id ?? "")) || undefined,
+        product_id: firstNonEmpty(rows.map((row) => row.data.product_id ?? '')) || undefined,
         item,
         source_packages: sourcePackages,
         package_count: rows.length,
@@ -123,15 +123,15 @@ export function groupInventory(packages: FirestoreRecord<PackageData>[]): Invent
         strains,
         lab_statuses: labStatuses,
         search: rows
-          .map((row) => [row.data.item, row.data.source_packages, row.data.category, row.data.strain, row.data.package_tag, row.data.source_harvest].join(" "))
-          .join(" ")
+          .map((row) => [row.data.item, row.data.source_packages, row.data.category, row.data.strain, row.data.package_tag, row.data.source_harvest].join(' '))
+          .join(' ')
           .toLowerCase(),
         packages: sortedPackages,
         status: rollupStatus(rows),
       } satisfies InventoryProductGroup;
     }),
-    "expiration_date",
-    "asc",
+    'expiration_date',
+    'asc',
   );
 }
 
@@ -141,9 +141,9 @@ export function filterInventoryGroups(groups: InventoryProductGroup[], query: st
 }
 
 export function sortInventoryGroups(groups: InventoryProductGroup[], field: InventorySortField, direction: InventorySortDirection): InventoryProductGroup[] {
-  const multiplier = direction === "asc" ? 1 : -1;
+  const multiplier = direction === 'asc' ? 1 : -1;
   return [...groups].sort((a, b) => {
-    if (field === "expiration_date") {
+    if (field === 'expiration_date') {
       if (a.expiration_ts === null && b.expiration_ts !== null) {
         return 1;
       }
@@ -153,17 +153,17 @@ export function sortInventoryGroups(groups: InventoryProductGroup[], field: Inve
       if (a.expiration_ts !== null && b.expiration_ts !== null && a.expiration_ts !== b.expiration_ts) {
         return (a.expiration_ts - b.expiration_ts) * multiplier;
       }
-    } else if (field === "item") {
+    } else if (field === 'item') {
       const compared = a.item.localeCompare(b.item);
       if (compared !== 0) {
         return compared * multiplier;
       }
-    } else if (field === "package_count") {
+    } else if (field === 'package_count') {
       const compared = a.package_count - b.package_count;
       if (compared !== 0) {
         return compared * multiplier;
       }
-    } else if (field === "quantity") {
+    } else if (field === 'quantity') {
       const compared = a.total_quantity - b.total_quantity;
       if (compared !== 0) {
         return compared * multiplier;
@@ -172,11 +172,4 @@ export function sortInventoryGroups(groups: InventoryProductGroup[], field: Inve
 
     return a.item.localeCompare(b.item) || a.source_packages.localeCompare(b.source_packages);
   });
-}
-
-export function inventoryCounts(groups: InventoryProductGroup[]): { products: number; packages: number } {
-  return {
-    products: groups.length,
-    packages: groups.reduce((sum, group) => sum + group.package_count, 0),
-  };
 }
