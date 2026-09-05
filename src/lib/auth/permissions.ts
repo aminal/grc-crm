@@ -20,6 +20,7 @@ export const APP_SECTIONS = [
   "brands",
   "strains",
   "products",
+  "distributors",
   "users",
 ] as const satisfies readonly AppSection[];
 
@@ -34,6 +35,7 @@ export const SECTION_LABELS = {
   brands: "Brands",
   strains: "Strains",
   products: "Products",
+  distributors: "Distributors",
   users: "Users",
 } as const satisfies Record<AppSection, string>;
 
@@ -46,6 +48,7 @@ export const SECTION_HREFS = {
   brands: "/brands",
   strains: "/strains",
   products: "/products",
+  distributors: "/distributors",
   users: "/users",
 } as const satisfies Record<AppSection, string>;
 
@@ -72,6 +75,8 @@ export const SECTION_FEATURES = {
   ],
   inventory: [
     { key: "upload_metrc", label: "Upload METRC" },
+    { key: "manage_consignment", label: "Manage consignment" },
+    { key: "manage_batches", label: "Manage batches" },
   ],
   companies: [
     { key: "manage_companies", label: "Manage companies" },
@@ -92,6 +97,11 @@ export const SECTION_FEATURES = {
   products: [
     { key: "create_products", label: "Create products" },
     { key: "update_products", label: "Update products" },
+  ],
+  distributors: [
+    { key: "create_distributors", label: "Create distributors" },
+    { key: "update_distributors", label: "Update distributors" },
+    { key: "archive_distributors", label: "Archive distributors" },
   ],
   users: [
     { key: "edit_user_profiles", label: "Edit user profiles" },
@@ -151,6 +161,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     brands: fullSection("brands"),
     strains: fullSection("strains"),
     products: fullSection("products"),
+    distributors: fullSection("distributors"),
     users: fullSection("users"),
   }),
   Manager: permissionsFromSections({
@@ -162,6 +173,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     brands: fullSection("brands"),
     strains: fullSection("strains"),
     products: fullSection("products"),
+    distributors: fullSection("distributors"),
     users: sectionConfig("users", true, ["edit_user_profiles", "edit_user_permissions"]),
   }),
   Employee: permissionsFromSections({
@@ -173,6 +185,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     brands: emptySection("brands", true),
     strains: emptySection("strains", true),
     products: emptySection("products", true),
+    distributors: emptySection("distributors", true),
     users: emptySection("users"),
   }),
   Guest: permissionsFromSections({
@@ -184,6 +197,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
     brands: emptySection("brands"),
     strains: emptySection("strains"),
     products: emptySection("products"),
+    distributors: emptySection("distributors"),
     users: emptySection("users"),
   }),
 } as const satisfies Record<UserRole, UserPermissions>;
@@ -214,6 +228,7 @@ function clonePermissions(permissions: UserPermissions): UserPermissions {
     brands: cloneSectionConfig("brands", permissions.brands),
     strains: cloneSectionConfig("strains", permissions.strains),
     products: cloneSectionConfig("products", permissions.products),
+    distributors: cloneSectionConfig("distributors", permissions.distributors),
     users: cloneSectionConfig("users", permissions.users),
   });
 }
@@ -293,6 +308,7 @@ export function normalizePermissions(
     brands: normalizeSection(role, "brands", stored?.brands, defaults.brands),
     strains: normalizeSection(role, "strains", stored?.strains, defaults.strains),
     products: normalizeSection(role, "products", stored?.products, defaults.products),
+    distributors: normalizeSection(role, "distributors", stored?.distributors, defaults.distributors),
     users: normalizeSection(role, "users", stored?.users, defaults.users),
   });
 }

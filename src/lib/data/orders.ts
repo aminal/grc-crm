@@ -25,6 +25,7 @@ import {
   recalculateInvoice as recalculateInvoiceTotals
 } from '@/lib/sales/invoice';
 import { buildPackageStatusMap } from '@/lib/sales/package-status';
+import { assertSingleConsignmentSource } from '@/lib/sales/consignment';
 import { assertSameSourcePrice, sourcePackageKey, type SourcePriceRecord } from '@/lib/sales/pricing';
 import { canTransition, CLOSABLE_ORDER_STATUSES, RELEASING_ORDER_STATUSES } from '@/lib/sales/order-status';
 import { findCompany } from './crm';
@@ -120,6 +121,10 @@ function itemSnapshot(packageRecord: FirestoreRecord<PackageData>, priceCents: n
         lab_test_expiration: packageData.lab_test_expiration ?? '',
         source_package_key: sourcePackageKey(packageData),
         price_cents: priceCents,
+        ...(packageData.consignment ? {
+            consignment_distributor_id: packageData.consignment.distributor_id,
+            consignment_distributor_name: packageData.consignment.distributor_name,
+        } : {}),
     };
 }
 
@@ -371,6 +376,8 @@ export async function createOrder(companyId: string, packageTags: string[], pack
             assertSameSourcePrice(sourcePrices, packageData, priceCents);
             items.push(itemSnapshot({ id: packageRef.id, data: packageData }, priceCents));
         }
+
+        assertSingleConsignmentSource(items);
 
         const highest = existingOrders.reduce((max, existingOrder) => Math.max(max, Number(existingOrder.data.order_number ?? 0)), 0);
         const orderNumber = Math.max(FIRST_ORDER_NUMBER, highest + 1);
@@ -986,6 +993,7 @@ export async function addPackages(orderId: string, packageTags: string[], packag
         }
 
         const items = [...orderData.items, ...newItems];
+        assertSingleConsignmentSource(items);
         transaction.set(
             orderRef,
             {
@@ -1079,6 +1087,8 @@ export async function updatePackages(orderId: string, packageTags: string[], pac
             assertSameSourcePrice(sourcePrices, packageData, priceCents);
             items.push(itemSnapshot({ id: packageRef.id, data: packageData }, priceCents));
         }
+
+        assertSingleConsignmentSource(items);
 
         pricesChanged = transactionPricesChanged;
         didUpdate = addedTags.length > 0 || removedTags.length > 0 || pricesChanged;

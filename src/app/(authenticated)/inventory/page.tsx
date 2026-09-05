@@ -8,6 +8,7 @@ import { TableSearch } from '@/components/ui/table-search';
 import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
+import { listDistributors } from '@/lib/data/distributors';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { compactNumber, formatInventoryCategory, formatMoney } from '@/lib/domain/format';
@@ -51,7 +52,12 @@ export default async function InventoryPage({ searchParams }: {
     const sortKey = tableSortKeyFromSearchParam(params.sort, inventorySortKeys);
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
-    const [packages, products, strains] = await Promise.all([listPackages(false), listProducts(), listStrains()]);
+    const [packages, products, strains, distributors] = await Promise.all([listPackages(false), listProducts(), listStrains(), canManageInventory ? listDistributors() : Promise.resolve([])]);
+    const distributorOptions = distributors.map((distributor) => ({
+        value: distributor.id,
+        label: distributor.data.name,
+        description: distributor.data.license_number || undefined,
+    }));
     const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
     const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));
     const visibleProducts = canViewPrivateStrains ? products : products.filter((product) => !privateProductIds.has(product.id));
@@ -79,7 +85,7 @@ export default async function InventoryPage({ searchParams }: {
                 title='Inventory'
                 actions={(
                     <>
-                        {canManageInventory ? <MetrcUploadDialog /> : null}
+                        {canManageInventory ? <MetrcUploadDialog distributorOptions={distributorOptions} /> : null}
                         {canCreateOrder ? (
                             <Button color='purple' href='/sales/create'>
                                 <Plus data-slot='icon' aria-hidden='true' />

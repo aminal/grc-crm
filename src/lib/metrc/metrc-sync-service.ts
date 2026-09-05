@@ -1,2 +1,2 @@
-export { syncPackages, uploadAndSyncMetrcFile } from "@/lib/data/inventory";
-export type { MetrcSyncResult } from "@/lib/data/inventory";
+export { finalizeMetrcSync, syncPackages, uploadAndSyncMetrcFile } from "@/lib/data/inventory";
+export type { MetrcSyncAnalysis, MetrcSyncFinalizeInput } from "@/lib/data/inventory";

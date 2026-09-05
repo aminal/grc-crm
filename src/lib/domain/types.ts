@@ -30,17 +30,18 @@ export type FirestoreRecord<T> = {
 };
 
 export type UserRole = "Guest" | "Employee" | "Manager" | "Admin";
-export type AppSection = "dashboard" | "sales" | "billing" | "inventory" | "companies" | "brands" | "strains" | "products" | "users";
+export type AppSection = "dashboard" | "sales" | "billing" | "inventory" | "companies" | "brands" | "strains" | "products" | "distributors" | "users";
 export type SectionAccessLevel = "none" | "read" | "write";
 export type SectionPermissions = Record<AppSection, SectionAccessLevel>;
 export type DashboardFeature = "view_metrics" | "view_recent_orders" | "view_recent_companies" | "view_inventory_groups" | "view_sales_status";
 export type SalesFeature = "create_orders" | "manage_order_status" | "manage_order_packages" | "confirm_delivery" | "delete_orders";
 export type BillingFeature = "approve_invoices" | "unapprove_invoices" | "manage_payments" | "manage_discounts";
-export type InventoryFeature = "upload_metrc";
+export type InventoryFeature = "upload_metrc" | "manage_consignment" | "manage_batches";
 export type CompaniesFeature = "manage_companies" | "manage_contacts" | "manage_interactions" | "delete_companies";
 export type BrandsFeature = "create_brands" | "update_brands" | "archive_brands";
 export type StrainsFeature = "create_strains" | "update_strains" | "view_private_strains";
 export type ProductsFeature = "create_products" | "update_products";
+export type DistributorsFeature = "create_distributors" | "update_distributors" | "archive_distributors";
 export type UsersFeature = "edit_user_profiles" | "edit_user_permissions" | "assign_admin_role";
 export type SectionFeatureMap = {
   dashboard: DashboardFeature;
@@ -51,6 +52,7 @@ export type SectionFeatureMap = {
   brands: BrandsFeature;
   strains: StrainsFeature;
   products: ProductsFeature;
+  distributors: DistributorsFeature;
   users: UsersFeature;
 };
 export type SectionFeature<S extends AppSection = AppSection> = SectionFeatureMap[S];
@@ -142,6 +144,14 @@ export type InteractionRecord = FirestoreRecord<InteractionData> & {
   entries: FirestoreRecord<InteractionEntryData>[];
 };
 
+export type PackageConsignment = {
+  distributor_id: string;
+  distributor_name: string;
+  notes: string;
+  consigned_by: ActorSnapshot;
+  consigned_at: FirestoreDate;
+};
+
 export type PackageData = {
   package_tag: string;
   product_id?: string;
@@ -171,10 +181,35 @@ export type PackageData = {
   status: "active" | "inactive";
   package_status?: "available" | "pending" | "sold" | "inactive";
   sold_order_id?: string;
+  consignment?: PackageConsignment | null;
+  last_sync_id?: string;
   last_synced_at: FirestoreDate;
   created_at?: FirestoreDate;
   updated_at: FirestoreDate;
   deactivated_at?: FirestoreDate;
+};
+
+export type InventoryBatchMetadataData = {
+  batch_number: string;
+  sku: string;
+  thc_percentage: string;
+  cbd_percentage: string;
+  coa_url: string;
+  item: string;
+  source_packages: string;
+  product_id?: string;
+  created_by?: ActorSnapshot;
+  updated_by?: ActorSnapshot;
+  created_at: FirestoreDate;
+  updated_at: FirestoreDate;
+};
+
+export type MetrcSyncStateData = {
+  sync_id: string;
+  started_at: FirestoreDate;
+  started_by: ActorSnapshot;
+  finalized_at: FirestoreDate;
+  finalized_by: ActorSnapshot | null;
 };
 
 export type ParsedPackageData = Pick<PackageData,
@@ -258,6 +293,8 @@ export type OrderItem = {
   lab_test_expiration: string;
   source_package_key: string;
   price_cents: number;
+  consignment_distributor_id?: string;
+  consignment_distributor_name?: string;
 };
 
 export type InvoicePayment = {
@@ -383,6 +420,19 @@ export type ProductData = {
   case_quantity: number;
   sku: string;
   upc: string;
+  notes: string;
+  archived_at?: FirestoreDate;
+  created_at: FirestoreDate;
+  updated_at: FirestoreDate;
+};
+
+export type DistributorData = {
+  name: string;
+  license_number: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  address: Address;
   notes: string;
   archived_at?: FirestoreDate;
   created_at: FirestoreDate;

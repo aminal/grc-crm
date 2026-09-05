@@ -72,6 +72,7 @@ describe("section permissions", () => {
       brands: "read",
       strains: "read",
       products: "read",
+      distributors: "read",
     });
     expectFeatures(employee, "sales", {
       create_orders: true,

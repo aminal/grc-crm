@@ -75,6 +75,8 @@ export default async function OrderPage({ params }: {
         unit_of_measure: item.unit_of_measure,
         expiration_date: item.expiration_date || null,
         unit_base_price_cents: item.product_id ? (productPrices.get(item.product_id) ?? 0) : 0,
+        consignment_distributor_id: item.consignment_distributor_id || undefined,
+        consignment_distributor_name: item.consignment_distributor_name || undefined,
     }));
     const initialSelectedTags = orderPackageRows.map((packageRecord) => packageRecord.package_tag);
     const selectedTagSet = new Set(initialSelectedTags);
@@ -88,6 +90,8 @@ export default async function OrderPage({ params }: {
         unit_of_measure: packageRecord.data.unit_of_measure,
         expiration_date: packageRecord.data.expiration_date || null,
         unit_base_price_cents: packageRecord.data.product_id ? (productPrices.get(packageRecord.data.product_id) ?? 0) : 0,
+        consignment_distributor_id: packageRecord.data.consignment?.distributor_id || undefined,
+        consignment_distributor_name: packageRecord.data.consignment?.distributor_name || undefined,
     }));
     const editPackageRows = [
         ...orderPackageRows,

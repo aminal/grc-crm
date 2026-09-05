@@ -72,6 +72,8 @@ export default async function CreateOrderPage({ searchParams }: {
         unit_of_measure: packageRecord.data.unit_of_measure,
         expiration_date: packageRecord.data.expiration_date || null,
         unit_base_price_cents: packageRecord.data.product_id ? (productPrices.get(packageRecord.data.product_id) ?? 0) : 0,
+        consignment_distributor_id: packageRecord.data.consignment?.distributor_id || undefined,
+        consignment_distributor_name: packageRecord.data.consignment?.distributor_name || undefined,
     }));
 
     return (

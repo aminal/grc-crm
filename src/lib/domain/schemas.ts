@@ -21,16 +21,53 @@ const requiredShortString = requiredString.pipe(z.string().max(255));
 const optionalLongString = optionalString.pipe(z.string().max(5000));
 const requiredLongString = requiredString.pipe(z.string().max(5000));
 const optionalUrl = optionalString.refine((value) => value === "" || /^https?:\/\//i.test(value), "Enter a valid http or https URL.");
+const optionalHttpUrl = optionalString.refine((value) => {
+  if (value === "") {
+    return true;
+  }
+
+  try {
+    const url = new URL(value);
+    return (url.protocol === "http:" || url.protocol === "https:") && Boolean(url.hostname);
+  } catch {
+    return false;
+  }
+}, "Enter a valid http or https URL.");
+const optionalPercentageString = optionalString
+  .pipe(z.string().max(32))
+  .refine((value) => {
+    if (value === "") {
+      return true;
+    }
+
+    if (!/^\d+(?:\.\d+)?$/.test(value)) {
+      return false;
+    }
+
+    const percentage = Number(value);
+    return Number.isFinite(percentage) && percentage >= 0 && percentage <= 100;
+  }, "Enter a percentage between 0 and 100.");
 const requiredStringArray = z.preprocess((value) => {
   const values = Array.isArray(value) ? value : value == null ? [] : [value];
   return [...new Set(values.map(String).map((entry) => entry.trim()).filter(Boolean))];
 }, z.array(z.string().min(1)).min(1));
+const optionalStringArray = z.preprocess((value) => {
+  const values = Array.isArray(value) ? value : value == null ? [] : [value];
+  return [...new Set(values.map(String).map((entry) => entry.trim()).filter(Boolean))];
+}, z.array(z.string().min(1)));
 const optionalInstagramHandle = optionalString.transform((value) => socialHandleFromInput(value, ["instagram.com"]));
 const optionalXHandle = optionalString.transform((value) => socialHandleFromInput(value, ["x.com", "twitter.com"]));
 const optionalThreadsHandle = optionalString.transform((value) => socialHandleFromInput(value, ["threads.net"]));
 const optionalEmail = optionalString.refine((value) => value === "" || z.email().safeParse(value).success, "Enter a valid email address.");
 const optionalDialablePhone = optionalString.refine((value) => value === "" || e164Phone(value) !== null, "Enter a dialable phone number.");
 const requiredState = z.preprocess((value) => typeof value === "string" ? value.trim().toUpperCase() : value, z.enum(US_STATE_ABBREVIATIONS));
+const optionalState = z.preprocess((value) => {
+  if (value === undefined || value === null) {
+    return "";
+  }
+
+  return typeof value === "string" ? value.trim().toUpperCase() : value;
+}, z.union([z.literal(""), z.enum(US_STATE_ABBREVIATIONS)]));
 const centsFromMoney = z.preprocess((value) => {
   if (typeof value !== "string" && typeof value !== "number") {
     return value;
@@ -286,6 +323,52 @@ export const productCreateSchema = z.object({
 });
 
 export const productUpdateSchema = productCreateSchema;
+
+export const distributorCreateSchema = z.object({
+  name: requiredShortString,
+  license_number: optionalShortString,
+  contact_name: optionalShortString,
+  email: optionalEmail,
+  phone: optionalDialablePhone,
+  address_street: optionalString,
+  address_city: optionalShortString,
+  address_state: optionalState,
+  address_postal_code: optionalString,
+  notes: optionalLongString,
+});
+
+export const distributorUpdateSchema = distributorCreateSchema;
+
+export const packageSelectionSchema = z.object({
+  package_ids: requiredStringArray,
+});
+
+export const packageConsignmentSchema = packageSelectionSchema.extend({
+  distributor_id: requiredString,
+  notes: optionalLongString,
+});
+
+export const batchMetadataSchema = z.object({
+  batch_number: optionalShortString,
+  sku: optionalShortString,
+  thc_percentage: optionalPercentageString,
+  cbd_percentage: optionalPercentageString,
+  coa_url: optionalHttpUrl.pipe(z.string().max(2048, "URL must be 2,048 characters or fewer.")),
+});
+
+export const syncConsignmentSchema = z.object({
+  sync_id: requiredString,
+  distributor_id: optionalString,
+  package_ids: optionalStringArray,
+}).superRefine((value, context) => {
+  if (value.package_ids.length > 0 && !value.distributor_id) {
+    context.addIssue({
+      code: "custom",
+      path: ["distributor_id"],
+      message: "Choose a distributor for the selected packages.",
+    });
+  }
+});
 
 export const editReasonSchema = z.object({
   reason: requiredLongString,
