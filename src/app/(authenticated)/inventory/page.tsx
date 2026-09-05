@@ -116,6 +116,9 @@ export default async function InventoryPage({ searchParams }: {
                                     </TableHeader>
                                     <TableBody>
                                         {paginatedGroups.map((group) => {
+                                            const product = group.product_id ? productsById.get(group.product_id) : undefined;
+                                            const productName = product?.name || group.item;
+                                            const skuLabel = product?.sku || 'No SKU';
                                             const valueCents = inventoryValueCents(group, productsById);
                                             const quantityLabel = group.mixed_units ? group.units.join(' / ') : (group.unit_of_measure === 'ea' ? 'Units' : group.unit_of_measure);
                                             const typeLabel = formatInventoryCategory(group.category);
@@ -125,20 +128,21 @@ export default async function InventoryPage({ searchParams }: {
                                             const totalPackageCount = availability?.total ?? group.package_count;
                                             const statusPrefix = group.status === 'available' ? `${availablePackageCount}/${totalPackageCount}` : undefined;
                                             const href = `/inventory/${encodeURIComponent(group.key)}`;
-                                            const label = `View inventory group ${group.item}`;
+                                            const label = `View inventory group ${skuLabel}`;
 
                                             return (
                                                 <TableRow key={group.key} className='group cursor-pointer'>
                                                     <TableCell>
                                                         <Link href={href} className='flex flex-col items-start gap-1 text-zinc-950 group-hover:text-purple-700 dark:text-white dark:group-hover:text-purple-400'>
-                                                            <div className='font-semibold text-lg'>{group.item}</div>
+                                                            <div className='font-semibold text-lg'>{skuLabel}</div>
+                                                            <div className='font-medium text-zinc-500 dark:text-zinc-400'>{productName || 'No product name'}</div>
+                                                            <div className='font-medium dark:text-zinc-400/85'>{group.source_packages || 'No source package'}</div>
                                                             <div className='flex flex-wrap items-center gap-2'>
                                                                 <StatusBadge status={group.status} prefix={statusPrefix} />
                                                                 {group.lab_statuses.length > 0 ? group.lab_statuses.map((labStatus) => (
                                                                     <Badge key={labStatus} color='violet'>{formatLabStatus(labStatus)}</Badge>
                                                                 )) : <span className='font-semibold text-zinc-500 dark:text-zinc-400'>No lab status</span>}
                                                             </div>
-                                                            <div className='font-medium dark:text-zinc-400/85'>{group.source_packages || 'No source package'}</div>
                                                         </Link>
                                                     </TableCell>
                                                     <TableCell>
