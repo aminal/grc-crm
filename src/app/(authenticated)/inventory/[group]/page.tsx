@@ -2,12 +2,14 @@ import { notFound } from 'next/navigation';
 import { HeaderCard } from '@/components/layout/header-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { listDistributors } from '@/lib/data/distributors';
 import { findInventoryBatchMetadata, groupInventory, listVisiblePackages } from '@/lib/data/inventory';
 import { compactNumber, formatDate, formatInventoryCategory } from '@/lib/domain/format';
 import type { PackageData } from '@/lib/domain/types';
+import { cn } from '@/lib/utils';
 import { BatchEditDialogButton } from './batch-edit-dialog';
 import { type InventoryPackageRow, PackageTable } from './package-table';
 
@@ -48,41 +50,25 @@ export default async function InventoryGroupPage({ params }: {
   const packageStrain = group.strains.join(' / ') || firstPackage?.strain || 'No strain';
   const packageTestStatus = group.lab_statuses.length > 0 ? (
     <>
-            {group.lab_statuses.map((labStatus) => (
-              <Badge key={labStatus} color='violet'>{formatLabStatus(labStatus)}</Badge>
-            ))}
-        </>
-  ) : null;
+      {group.lab_statuses.map((labStatus) => (
+        <Badge key={labStatus} color='violet'>{formatLabStatus(labStatus)}</Badge>
+      ))}
+    </>
+  ) : <Badge color='zinc'>No lab status</Badge>;
   const availablePackages = group.packages.filter((packageRecord) => packageStatus(packageRecord.data) === 'available');
   const availablePackageCount = availablePackages.length;
   const availableUnitCount = availablePackages.reduce((total, packageRecord) => total + Number(packageRecord.data.quantity ?? 0), 0);
-  const totalUnitDisplay = `${compactNumber(availableUnitCount)}/${compactNumber(group.total_quantity)}`;
-  const thcPercentage = batchMetadataValues.thc_percentage || null;
-  const cbdPercentage = batchMetadataValues.cbd_percentage || null;
-  const thcStat = thcPercentage ? (
-    <div className='flex min-w-28 flex-col rounded-xl bg-purple-500/10 px-6 py-4 text-purple-700 dark:bg-zinc-600/10 dark:text-purple-300'>
-      <div className='flex items-start justify-end gap-0.5 text-4xl/9 font-semibold tracking-tight'>
-        {thcPercentage}
-        <div className='text-md/3.5! mt-1 leading-none font-semibold  text-purple-600/80 dark:text-purple-600'>THC<br />%
-        </div>
-      </div>
-      {cbdPercentage ? (
-        <div className='mt-2 border-t border-zinc-900/30 pt-2 dark:border-white/5'>
-          <div className='mt-1 flex items-start justify-end gap-0.5 text-4xl/9 font-semibold tracking-tight'>
-            {cbdPercentage}
-            <div className='text-md/3.5! mt-1 leading-none font-semibold  text-purple-600/80 dark:text-purple-600'>CBD<br />%
-            </div>
-          </div>
-        </div>
-      ) : null}
-      <div className='mt-2 border-t border-zinc-900/30 pt-2 dark:border-white/5'>
-        <div className='flex justify-end gap-0.5 text-3xl/9 font-semibold tracking-tight'>{totalUnitDisplay}</div>
-        <div className='text-right text-md/3! font-semibold uppercase tracking-[0.1em] text-purple-600/80 dark:text-purple-600'>
-          Total Units
-        </div>
-      </div>
+  const totalUnitCount = group.total_quantity;
+  const remainingUnitPercent = totalUnitCount > 0 ? Math.min(100, Math.max(0, (availableUnitCount / totalUnitCount) * 100)) : 0;
+  const thcPercentage = batchMetadataValues.thc_percentage ? `${batchMetadataValues.thc_percentage}%` : '—';
+  const cbdPercentage = batchMetadataValues.cbd_percentage ? `${batchMetadataValues.cbd_percentage}%` : '—';
+  const sourcePackage = group.source_packages || 'Unknown source';
+  const batchIconLabel = (batchMetadataValues.sku || group.item || 'Batch').slice(0, 2).toUpperCase();
+  const batchIcon = (
+    <div className='flex size-14 items-center justify-center rounded-2xl bg-purple-500/10 text-lg font-semibold tracking-tight text-purple-700 ring-1 ring-purple-500/15 dark:bg-purple-400/10 dark:text-purple-200 dark:ring-purple-300/15'>
+      {batchIconLabel}
     </div>
-  ) : null;
+  );
   const sortedPackages = [...group.packages].sort((left, right) => packageStatusOrder[packageStatus(left.data)] - packageStatusOrder[packageStatus(right.data)]);
   const distributorOptions = distributors.map((distributor) => ({
     value: distributor.id,
@@ -98,13 +84,15 @@ export default async function InventoryGroupPage({ params }: {
     unit_label: packageRecord.data.unit_of_measure === 'ea' ? 'Units' : packageRecord.data.unit_of_measure || 'Qty',
     distributor_name: packageRecord.data.consignment?.distributor_name ?? '',
   }));
-  const packageDetails = [
-    { label: 'Product Type', value: formatInventoryCategory(group.category) || '—' },
+  const operationalStats = [
+    { label: 'THC', value: thcPercentage, accent: Boolean(batchMetadataValues.thc_percentage) },
+    { label: 'CBD', value: cbdPercentage, accent: Boolean(batchMetadataValues.cbd_percentage) },
     { label: 'Expires', value: formatDate(group.expiration_date ?? firstPackage?.expiration_date) },
-    { label: 'PKGS Available', value: `${availablePackageCount} / ${group.package_count}` },
-    ...(batchMetadataValues.batch_number ? [{ label: 'Batch Number', value: batchMetadataValues.batch_number }] : []),
-    ...(batchMetadataValues.sku ? [{ label: 'SKU', value: batchMetadataValues.sku }] : []),
-    { label: 'Strain', value: packageStrain },
+    { label: 'Available Packages', value: `${availablePackageCount} / ${group.package_count}` },
+    { label: 'Product Type', value: formatInventoryCategory(group.category) || '—' },
+    { label: 'Batch Number', value: batchMetadataValues.batch_number || '—' },
+    { label: 'Strain', value: packageStrain, wide: true },
+    { label: 'Source Package', value: sourcePackage, breakAll: true, wide: true },
   ];
   const headerActions = canManageBatch || canCreateOrder || coaUrl ? (
     <div className='flex flex-wrap gap-2 sm:justify-end'>
@@ -118,15 +106,53 @@ export default async function InventoryGroupPage({ params }: {
     <div>
       <HeaderCard
         title={batchMetadataValues.sku || 'No SKU'}
+        subtitle={<span className='font-semibold text-zinc-900 dark:text-white'>{group.item || 'Unknown item'}</span>}
         badge={packageTestStatus}
-        media={thcStat}
+        media={batchIcon}
         actions={headerActions}
-        className='mb-6'
-        meta={[
-          { label: 'Source Package', value: group.source_packages || 'unknown source', breakAll: true },
-          ...packageDetails,
-        ]}
+        className='mb-4'
       />
+
+      <Card className='mb-6 overflow-hidden'>
+        <CardContent className='p-0'>
+          <div className='grid gap-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2fr)]'>
+            <section className='border-b border-zinc-950/5 bg-zinc-50/80 p-4 dark:border-white/10 dark:bg-white/[0.03] sm:p-5 lg:border-r lg:border-b-0'>
+              <div className='flex items-start justify-between gap-4'>
+                <div>
+                  <p className='text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400'>Remaining Units</p>
+                  <p className='mt-2 text-4xl/10 font-semibold tracking-tight text-zinc-950 dark:text-white'>
+                    {compactNumber(availableUnitCount)}
+                    <span className='ml-2 text-2xl/8 font-medium text-zinc-500 dark:text-zinc-400'>/ {compactNumber(totalUnitCount)}</span>
+                  </p>
+                </div>
+                <Badge color={availableUnitCount > 0 ? 'emerald' : 'zinc'}>{availableUnitCount > 0 ? 'Available' : 'Unavailable'}</Badge>
+              </div>
+              <div className='mt-5'>
+                <div
+                  className='h-2 overflow-hidden rounded-full bg-zinc-200 dark:bg-white/10'
+                  role='progressbar'
+                  aria-label={`${compactNumber(availableUnitCount)} of ${compactNumber(totalUnitCount)} units remaining`}
+                  aria-valuemin={0}
+                  aria-valuemax={Math.max(totalUnitCount, availableUnitCount, 1)}
+                  aria-valuenow={availableUnitCount}
+                >
+                  <div className='h-full rounded-full bg-purple-600 dark:bg-purple-400' style={{ width: `${remainingUnitPercent}%` }} />
+                </div>
+                <div className='mt-2 flex justify-between text-xs/5 font-medium text-zinc-500 dark:text-zinc-400'>
+                  <span>{Math.round(remainingUnitPercent)}% remaining</span>
+                  <span>Total units tracked</span>
+                </div>
+              </div>
+            </section>
+
+            <section className='grid grid-cols-2 gap-px bg-zinc-950/5 dark:bg-white/10 lg:grid-cols-4'>
+              {operationalStats.map((stat) => (
+                <OperationalStat key={stat.label} {...stat} />
+              ))}
+            </section>
+          </div>
+        </CardContent>
+      </Card>
 
       <PackageTable
         group={encodedGroup}
@@ -135,6 +161,25 @@ export default async function InventoryGroupPage({ params }: {
         canManageConsignment={canManageConsignment}
       />
     </div>
+  );
+}
+
+function OperationalStat({ label, value, accent = false, breakAll = false, wide = false }: {
+  label: string;
+  value: React.ReactNode;
+  accent?: boolean;
+  breakAll?: boolean;
+  wide?: boolean;
+}): React.ReactElement {
+  return (
+    <dl className={cn('bg-white p-4 dark:bg-zinc-950 sm:p-5', wide && 'col-span-2 lg:col-span-1')}>
+      <dt className='text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400'>{label}</dt>
+      <dd className={cn(
+        'mt-2 text-lg/7 font-semibold text-zinc-950 dark:text-white',
+        accent && 'text-purple-700 dark:text-purple-300',
+        breakAll && 'break-all',
+      )}>{value}</dd>
+    </dl>
   );
 }
 

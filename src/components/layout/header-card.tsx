@@ -7,8 +7,9 @@ export type HeaderCardMetaItem = {
   breakAll?: boolean;
 };
 
-export function HeaderCard({ title, badge, media, meta = [], actions, className }: {
+export function HeaderCard({ title, subtitle, badge, media, meta = [], actions, className }: {
   title: React.ReactNode;
+  subtitle?: React.ReactNode;
   badge?: React.ReactNode;
   media?: React.ReactNode;
   meta?: HeaderCardMetaItem[];
@@ -25,14 +26,15 @@ export function HeaderCard({ title, badge, media, meta = [], actions, className 
           {media ? <div className='shrink-0'>{media}</div> : null}
           <div className='min-w-0'>
             <div className={cn(
-              'flex',
-              meta.length > 0
-                ? 'flex-wrap flex-row items-center gap-2'
+              'flex min-w-0',
+              meta.length > 0 || badge
+                ? 'flex-row flex-wrap items-center gap-x-3 gap-y-2'
                 : 'flex-col items-start gap-0',
             )}>
-              <h2 className='truncate pt-0.5 pl-0.5 text-3xl/8 font-semibold text-zinc-950 dark:text-white'>{title}</h2>
-              <div className='flex flex-row space-x-2'>{badge}</div>
+              <h2 className='min-w-0 max-w-full truncate pt-0.5 pl-0.5 text-3xl/8 font-semibold text-zinc-950 dark:text-white'>{title}</h2>
+              {badge ? <div className='flex flex-row flex-wrap gap-2'>{badge}</div> : null}
             </div>
+            {subtitle ? <div className='mt-2 pl-0.5 text-sm/6 font-medium text-zinc-600 dark:text-zinc-300'>{subtitle}</div> : null}
             {meta.length > 0 ? (
               <div className='flex flex-wrap gap-x-4 gap-y-3 pt-3 text-sm xl:gap-x-12'>
                 {meta.map((item, index) => (
