@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as Headless from "@headlessui/react";
+import * as Headless from '@headlessui/react';
 import {
   ArchiveBoxIcon,
   BanknotesIcon,
@@ -9,17 +9,17 @@ import {
   DocumentCurrencyDollarIcon,
   HomeIcon,
   UserGroupIcon,
-} from "@heroicons/react/20/solid";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { LayoutGroup, motion } from "motion/react";
-import { useId } from "react";
-import { cn } from "@/lib/utils";
-import { TouchTarget } from "@/components/ui/button";
-import { isSectionEnabled } from "@/lib/auth/permissions";
-import type { AppSection, AuthenticatedUser } from "@/lib/domain/types";
+} from '@heroicons/react/20/solid';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { LayoutGroup, motion } from 'motion/react';
+import { useId } from 'react';
+import { cn } from '@/lib/utils';
+import { TouchTarget } from '@/components/ui/button';
+import { isSectionEnabled } from '@/lib/auth/permissions';
+import type { AppSection, AuthenticatedUser } from '@/lib/domain/types';
 
-const settingsSections = ["users", "brands", "products", "strains"] as const satisfies readonly AppSection[];
+const settingsSections = ['users', 'brands', 'products', 'strains'] as const satisfies readonly AppSection[];
 
 const navItems: readonly {
   href: string;
@@ -29,78 +29,81 @@ const navItems: readonly {
   isCurrent: (pathname: string) => boolean;
 }[] = [
   {
-    href: "/dashboard",
-    label: "Dashboard",
-    sections: ["dashboard"],
+    href: '/dashboard',
+    label: 'Dashboard',
+    sections: ['dashboard'],
     icon: HomeIcon,
-    isCurrent: (pathname: string) => pathname === "/dashboard",
+    isCurrent: (pathname: string) => pathname === '/dashboard',
   },
   {
-    href: "/sales",
-    label: "Sales",
-    sections: ["sales"],
+    href: '/sales',
+    label: 'Sales',
+    sections: ['sales'],
     icon: BanknotesIcon,
-    isCurrent: (pathname: string) => pathname === "/sales" || pathname.startsWith("/sales/"),
+    isCurrent: (pathname: string) => pathname === '/sales' || pathname.startsWith('/sales/'),
   },
   {
-    href: "/billing",
-    label: "Billing",
-    sections: ["billing"],
+    href: '/billing',
+    label: 'Billing',
+    sections: ['billing'],
     icon: DocumentCurrencyDollarIcon,
-    isCurrent: (pathname: string) => pathname === "/billing" || pathname.startsWith("/billing/"),
+    isCurrent: (pathname: string) => pathname === '/billing' || pathname.startsWith('/billing/'),
   },
   {
-    href: "/inventory",
-    label: "Inventory",
-    sections: ["inventory"],
+    href: '/inventory',
+    label: 'Inventory',
+    sections: ['inventory'],
     icon: ArchiveBoxIcon,
-    isCurrent: (pathname: string) => pathname === "/inventory" || pathname.startsWith("/inventory/"),
+    isCurrent: (pathname: string) => pathname === '/inventory' || pathname.startsWith('/inventory/'),
   },
   {
-    href: "/companies",
-    label: "Companies",
-    sections: ["companies"],
+    href: '/companies',
+    label: 'Companies',
+    sections: ['companies'],
     icon: BuildingOffice2Icon,
-    isCurrent: (pathname: string) => pathname === "/companies" || pathname.startsWith("/companies/"),
+    isCurrent: (pathname: string) => pathname === '/companies' || pathname.startsWith('/companies/'),
   },
   {
-    href: "/users",
-    label: "Users",
-    sections: ["users"],
+    href: '/users',
+    label: 'Users',
+    sections: ['users'],
     icon: UserGroupIcon,
-    isCurrent: (pathname: string) => pathname === "/users" || pathname.startsWith("/users/"),
+    isCurrent: (pathname: string) => pathname === '/users' || pathname.startsWith('/users/'),
   },
   {
-    href: "/settings",
-    label: "Settings",
+    href: '/settings',
+    label: 'Settings',
     sections: settingsSections,
     icon: Cog6ToothIcon,
-    isCurrent: (pathname: string) => pathname === "/settings" || pathname.startsWith("/settings/"),
+    isCurrent: (pathname: string) => pathname === '/settings' || pathname.startsWith('/settings/'),
   },
 ] as const;
 
 const sidebarItemClasses = cn(
-  "relative flex cursor-pointer w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5",
-  "*:data-[slot=icon]:size-6 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:fill-zinc-500 *:data-[slot=icon]:text-zinc-500 sm:*:data-[slot=icon]:size-5",
-  "*:last:data-[slot=icon]:ml-auto *:last:data-[slot=icon]:size-5 sm:*:last:data-[slot=icon]:size-4",
-  "*:data-[slot=avatar]:-m-0.5 *:data-[slot=avatar]:size-7 sm:*:data-[slot=avatar]:size-6",
-  "data-hover:bg-zinc-950/5 data-hover:*:data-[slot=icon]:fill-zinc-950 data-hover:*:data-[slot=icon]:text-zinc-950",
-  "data-active:bg-zinc-950/5 data-active:*:data-[slot=icon]:fill-zinc-950 data-active:*:data-[slot=icon]:text-zinc-950",
-  "data-current:*:data-[slot=icon]:fill-zinc-950 data-current:*:data-[slot=icon]:text-zinc-950",
-  "dark:text-white dark:*:data-[slot=icon]:fill-zinc-400 dark:*:data-[slot=icon]:text-zinc-400",
-  "dark:data-hover:bg-white/5 dark:data-hover:*:data-[slot=icon]:fill-white dark:data-hover:*:data-[slot=icon]:text-white",
-  "dark:data-active:bg-white/5 dark:data-active:*:data-[slot=icon]:fill-white dark:data-active:*:data-[slot=icon]:text-white",
-  "dark:data-current:*:data-[slot=icon]:fill-white dark:data-current:*:data-[slot=icon]:text-white",
-  "dark:data-current:bg-white/5",
+  'relative flex cursor-pointer w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-base/6 font-medium text-zinc-950 sm:py-2 sm:text-sm/5 md:text-base/5 lg:text-sm/5',
+  '*:data-[slot=icon]:size-6 *:data-[slot=icon]:shrink-0 *:data-[slot=icon]:fill-zinc-500 *:data-[slot=icon]:text-zinc-500 sm:*:data-[slot=icon]:size-5',
+  '*:last:data-[slot=icon]:ml-auto *:last:data-[slot=icon]:size-5 sm:*:last:data-[slot=icon]:size-4',
+  '*:data-[slot=avatar]:-m-0.5 *:data-[slot=avatar]:size-7 sm:*:data-[slot=avatar]:size-6',
+  'data-hover:bg-zinc-950/5 data-hover:*:data-[slot=icon]:fill-zinc-950 data-hover:*:data-[slot=icon]:text-zinc-950',
+  'data-active:bg-zinc-950/5 data-active:*:data-[slot=icon]:fill-zinc-950 data-active:*:data-[slot=icon]:text-zinc-950',
+  'data-current:*:data-[slot=icon]:fill-zinc-950 data-current:*:data-[slot=icon]:text-zinc-950',
+  'dark:text-white dark:*:data-[slot=icon]:fill-zinc-400 dark:*:data-[slot=icon]:text-zinc-400',
+  'dark:data-hover:bg-white/5 dark:data-hover:*:data-[slot=icon]:fill-white dark:data-hover:*:data-[slot=icon]:text-white',
+  'dark:data-active:bg-white/5 dark:data-active:*:data-[slot=icon]:fill-white dark:data-active:*:data-[slot=icon]:text-white',
+  'dark:data-current:*:data-[slot=icon]:fill-white dark:data-current:*:data-[slot=icon]:text-white',
+  'dark:data-current:bg-white/5',
 );
 
-export function SidebarNav({ user, onNavigate }: { user: AuthenticatedUser; onNavigate?: () => void }): React.ReactElement {
+export function SidebarNav({ user, onNavigate }: {
+  user: AuthenticatedUser;
+  onNavigate?: () => void
+}): React.ReactElement {
   const pathname = usePathname();
   const id = useId();
 
   return (
     <LayoutGroup id={id}>
-      <div data-slot="section" className="flex flex-col gap-0.5">
+      <div data-slot='section' className='flex flex-col gap-0.5'>
         {navItems
           .filter((item) => item.sections.some((section) => isSectionEnabled(user, section)))
           .map((item) => {
@@ -108,19 +111,20 @@ export function SidebarNav({ user, onNavigate }: { user: AuthenticatedUser; onNa
             const current = item.isCurrent(pathname);
 
             return (
-              <span key={item.href} className="relative">
-                {current ? <motion.span layoutId="current-indicator" className="absolute inset-y-2 -left-4 w-0.5 rounded-full bg-zinc-950 dark:bg-white" /> : null}
+              <span key={item.href} className='relative'>
+                {current ?
+                  <motion.span layoutId='current-indicator' className='absolute inset-y-2 -left-4 w-0.5 rounded-full bg-zinc-950 dark:bg-white' /> : null}
                 <Headless.CloseButton
                   as={Link}
                   href={item.href}
-                  aria-current={current ? "page" : undefined}
+                  aria-current={current ? 'page' : undefined}
                   onClick={onNavigate}
-                  data-current={current ? "true" : undefined}
+                  data-current={current ? 'true' : undefined}
                   className={sidebarItemClasses}
                 >
                   <TouchTarget>
-                    <Icon data-slot="icon" aria-hidden="true" />
-                    <span className="truncate">{item.label}</span>
+                    <Icon data-slot='icon' aria-hidden='true' />
+                    <span className='truncate'>{item.label}</span>
                   </TouchTarget>
                 </Headless.CloseButton>
               </span>
