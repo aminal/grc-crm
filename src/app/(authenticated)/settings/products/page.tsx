@@ -264,7 +264,7 @@ export default async function SettingsProductsPage({ searchParams }: {
                                 Products
                             </h2>
                             {canCreate ? (
-                                <Button color='purple' href={createProductHref}>
+                                <Button color='purple' href={createProductHref} className='uppercase text-md!'>
                                     <Plus data-slot='icon' aria-hidden='true' />
                                     Add Product
                                 </Button>

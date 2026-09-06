@@ -141,7 +141,7 @@ export default async function SettingsBrandsPage({ searchParams }: {
                 Brands
               </h2>
               {canCreate ? (
-                <Button color='purple' href={createBrandHref}>
+                <Button color='purple' href={createBrandHref} className='uppercase text-md!'>
                   <Plus data-slot='icon' aria-hidden='true' />
                   Add Brand
                 </Button>

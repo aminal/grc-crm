@@ -158,7 +158,7 @@ export default async function SettingsStrainsPage({ searchParams }: { searchPara
                 Strains
               </h2>
               {canCreate ? (
-                <Button color="purple" href={createStrainHref}>
+                <Button color="purple" href={createStrainHref} className='uppercase text-md!'>
                   <Plus data-slot="icon" aria-hidden="true" />
                   Add Strain
                 </Button>
