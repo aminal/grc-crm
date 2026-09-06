@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
-import { listDistributors } from '@/lib/data/distributors';
+import { listDistributorCompanies } from '@/lib/data/crm';
 import { findInventoryBatchMetadata, groupInventory, listVisiblePackages } from '@/lib/data/inventory';
 import { compactNumber, formatDate, formatInventoryCategory } from '@/lib/domain/format';
 import type { PackageData } from '@/lib/domain/types';
@@ -32,7 +32,7 @@ export default async function InventoryGroupPage({ params }: {
 
   const { group: encodedGroup } = await params;
   const key = decodeURIComponent(encodedGroup);
-  const [permissionedPackages, distributors] = await Promise.all([listVisiblePackages(user), canManageConsignment ? listDistributors() : Promise.resolve([])]);
+  const [permissionedPackages, distributors] = await Promise.all([listVisiblePackages(user), canManageConsignment ? listDistributorCompanies() : Promise.resolve([])]);
   const group = groupInventory(permissionedPackages).find((row) => row.key === key);
   if (!group) {
     notFound();
@@ -72,8 +72,11 @@ export default async function InventoryGroupPage({ params }: {
   const sortedPackages = [...group.packages].sort((left, right) => packageStatusOrder[packageStatus(left.data)] - packageStatusOrder[packageStatus(right.data)]);
   const distributorOptions = distributors.map((distributor) => ({
     value: distributor.id,
-    label: distributor.data.name,
-    description: distributor.data.license_number || undefined,
+    label: distributor.data.company_name,
+    description: [
+      distributor.data.license_number,
+      [distributor.data.address.city, distributor.data.address.state].filter(Boolean).join(', '),
+    ].filter(Boolean).join(' · ') || undefined,
   }));
   const packageRows: InventoryPackageRow[] = sortedPackages.map((packageRecord) => ({
     id: packageRecord.id,

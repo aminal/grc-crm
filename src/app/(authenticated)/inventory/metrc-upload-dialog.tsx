@@ -155,18 +155,18 @@ function MetrcSyncReview({ analysis, distributorOptions, onDone }: { analysis: M
           ) : null}
 
           <div className="space-y-1.5">
-            <Field label="Distributor">
+            <Field label="Distributor company">
               <SearchableSelect
                 name="distributor_id"
                 options={distributorOptions}
-                placeholder="Search distributors"
-                emptyMessage="No distributors found."
+                placeholder="Search distributor companies"
+                emptyMessage="No active distributor companies found."
                 required={selectedCount > 0}
                 disabled={pending || selectedCount === 0}
               />
             </Field>
             <p className="text-sm/5 text-zinc-500 dark:text-zinc-400">
-              {selectedCount > 0 ? "Applies to every checked package." : "Check at least one package to assign a distributor."}
+              {selectedCount > 0 ? "Applies to every checked package." : "Check at least one package to assign a distributor company."}
             </p>
           </div>
 

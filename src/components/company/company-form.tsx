@@ -73,7 +73,7 @@ export function socialHandleFromValue(value: string | undefined, hosts: string[]
   return trimmed.replace(/^@+/, "");
 }
 
-export function CompanyForm({ company, action, submitLabel, footerStart, footerEnd }: { company?: CompanyFormValues; action: (formData: FormData) => void | Promise<void>; submitLabel: string; footerStart?: React.ReactNode; footerEnd?: React.ReactNode }): React.ReactElement {
+export function CompanyForm({ company, action, submitLabel, footerStart, footerEnd, lockActiveStatus = false }: { company?: CompanyFormValues; action: (formData: FormData) => void | Promise<void>; submitLabel: string; footerStart?: React.ReactNode; footerEnd?: React.ReactNode; lockActiveStatus?: boolean }): React.ReactElement {
   return (
     <form action={action} className="grid gap-4 sm:grid-cols-6">
       <div className="sm:col-span-4">
@@ -91,9 +91,10 @@ export function CompanyForm({ company, action, submitLabel, footerStart, footerE
       <div className="sm:col-span-2">
         <Field label="Status">
           <Select name="status" defaultValue={defaultCompanyStatus(company?.status)} required>
-            {COMPANY_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
+            {COMPANY_STATUSES.map((status) => <option key={status} value={status} disabled={lockActiveStatus && status !== "Active"}>{status}</option>)}
           </Select>
         </Field>
+        {lockActiveStatus ? <p className="mt-1.5 text-sm/5 font-medium text-zinc-500 dark:text-zinc-400">Consigned inventory requires this distributor company to remain Active.</p> : null}
       </div>
       <div className="sm:col-span-2">
         <Field label="License number">

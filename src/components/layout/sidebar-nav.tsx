@@ -9,7 +9,6 @@ import {
   DocumentCurrencyDollarIcon,
   HomeIcon,
   TagIcon,
-  TruckIcon,
   UserGroupIcon,
 } from "@heroicons/react/20/solid";
 import { Cannabis } from "lucide-react";
@@ -88,13 +87,6 @@ const navItems: readonly {
     section: "products",
     icon: CubeIcon,
     isCurrent: (pathname: string) => pathname === "/products" || pathname.startsWith("/products/"),
-  },
-  {
-    href: "/distributors",
-    label: "Distributors",
-    section: "distributors",
-    icon: TruckIcon,
-    isCurrent: (pathname: string) => pathname === "/distributors" || pathname.startsWith("/distributors/"),
   },
   {
     href: "/users",

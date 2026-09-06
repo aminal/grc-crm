@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { AppSection, SectionAccessLevel, SectionFeatureMap, UserPermissions, UserRole } from "@/lib/domain/types";
+import type { AppSection, SectionAccessLevel, SectionFeatureMap, StoredUserPermissions, UserPermissions, UserRole } from "@/lib/domain/types";
 import {
   APP_SECTIONS,
   canReadSection,
@@ -72,7 +72,6 @@ describe("section permissions", () => {
       brands: "read",
       strains: "read",
       products: "read",
-      distributors: "read",
     });
     expectFeatures(employee, "sales", {
       create_orders: true,
@@ -110,6 +109,16 @@ describe("section permissions", () => {
     expect(permissions.inventory.enabled).toBe(false);
     expect(permissions.companies.features.manage_contacts).toBe(true);
     expect(permissions.users.enabled).toBe(false);
+  });
+
+  it("ignores stored distributor permissions", () => {
+    const storedPermissions = {
+      distributors: { enabled: true, features: { create_distributors: true } },
+    } as unknown as StoredUserPermissions;
+
+    const permissions = normalizePermissions("Employee", storedPermissions);
+
+    expect(Object.prototype.hasOwnProperty.call(permissions, "distributors")).toBe(false);
   });
 
   it("normalizes legacy none, read, and write access levels", () => {

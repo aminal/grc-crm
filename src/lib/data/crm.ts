@@ -174,6 +174,22 @@ export async function findCompany(companyId: string): Promise<FirestoreRecord<Co
   return getDocument<CompanyData>(`${COMPANIES}/${companyId}`);
 }
 
+export async function listDistributorCompanies(): Promise<FirestoreRecord<CompanyData>[]> {
+  const companies = await listCompanies();
+  return companies
+    .filter((company) => company.data.facility_type === "Distributor" && company.data.status === "Active")
+    .sort((a, b) => a.data.company_name.localeCompare(b.data.company_name));
+}
+
+export async function findDistributorCompany(companyId: string): Promise<FirestoreRecord<CompanyData> | null> {
+  const company = await findCompany(companyId);
+  if (!company || company.data.facility_type !== "Distributor" || company.data.status !== "Active") {
+    return null;
+  }
+
+  return company;
+}
+
 export async function findCompanyBySlug(companySlug: string): Promise<FirestoreRecord<CompanyData> | null> {
   const snapshot = await db.collection(COMPANIES).where("slug", "==", companySlug).limit(1).get();
   const doc = snapshot.docs[0];

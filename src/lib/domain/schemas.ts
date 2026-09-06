@@ -61,13 +61,6 @@ const optionalThreadsHandle = optionalString.transform((value) => socialHandleFr
 const optionalEmail = optionalString.refine((value) => value === "" || z.email().safeParse(value).success, "Enter a valid email address.");
 const optionalDialablePhone = optionalString.refine((value) => value === "" || e164Phone(value) !== null, "Enter a dialable phone number.");
 const requiredState = z.preprocess((value) => typeof value === "string" ? value.trim().toUpperCase() : value, z.enum(US_STATE_ABBREVIATIONS));
-const optionalState = z.preprocess((value) => {
-  if (value === undefined || value === null) {
-    return "";
-  }
-
-  return typeof value === "string" ? value.trim().toUpperCase() : value;
-}, z.union([z.literal(""), z.enum(US_STATE_ABBREVIATIONS)]));
 const centsFromMoney = z.preprocess((value) => {
   if (typeof value !== "string" && typeof value !== "number") {
     return value;
@@ -323,21 +316,6 @@ export const productCreateSchema = z.object({
 });
 
 export const productUpdateSchema = productCreateSchema;
-
-export const distributorCreateSchema = z.object({
-  name: requiredShortString,
-  license_number: optionalShortString,
-  contact_name: optionalShortString,
-  email: optionalEmail,
-  phone: optionalDialablePhone,
-  address_street: optionalString,
-  address_city: optionalShortString,
-  address_state: optionalState,
-  address_postal_code: optionalString,
-  notes: optionalLongString,
-});
-
-export const distributorUpdateSchema = distributorCreateSchema;
 
 export const packageSelectionSchema = z.object({
   package_ids: requiredStringArray,

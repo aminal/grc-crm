@@ -7,7 +7,7 @@ import { adminStorage, db } from "@/lib/firebase/admin";
 import type {
   ActorSnapshot,
   AuthenticatedUser,
-  DistributorData,
+  CompanyData,
   FirestoreRecord,
   InventoryBatchMetadataData,
   InventoryProductGroup,
@@ -24,7 +24,7 @@ import { docIdFromTag, getDocument, listCollection, normalizedText, now } from "
 import { groupInventory as groupInventoryRecords } from "@/lib/metrc/inventory-grouping";
 import { parseMetrcWorkbook } from "@/lib/metrc/metrc-spreadsheet-parser";
 import { assertFinalizableSync, partitionSyncFinalization, stalePackagesForSync, toSyncCandidates, type SyncCandidatePackage } from "@/lib/metrc/sync-candidates";
-import { findDistributor } from "./distributors";
+import { findDistributorCompany } from "./crm";
 import { buildFieldChanges, buildSettingsActivityData, listProducts, listStrains } from "./sales-settings";
 import { derivedPackageStatus, packageStatusMap } from "./package-status";
 
@@ -455,6 +455,16 @@ export async function findPackage(packageId: string): Promise<FirestoreRecord<Pa
   };
 }
 
+export async function hasPackageConsignmentsForDistributorCompany(companyId: string): Promise<boolean> {
+  const distributorId = companyId.trim();
+  if (!distributorId) {
+    return false;
+  }
+
+  const snapshot = await db.collection(PACKAGES).where("consignment.distributor_id", "==", distributorId).limit(1).get();
+  return !snapshot.empty;
+}
+
 type ActivityWriter = {
   create(ref: DocumentReference, data: DocumentData): unknown;
 };
@@ -490,19 +500,19 @@ export function writePackageConsignmentActivity(
   );
 }
 
-async function requireAvailableDistributor(distributorId: string): Promise<FirestoreRecord<DistributorData>> {
-  const distributor = await findDistributor(distributorId.trim());
-  if (!distributor || distributor.data.archived_at) {
-    throw new Error("Distributor not found.");
+async function requireDistributorCompany(distributorId: string): Promise<FirestoreRecord<CompanyData>> {
+  const company = await findDistributorCompany(distributorId.trim());
+  if (!company) {
+    throw new Error("Distributor company not found.");
   }
 
-  return distributor;
+  return company;
 }
 
-function buildConsignment(distributor: FirestoreRecord<DistributorData>, notes: string, user: AuthenticatedUser): PackageConsignment {
+function buildConsignment(company: FirestoreRecord<CompanyData>, notes: string, user: AuthenticatedUser): PackageConsignment {
   return {
-    distributor_id: distributor.id,
-    distributor_name: distributor.data.name,
+    distributor_id: company.id,
+    distributor_name: company.data.company_name,
     notes: notes.trim(),
     consigned_by: actorSnapshot(user),
     consigned_at: now(),
@@ -515,7 +525,7 @@ export async function consignPackages(packageIds: string[], distributorId: strin
     return 0;
   }
 
-  const distributor = await requireAvailableDistributor(distributorId);
+  const distributor = await requireDistributorCompany(distributorId);
   const snapshots = await db.getAll(...ids.map((packageId) => db.doc(`${PACKAGES}/${packageId}`)));
 
   let batch = db.batch();

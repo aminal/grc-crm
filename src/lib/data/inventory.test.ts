@@ -1,6 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { defaultPermissionsForRole } from "@/lib/auth/permissions";
-import type { AuthenticatedUser, FirestoreRecord, PackageData, ParsedPackageData, ProductData, StrainData, UserPermissions } from "@/lib/domain/types";
+import type { AuthenticatedUser, CompanyData, FirestoreRecord, PackageData, ParsedPackageData, ProductData, StrainData, UserPermissions } from "@/lib/domain/types";
+
+const firebaseAdminMock = vi.hoisted(() => ({
+  adminStorage: {},
+  db: {
+    batch: vi.fn(),
+    collection: vi.fn(),
+    doc: vi.fn(),
+    getAll: vi.fn(),
+  },
+}));
 
 vi.mock("server-only", () => ({}));
 vi.mock("./firestore", () => ({
@@ -16,22 +26,20 @@ vi.mock("./sales-settings", () => ({
   listProducts: vi.fn(),
   listStrains: vi.fn(),
 }));
-vi.mock("./distributors", () => ({
-  findDistributor: vi.fn(),
+vi.mock("./crm", () => ({
+  findDistributorCompany: vi.fn(),
 }));
 vi.mock("./package-status", () => ({
   derivedPackageStatus: vi.fn(),
   packageStatusMap: vi.fn(),
 }));
-vi.mock("@/lib/firebase/admin", () => ({
-  adminStorage: {},
-  db: {},
-}));
+vi.mock("@/lib/firebase/admin", () => firebaseAdminMock);
 
 import { getDocument, listCollection } from "./firestore";
 import { listProducts, listStrains } from "./sales-settings";
 import { derivedPackageStatus, packageStatusMap } from "./package-status";
-import { assertPackagesInGroup, findInventoryBatchMetadata, groupInventory, mapPackagesToProducts } from "./inventory";
+import { findDistributorCompany } from "./crm";
+import { assertPackagesInGroup, consignPackages, findInventoryBatchMetadata, groupInventory, hasPackageConsignmentsForDistributorCompany, mapPackagesToProducts } from "./inventory";
 
 function parsedPackage(overrides: Partial<ParsedPackageData>): ParsedPackageData {
   return {
@@ -82,6 +90,35 @@ function product(id: string, overrides: Partial<ProductData>): FirestoreRecord<P
   return { id, data };
 }
 
+function company(id: string, overrides: Partial<CompanyData>): FirestoreRecord<CompanyData> {
+  return {
+    id,
+    data: {
+      company_name: "Distributor Company",
+      license_number: "LIC-1",
+      status: "Active",
+      facility_type: "Distributor",
+      primary_contact_id: null,
+      address: {
+        street: "",
+        city: "",
+        state: "",
+        postal_code: "",
+      },
+      website_url: "",
+      social_links: {
+        facebook: "",
+        instagram: "",
+        x: "",
+        threads: "",
+      },
+      created_at: null,
+      updated_at: null,
+      ...overrides,
+    },
+  };
+}
+
 function existingPackage(overrides: Partial<PackageData>): PackageData {
   return {
     package_tag: "pkg-a",
@@ -115,6 +152,72 @@ function existingPackage(overrides: Partial<PackageData>): PackageData {
     ...overrides,
   };
 }
+
+describe("company-backed package consignment", () => {
+  beforeEach(() => {
+    firebaseAdminMock.db.batch.mockReset();
+    firebaseAdminMock.db.collection.mockReset();
+    firebaseAdminMock.db.doc.mockReset();
+    firebaseAdminMock.db.getAll.mockReset();
+    vi.mocked(findDistributorCompany).mockReset();
+  });
+
+  it("detects package consignments by distributor company ID", async () => {
+    const get = vi.fn().mockResolvedValue({ empty: false });
+    const limit = vi.fn(() => ({ get }));
+    const where = vi.fn(() => ({ limit }));
+    firebaseAdminMock.db.collection.mockReturnValue({ where });
+
+    await expect(hasPackageConsignmentsForDistributorCompany(" company-1 ")).resolves.toBe(true);
+    expect(firebaseAdminMock.db.collection).toHaveBeenCalledWith("packages");
+    expect(where).toHaveBeenCalledWith("consignment.distributor_id", "==", "company-1");
+    expect(limit).toHaveBeenCalledWith(1);
+  });
+
+  it("writes distributor company snapshots when consigning packages", async () => {
+    const batch = {
+      commit: vi.fn(),
+      create: vi.fn(),
+      set: vi.fn(),
+    };
+    const packageRef = { path: "packages/pkg-a" };
+    const activityDoc = { path: "packages/pkg-a/activity/activity-1" };
+    firebaseAdminMock.db.batch.mockReturnValue(batch);
+    firebaseAdminMock.db.collection.mockReturnValue({ doc: vi.fn(() => activityDoc) });
+    firebaseAdminMock.db.doc.mockImplementation((path: string) => ({ path }));
+    firebaseAdminMock.db.getAll.mockResolvedValue([
+      {
+        id: "pkg-a",
+        exists: true,
+        ref: packageRef,
+        data: () => existingPackage({ package_tag: "TAG-A" }),
+      },
+    ]);
+    vi.mocked(findDistributorCompany).mockResolvedValue(company("company-1", { company_name: "Company Distributor" }));
+
+    await expect(consignPackages(["pkg-a"], "company-1", " Transfer ", userWithPermissions(() => undefined))).resolves.toBe(1);
+    expect(findDistributorCompany).toHaveBeenCalledWith("company-1");
+    expect(batch.set).toHaveBeenCalledWith(
+      packageRef,
+      {
+        consignment: {
+          distributor_id: "company-1",
+          distributor_name: "Company Distributor",
+          notes: "Transfer",
+          consigned_by: {
+            uid: "user-1",
+            email: "consignment.manager@greenroomcannabis.com",
+            name: "Consignment Manager",
+            picture: "",
+          },
+          consigned_at: "server-now",
+        },
+        updated_at: "server-now",
+      },
+      { merge: true },
+    );
+  });
+});
 
 describe("inventory product mapping", () => {
   it("maps uploaded packages to different products by item name and SKU", () => {

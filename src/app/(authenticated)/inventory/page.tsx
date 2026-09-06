@@ -8,7 +8,7 @@ import { TableSearch } from '@/components/ui/table-search';
 import { activeTableSortDirection, paginatedTableItems, Table, TableBody, TableCell, TableHead, TableHeader, TablePagination, TableRow, tablePageFromSearchParam, tableSortDirectionFromSearchParam, tableSortHref, tableSortKeyFromSearchParam, tableSortParams, type TableSortDirection } from '@/components/ui/table';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
-import { listDistributors } from '@/lib/data/distributors';
+import { listDistributorCompanies } from '@/lib/data/crm';
 import { groupInventory, listPackages } from '@/lib/data/inventory';
 import { listProducts, listStrains } from '@/lib/data/sales-settings';
 import { compactNumber, formatInventoryCategory, formatMoney } from '@/lib/domain/format';
@@ -52,11 +52,14 @@ export default async function InventoryPage({ searchParams }: {
     const sortKey = tableSortKeyFromSearchParam(params.sort, inventorySortKeys);
     const sortDirection = sortKey ? tableSortDirectionFromSearchParam(params.dir) : null;
     const sortParams = tableSortParams(sortKey, sortDirection);
-    const [packages, products, strains, distributors] = await Promise.all([listPackages(false), listProducts(), listStrains(), canManageInventory ? listDistributors() : Promise.resolve([])]);
+    const [packages, products, strains, distributors] = await Promise.all([listPackages(false), listProducts(), listStrains(), canManageInventory ? listDistributorCompanies() : Promise.resolve([])]);
     const distributorOptions = distributors.map((distributor) => ({
         value: distributor.id,
-        label: distributor.data.name,
-        description: distributor.data.license_number || undefined,
+        label: distributor.data.company_name,
+        description: [
+            distributor.data.license_number,
+            [distributor.data.address.city, distributor.data.address.state].filter(Boolean).join(', '),
+        ].filter(Boolean).join(' · ') || undefined,
     }));
     const privateStrainIds = new Set(strains.filter((strain) => strain.data.status === 'Hidden').map((strain) => strain.id));
     const privateProductIds = new Set(products.filter((product) => product.data.status === 'Hidden' || product.data.strain_ids.some((strainId) => privateStrainIds.has(strainId))).map((product) => product.id));

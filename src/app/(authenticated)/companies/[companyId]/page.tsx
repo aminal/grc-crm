@@ -15,6 +15,7 @@ import { EditCompanyDialog } from '../new-company-dialog';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { listContacts } from '@/lib/data/crm';
+import { hasPackageConsignmentsForDistributorCompany } from '@/lib/data/inventory';
 import { listOrdersForCompany } from '@/lib/data/orders';
 import { loadCompanyRoute } from './company-route';
 import { COMPANY_STATUSES } from '@/lib/domain/constants';
@@ -29,6 +30,10 @@ export default async function CompanyDetailsPage({ params }: {
 
     const { companyId: routeSegment } = await params;
     const { company, companyId, companySlug } = await loadCompanyRoute(routeSegment);
+    const companyStatus = COMPANY_STATUSES.includes(company.data.status) ? company.data.status : 'Lead';
+    const locksActiveStatus = canManage && company.data.facility_type === 'Distributor' && companyStatus === 'Active'
+        ? await hasPackageConsignmentsForDistributorCompany(companyId)
+        : false;
     const [contacts, orders] = await Promise.all([listContacts(companyId), listOrdersForCompany(companyId)]);
 
     const primary = contacts.find((contact) => contact.id === company.data.primary_contact_id);
@@ -43,7 +48,6 @@ export default async function CompanyDetailsPage({ params }: {
     const location = [company.data.address.city, company.data.address.state].filter(Boolean).join(', ');
     const address = [company.data.address.street, location, company.data.address.postal_code].filter(Boolean).join(', ');
     const socialLinks = company.data.social_links ?? { facebook: '', instagram: '', x: '', threads: '' };
-    const companyStatus = COMPANY_STATUSES.includes(company.data.status) ? company.data.status : 'Lead';
     const companyFormValues = {
         company_name: company.data.company_name,
         license_number: company.data.license_number,
@@ -82,7 +86,7 @@ export default async function CompanyDetailsPage({ params }: {
                     <CardHeader>
                         <div className='flex items-start justify-between gap-4'>
                             <CardTitle>Company Details</CardTitle>
-                            {canManage ? <EditCompanyDialog companyId={companyId} company={companyFormValues} canDelete={canDeleteCompany} /> : null}
+                            {canManage ? <EditCompanyDialog companyId={companyId} company={companyFormValues} canDelete={canDeleteCompany} lockActiveStatus={locksActiveStatus} /> : null}
                         </div>
                     </CardHeader>
                     <CardContent className='p-0'>

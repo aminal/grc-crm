@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMPANY_STATUSES, PRODUCT_STATUSES, STRAIN_STATUSES } from "./constants";
 import { APP_SECTIONS, SECTION_FEATURES } from "@/lib/auth/permissions";
-import { batchMetadataSchema, companySchema, createOrderSchema, discountSchema, distributorCreateSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, strainCreateSchema, syncConsignmentSchema, userUpdateSchema } from "./schemas";
+import { batchMetadataSchema, companySchema, createOrderSchema, discountSchema, packagePricesFromForm, packageTagsFromForm, paymentSchema, productCreateSchema, strainCreateSchema, syncConsignmentSchema, userUpdateSchema } from "./schemas";
 
 describe("domain schemas", () => {
   it("stores company social profiles as handles", () => {
@@ -85,33 +85,6 @@ describe("domain schemas", () => {
       expect(productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"], status }).status).toBe(status);
     }
     expect(() => productCreateSchema.parse({ name: "Product", brand_id: "brand-1", strain_ids: ["strain-1"], status: "Discontinued" })).toThrow();
-  });
-
-  it("accepts a name-only distributor and normalizes the optional state", () => {
-    expect(distributorCreateSchema.parse({ name: " North Star Logistics " })).toMatchObject({
-      name: "North Star Logistics",
-      license_number: "",
-      contact_name: "",
-      email: "",
-      phone: "",
-      address_street: "",
-      address_city: "",
-      address_state: "",
-      address_postal_code: "",
-      notes: "",
-    });
-    expect(distributorCreateSchema.parse({ name: "North Star", address_state: "" }).address_state).toBe("");
-    expect(distributorCreateSchema.parse({ name: "North Star", address_state: " ny " }).address_state).toBe("NY");
-    expect(() => distributorCreateSchema.parse({ name: "North Star", address_state: "ZZ" })).toThrow();
-  });
-
-  it("rejects invalid distributor email and phone values", () => {
-    expect(() => distributorCreateSchema.parse({ name: "North Star", email: "not-an-email" })).toThrow();
-    expect(() => distributorCreateSchema.parse({ name: "North Star", phone: "12" })).toThrow();
-    expect(distributorCreateSchema.parse({ name: "North Star", email: "ops@example.com", phone: "(518) 555-0134" })).toMatchObject({
-      email: "ops@example.com",
-      phone: "(518) 555-0134",
-    });
   });
 
   it("requires a distributor only when sync packages are selected", () => {

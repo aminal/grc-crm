@@ -71,12 +71,12 @@ export function ConsignmentDialog({ group, packageIds, distributorOptions, onClo
         {state.error ? <div className="mb-4 rounded-lg bg-red-500/15 p-3 text-sm/6 font-medium text-red-700 ring-1 ring-red-500/20">{state.error}</div> : null}
         <form id={formId} action={formAction} className="space-y-4">
           <PackageIdInputs packageIds={packageIds} />
-          <Field label="Distributor">
+          <Field label="Distributor company">
             <SearchableSelect
               name="distributor_id"
               options={distributorOptions}
-              placeholder="Search distributors"
-              emptyMessage="No distributors found."
+              placeholder="Search distributor companies"
+              emptyMessage="No active distributor companies found."
               required
               disabled={pending}
             />

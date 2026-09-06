@@ -15,6 +15,7 @@ import {
   updateCompany,
   updateContact,
 } from "@/lib/data/crm";
+import { hasPackageConsignmentsForDistributorCompany } from "@/lib/data/inventory";
 import { companyPath } from "@/lib/domain/company-slug";
 import { companySchema, contactSchema, formEntries, interactionEntrySchema, interactionSchema } from "@/lib/domain/schemas";
 
@@ -30,6 +31,15 @@ export async function updateCompanyAction(companyId: string, formData: FormData)
   await requireFeature("companies", "manage_companies");
   const input = companySchema.parse(formEntries(formData));
   const currentCompany = await findCompany(companyId);
+  if (
+    currentCompany?.data.facility_type === "Distributor" &&
+    currentCompany.data.status === "Active" &&
+    input.status !== "Active" &&
+    await hasPackageConsignmentsForDistributorCompany(companyId)
+  ) {
+    throw new Error("Distributor companies with consigned inventory must remain Active.");
+  }
+
   const company = await updateCompany(companyId, input);
   revalidatePath("/companies");
   if (currentCompany) {

@@ -30,7 +30,7 @@ export type FirestoreRecord<T> = {
 };
 
 export type UserRole = "Guest" | "Employee" | "Manager" | "Admin";
-export type AppSection = "dashboard" | "sales" | "billing" | "inventory" | "companies" | "brands" | "strains" | "products" | "distributors" | "users";
+export type AppSection = "dashboard" | "sales" | "billing" | "inventory" | "companies" | "brands" | "strains" | "products" | "users";
 export type SectionAccessLevel = "none" | "read" | "write";
 export type SectionPermissions = Record<AppSection, SectionAccessLevel>;
 export type DashboardFeature = "view_metrics" | "view_recent_orders" | "view_recent_companies" | "view_inventory_groups" | "view_sales_status";
@@ -41,7 +41,6 @@ export type CompaniesFeature = "manage_companies" | "manage_contacts" | "manage_
 export type BrandsFeature = "create_brands" | "update_brands" | "archive_brands";
 export type StrainsFeature = "create_strains" | "update_strains" | "view_private_strains";
 export type ProductsFeature = "create_products" | "update_products";
-export type DistributorsFeature = "create_distributors" | "update_distributors" | "archive_distributors";
 export type UsersFeature = "edit_user_profiles" | "edit_user_permissions" | "assign_admin_role";
 export type SectionFeatureMap = {
   dashboard: DashboardFeature;
@@ -52,7 +51,6 @@ export type SectionFeatureMap = {
   brands: BrandsFeature;
   strains: StrainsFeature;
   products: ProductsFeature;
-  distributors: DistributorsFeature;
   users: UsersFeature;
 };
 export type SectionFeature<S extends AppSection = AppSection> = SectionFeatureMap[S];
@@ -420,19 +418,6 @@ export type ProductData = {
   case_quantity: number;
   sku: string;
   upc: string;
-  notes: string;
-  archived_at?: FirestoreDate;
-  created_at: FirestoreDate;
-  updated_at: FirestoreDate;
-};
-
-export type DistributorData = {
-  name: string;
-  license_number: string;
-  contact_name: string;
-  email: string;
-  phone: string;
-  address: Address;
   notes: string;
   archived_at?: FirestoreDate;
   created_at: FirestoreDate;
