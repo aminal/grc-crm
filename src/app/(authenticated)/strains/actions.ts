@@ -22,8 +22,8 @@ export async function createStrainAction(formData: FormData): Promise<StrainStat
   const user = await requireFeature("strains", "create_strains");
   const input = strainCreateSchema.parse(formEntries(formData));
   await createStrain(input, user);
-  revalidatePath("/strains");
-  revalidatePath("/products");
+  revalidatePath("/settings/strains");
+  revalidatePath("/settings/products");
   return input.status;
 }
 
@@ -33,10 +33,10 @@ export async function updateStrainAction(strainId: string, formData: FormData): 
   const input = strainUpdateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
   await updateStrain(strainId, input, user, reason.reason);
-  revalidatePath("/strains");
+  revalidatePath("/settings/strains");
   revalidatePath(`/strains/${encodeURIComponent(strainId)}`);
   revalidatePath(`/strains/${encodeURIComponent(strainId)}/edit`);
-  revalidatePath("/products");
+  revalidatePath("/settings/products");
   return input.status;
 }
 

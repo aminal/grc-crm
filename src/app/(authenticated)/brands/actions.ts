@@ -20,7 +20,7 @@ export async function createBrandAction(formData: FormData): Promise<void> {
   const user = await requireFeature("brands", "create_brands");
   const input = brandCreateSchema.parse(formEntries(formData));
   await createBrand(input, user);
-  revalidatePath("/brands");
+  revalidatePath("/settings/brands");
 }
 
 export async function updateBrandAction(brandId: string, formData: FormData): Promise<void> {
@@ -29,7 +29,7 @@ export async function updateBrandAction(brandId: string, formData: FormData): Pr
   const input = brandCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
   await updateBrand(brandId, input, user, reason.reason);
-  revalidatePath("/brands");
+  revalidatePath("/settings/brands");
   revalidatePath(`/brands/${encodeURIComponent(brandId)}`);
 }
 
@@ -40,10 +40,10 @@ export async function archiveBrandAction(brandId: string, formData: FormData): P
   }
 
   await archiveBrand(brandId, user, "Archived from Brands settings.");
-  revalidatePath("/brands");
+  revalidatePath("/settings/brands");
   revalidatePath(`/brands/${encodeURIComponent(brandId)}`);
-  revalidatePath("/products");
-  redirect("/brands");
+  revalidatePath("/settings/products");
+  redirect("/settings/brands");
 }
 
 export async function createBrandFormAction(_: BrandFormState, formData: FormData): Promise<BrandFormState> {

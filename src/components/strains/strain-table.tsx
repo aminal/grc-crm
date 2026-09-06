@@ -24,11 +24,15 @@ export function StrainTable({
   query = "",
   sortKey = null,
   sortDirection = null,
+  baseHref = "/settings/strains",
+  rowParams = {},
 }: {
   strains: StrainTableStrain[];
   query?: string;
   sortKey?: StrainTableSortKey | null;
   sortDirection?: TableSortDirection | null;
+  baseHref?: string;
+  rowParams?: Record<string, string>;
 }): React.ReactElement {
   if (strains.length === 0) {
     return <EmptyState title="No strains yet" description="Create a strain before adding products to the sales catalog." />;
@@ -38,14 +42,14 @@ export function StrainTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead sortHref={strainSortHref("name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
-          <TableHead sortHref={strainSortHref("composition", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("composition", sortKey, sortDirection)}>Composition</TableHead>
-          <TableHead sortHref={strainSortHref("status", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("status", sortKey, sortDirection)}>Status</TableHead>
+          <TableHead sortHref={strainSortHref(baseHref, "name", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("name", sortKey, sortDirection)}>Name</TableHead>
+          <TableHead sortHref={strainSortHref(baseHref, "composition", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("composition", sortKey, sortDirection)}>Composition</TableHead>
+          <TableHead sortHref={strainSortHref(baseHref, "status", query, sortKey, sortDirection)} sortDirection={activeTableSortDirection("status", sortKey, sortDirection)}>Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {strains.map((strain) => {
-          const href = `/strains/${encodeURIComponent(strain.id)}`;
+          const href = strainHref(baseHref, strain.id, query, rowParams);
           const label = `View ${strain.data.name}`;
 
           return (
@@ -88,6 +92,22 @@ function StrainStatusBadge({ status }: { status: StrainStatus }): React.ReactEle
   return <Badge color={statusColors[status]}>{status}</Badge>;
 }
 
-function strainSortHref(column: StrainTableSortKey, query: string, sortKey: StrainTableSortKey | null, sortDirection: TableSortDirection | null): string {
-  return tableSortHref("/strains", column, { q: query }, sortKey, sortDirection);
+function strainHref(baseHref: string, strainId: string, query: string, params: Record<string, string>): string {
+  const searchParams = new URLSearchParams();
+  if (query) {
+    searchParams.set("q", query);
+  }
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      searchParams.set(key, value);
+    }
+  });
+
+  searchParams.set("strain", strainId);
+  return `${baseHref}?${searchParams.toString()}`;
+}
+
+function strainSortHref(baseHref: string, column: StrainTableSortKey, query: string, sortKey: StrainTableSortKey | null, sortDirection: TableSortDirection | null): string {
+  return tableSortHref(baseHref, column, { q: query }, sortKey, sortDirection);
 }

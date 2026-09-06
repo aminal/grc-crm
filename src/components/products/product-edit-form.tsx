@@ -37,7 +37,7 @@ export function ProductEditForm({ product, brands, strains, cancelHref, successH
 
   useEffect(() => {
     if (state.success) {
-      router.replace(state.status === "Archived" ? "/products" : successHref, { scroll: false });
+      router.replace(state.status === "Archived" ? "/settings/products" : successHref, { scroll: false });
     }
   }, [router, state.status, state.success, successHref]);
 

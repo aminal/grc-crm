@@ -24,6 +24,8 @@ type ProductTableProps = {
     query?: string;
     sortKey?: ProductTableSortKey | null;
     sortDirection?: TableSortDirection | null;
+    baseHref?: string;
+    rowParams?: Record<string, string>;
 };
 
 function isArchived(record: FirestoreRecord<BrandData | StrainData>): boolean {
@@ -37,7 +39,9 @@ export function ProductTable({
     strains,
     query = '',
     sortKey = null,
-    sortDirection = null
+    sortDirection = null,
+    baseHref = '/settings/products',
+    rowParams = {},
 }: ProductTableProps): React.ReactElement {
     const hasActiveStrains = strains.some((strain) => !isArchived(strain));
 
@@ -62,17 +66,17 @@ export function ProductTable({
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead sortHref={productSortHref('name', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('name', sortKey, sortDirection)}>Name</TableHead>
-                    <TableHead sortHref={productSortHref('category', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('category', sortKey, sortDirection)}>Category</TableHead>
-                    <TableHead sortHref={productSortHref('status', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('status', sortKey, sortDirection)}>Status</TableHead>
-                    <TableHead className='hidden xl:table-cell' sortHref={productSortHref('sku', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('sku', sortKey, sortDirection)}>SKU</TableHead>
-                    <TableHead className='hidden xl:table-cell' sortHref={productSortHref('brand', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('brand', sortKey, sortDirection)}>Brand</TableHead>
-                    <TableHead className='hidden sm:table-cell' sortHref={productSortHref('strain', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('strain', sortKey, sortDirection)}>Strain</TableHead>
+                    <TableHead sortHref={productSortHref(baseHref, 'name', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('name', sortKey, sortDirection)}>Name</TableHead>
+                    <TableHead sortHref={productSortHref(baseHref, 'category', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('category', sortKey, sortDirection)}>Category</TableHead>
+                    <TableHead sortHref={productSortHref(baseHref, 'status', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('status', sortKey, sortDirection)}>Status</TableHead>
+                    <TableHead className='hidden xl:table-cell' sortHref={productSortHref(baseHref, 'sku', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('sku', sortKey, sortDirection)}>SKU</TableHead>
+                    <TableHead className='hidden xl:table-cell' sortHref={productSortHref(baseHref, 'brand', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('brand', sortKey, sortDirection)}>Brand</TableHead>
+                    <TableHead className='hidden sm:table-cell' sortHref={productSortHref(baseHref, 'strain', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('strain', sortKey, sortDirection)}>Strain</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {products.map((product) => {
-                    const href = `/products/${encodeURIComponent(product.id)}`;
+                    const href = productHref(baseHref, product.id, query, rowParams);
                     const label = `View ${product.data.name}`;
 
                     return (
@@ -145,6 +149,22 @@ function ProductStatusBadge({ status }: { status: ProductStatus }): React.ReactE
     return <Badge color={statusColors[status]}>{status}</Badge>;
 }
 
-function productSortHref(column: ProductTableSortKey, query: string, sortKey: ProductTableSortKey | null, sortDirection: TableSortDirection | null): string {
-    return tableSortHref('/products', column, { q: query }, sortKey, sortDirection);
+function productHref(baseHref: string, productId: string, query: string, params: Record<string, string>): string {
+    const searchParams = new URLSearchParams();
+    if (query) {
+        searchParams.set('q', query);
+    }
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+            searchParams.set(key, value);
+        }
+    });
+
+    searchParams.set('product', productId);
+    return `${baseHref}?${searchParams.toString()}`;
+}
+
+function productSortHref(baseHref: string, column: ProductTableSortKey, query: string, sortKey: ProductTableSortKey | null, sortDirection: TableSortDirection | null): string {
+    return tableSortHref(baseHref, column, { q: query }, sortKey, sortDirection);
 }

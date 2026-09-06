@@ -1,11 +1,9 @@
 import { notFound, redirect } from 'next/navigation';
 import { BrandDialog } from '@/components/brands/brand-dialog';
-import { BrandHeaderCard } from '@/components/brands/brand-header-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { BrandDetailsCard, BrandHeaderCard } from '@/components/brands/brand-header-card';
 import { isFeatureEnabled } from '@/lib/auth/permissions';
 import { requireSectionEnabled } from '@/lib/auth/session';
 import { findBrand } from '@/lib/data/sales-settings';
-import { formatDate } from '@/lib/domain/format';
 import type { BrandData, FirestoreRecord } from '@/lib/domain/types';
 
 type BrandDetailParams = {
@@ -48,42 +46,6 @@ export default async function BrandDetailPage({ params, searchParams }: {
             <BrandHeaderCard brand={brand} editHref={canEditBrand ? `${brandHref}?edit=1` : null} />
             <BrandDetailsCard brand={brand} />
             {showEditBrandDialog ? <BrandDialog mode='edit' brand={serializeBrand(brand)} closeHref={brandHref} canArchive={canArchiveBrand} /> : null}
-        </div>
-    );
-}
-
-function BrandDetailsCard({ brand }: { brand: FirestoreRecord<BrandData> }): React.ReactElement {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Brand Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <dl className='grid gap-5 sm:grid-cols-2 xl:grid-cols-3'>
-                    <DetailItem label='Name' value={brand.data.name || '—'} />
-                    <DetailItem label='Acronym' value={brand.data.acronym || '—'} />
-                    <DetailItem label='Website' value={brand.data.website || '—'} />
-                    <DetailItem label='Created' value={formatDate(brand.data.created_at)} />
-                    <DetailItem label='Last Updated' value={formatDate(brand.data.updated_at)} />
-                </dl>
-                {brand.data.notes ? (
-                    <dl className='mt-6'>
-                        <DetailItem label='Notes' value={<span className='whitespace-pre-wrap'>{brand.data.notes}</span>} />
-                    </dl>
-                ) : null}
-            </CardContent>
-        </Card>
-    );
-}
-
-function DetailItem({ label, value }: {
-    label: string;
-    value: React.ReactNode;
-}): React.ReactElement {
-    return (
-        <div>
-            <dt className='text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500'>{label}</dt>
-            <dd className='mt-1 break-words text-sm/6 font-semibold text-zinc-950 dark:text-white'>{value}</dd>
         </div>
     );
 }

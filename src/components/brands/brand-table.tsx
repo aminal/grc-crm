@@ -20,11 +20,15 @@ export function BrandTable({
     query = '',
     sortKey = null,
     sortDirection = null,
+    baseHref = '/settings/brands',
+    rowParams = {},
 }: {
     brands: FirestoreRecord<BrandData>[];
     query?: string;
     sortKey?: BrandTableSortKey | null;
     sortDirection?: TableSortDirection | null;
+    baseHref?: string;
+    rowParams?: Record<string, string>;
 }): React.ReactElement {
     if (brands.length === 0) {
         return <EmptyState title='No brands yet' description='Create a brand to start building your sales catalog.' />;
@@ -34,14 +38,14 @@ export function BrandTable({
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead sortHref={brandSortHref('name', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('name', sortKey, sortDirection)}>Name</TableHead>
-                    <TableHead className='hidden sm:table-cell' sortHref={brandSortHref('acronym', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('acronym', sortKey, sortDirection)}>Acronym</TableHead>
-                    <TableHead sortHref={brandSortHref('website', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('website', sortKey, sortDirection)}>Website</TableHead>
+                    <TableHead sortHref={brandSortHref(baseHref, 'name', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('name', sortKey, sortDirection)}>Name</TableHead>
+                    <TableHead className='hidden sm:table-cell' sortHref={brandSortHref(baseHref, 'acronym', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('acronym', sortKey, sortDirection)}>Acronym</TableHead>
+                    <TableHead sortHref={brandSortHref(baseHref, 'website', query, sortKey, sortDirection)} sortDirection={activeTableSortDirection('website', sortKey, sortDirection)}>Website</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {brands.map((brand) => {
-                    const href = `/brands/${encodeURIComponent(brand.id)}`;
+                    const href = brandHref(baseHref, brand.id, query, rowParams);
                     const label = `View ${brand.data.name}`;
 
                     return (
@@ -76,6 +80,22 @@ export function BrandTable({
     );
 }
 
-function brandSortHref(column: BrandTableSortKey, query: string, sortKey: BrandTableSortKey | null, sortDirection: TableSortDirection | null): string {
-    return tableSortHref('/brands', column, { q: query }, sortKey, sortDirection);
+function brandHref(baseHref: string, brandId: string, query: string, params: Record<string, string>): string {
+    const searchParams = new URLSearchParams();
+    if (query) {
+        searchParams.set('q', query);
+    }
+
+    Object.entries(params).forEach(([key, value]) => {
+        if (value) {
+            searchParams.set(key, value);
+        }
+    });
+
+    searchParams.set('brand', brandId);
+    return `${baseHref}?${searchParams.toString()}`;
+}
+
+function brandSortHref(baseHref: string, column: BrandTableSortKey, query: string, sortKey: BrandTableSortKey | null, sortDirection: TableSortDirection | null): string {
+    return tableSortHref(baseHref, column, { q: query }, sortKey, sortDirection);
 }

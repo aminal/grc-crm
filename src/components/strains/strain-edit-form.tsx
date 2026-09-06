@@ -35,7 +35,7 @@ export function StrainEditForm({ strain, cancelHref, successHref }: StrainEditFo
 
   useEffect(() => {
     if (state.success) {
-      router.replace(state.status === "Archived" ? "/strains" : successHref, { scroll: false });
+      router.replace(state.status === "Archived" ? "/settings/strains" : successHref, { scroll: false });
     }
   }, [router, state.status, state.success, successHref]);
 

@@ -43,9 +43,9 @@ export const SECTION_HREFS = {
   billing: "/billing",
   inventory: "/inventory",
   companies: "/companies",
-  brands: "/brands",
-  strains: "/strains",
-  products: "/products",
+  brands: "/settings/brands",
+  strains: "/settings/strains",
+  products: "/settings/products",
   users: "/users",
 } as const satisfies Record<AppSection, string>;
 

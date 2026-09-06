@@ -59,11 +59,10 @@ export default async function EditProductPage({ params }: {
         notFound();
     }
     const productHref = productPath(product.id);
-    const primaryStrain = firstProductStrain(product, strains);
 
     return (
         <div className='space-y-6'>
-            <ProductHeaderCard product={product} strainSativaPercentage={primaryStrain?.data.sativa_percentage} />
+            <ProductHeaderCard product={product} />
             <Card>
                 <CardHeader>
                     <CardTitle>Product Details</CardTitle>
@@ -162,10 +161,5 @@ async function includeProductStrains(activeStrains: FirestoreRecord<StrainData>[
         ...activeStrains,
         ...referencedStrains.filter((strain): strain is FirestoreRecord<StrainData> => strain !== null),
     ].sort((a, b) => a.data.name.localeCompare(b.data.name));
-}
-
-function firstProductStrain(product: FirestoreRecord<ProductData>, strains: FirestoreRecord<StrainData>[]): FirestoreRecord<StrainData> | null {
-    const firstStrainId = product.data.strain_ids[0];
-    return firstStrainId ? (strains.find((strain) => strain.id === firstStrainId) ?? null) : null;
 }
 

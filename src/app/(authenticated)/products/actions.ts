@@ -21,7 +21,7 @@ export async function createProductAction(formData: FormData): Promise<ProductSt
   const user = await requireFeature("products", "create_products");
   const input = productCreateSchema.parse(formEntries(formData));
   await createProduct(input, user);
-  revalidatePath("/products");
+  revalidatePath("/settings/products");
   return input.status;
 }
 
@@ -31,7 +31,7 @@ export async function updateProductAction(productId: string, formData: FormData)
   const input = productCreateSchema.parse(values);
   const reason = editReasonSchema.parse(values);
   await updateProduct(productId, input, user, reason.reason);
-  revalidatePath("/products");
+  revalidatePath("/settings/products");
   revalidatePath(`/products/${encodeURIComponent(productId)}`);
   revalidatePath(`/products/${encodeURIComponent(productId)}/edit`);
   return input.status;

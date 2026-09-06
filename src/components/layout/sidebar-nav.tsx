@@ -5,13 +5,11 @@ import {
   ArchiveBoxIcon,
   BanknotesIcon,
   BuildingOffice2Icon,
-  CubeIcon,
+  Cog6ToothIcon,
   DocumentCurrencyDollarIcon,
   HomeIcon,
-  TagIcon,
   UserGroupIcon,
 } from "@heroicons/react/20/solid";
-import { Cannabis } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutGroup, motion } from "motion/react";
@@ -21,79 +19,63 @@ import { TouchTarget } from "@/components/ui/button";
 import { isSectionEnabled } from "@/lib/auth/permissions";
 import type { AppSection, AuthenticatedUser } from "@/lib/domain/types";
 
-function StrainsIcon(props: React.ComponentProps<typeof Cannabis>): React.ReactElement {
-  return <Cannabis {...props} className={cn("[&_*]:fill-none", props.className)} />;
-}
+const settingsSections = ["users", "brands", "products", "strains"] as const satisfies readonly AppSection[];
 
 const navItems: readonly {
   href: string;
   label: string;
-  section: AppSection;
+  sections: readonly AppSection[];
   icon: React.ElementType;
   isCurrent: (pathname: string) => boolean;
 }[] = [
   {
     href: "/dashboard",
     label: "Dashboard",
-    section: "dashboard",
+    sections: ["dashboard"],
     icon: HomeIcon,
     isCurrent: (pathname: string) => pathname === "/dashboard",
   },
   {
     href: "/sales",
     label: "Sales",
-    section: "sales",
+    sections: ["sales"],
     icon: BanknotesIcon,
     isCurrent: (pathname: string) => pathname === "/sales" || pathname.startsWith("/sales/"),
   },
   {
     href: "/billing",
     label: "Billing",
-    section: "billing",
+    sections: ["billing"],
     icon: DocumentCurrencyDollarIcon,
     isCurrent: (pathname: string) => pathname === "/billing" || pathname.startsWith("/billing/"),
   },
   {
     href: "/inventory",
     label: "Inventory",
-    section: "inventory",
+    sections: ["inventory"],
     icon: ArchiveBoxIcon,
     isCurrent: (pathname: string) => pathname === "/inventory" || pathname.startsWith("/inventory/"),
   },
   {
     href: "/companies",
     label: "Companies",
-    section: "companies",
+    sections: ["companies"],
     icon: BuildingOffice2Icon,
     isCurrent: (pathname: string) => pathname === "/companies" || pathname.startsWith("/companies/"),
   },
   {
-    href: "/brands",
-    label: "Brands",
-    section: "brands",
-    icon: TagIcon,
-    isCurrent: (pathname: string) => pathname === "/brands" || pathname.startsWith("/brands/"),
-  },
-  {
-    href: "/strains",
-    label: "Strains",
-    section: "strains",
-    icon: StrainsIcon,
-    isCurrent: (pathname: string) => pathname === "/strains" || pathname.startsWith("/strains/"),
-  },
-  {
-    href: "/products",
-    label: "Products",
-    section: "products",
-    icon: CubeIcon,
-    isCurrent: (pathname: string) => pathname === "/products" || pathname.startsWith("/products/"),
-  },
-  {
     href: "/users",
     label: "Users",
-    section: "users",
+    sections: ["users"],
     icon: UserGroupIcon,
     isCurrent: (pathname: string) => pathname === "/users" || pathname.startsWith("/users/"),
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    sections: settingsSections,
+    icon: Cog6ToothIcon,
+    isCurrent: (pathname: string) => pathname === "/settings" || pathname.startsWith("/settings/"),
   },
 ] as const;
 
@@ -120,7 +102,7 @@ export function SidebarNav({ user, onNavigate }: { user: AuthenticatedUser; onNa
     <LayoutGroup id={id}>
       <div data-slot="section" className="flex flex-col gap-0.5">
         {navItems
-          .filter((item) => isSectionEnabled(user, item.section))
+          .filter((item) => item.sections.some((section) => isSectionEnabled(user, section)))
           .map((item) => {
             const Icon = item.icon;
             const current = item.isCurrent(pathname);

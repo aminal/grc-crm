@@ -11,7 +11,7 @@ import {
 } from '@heroicons/react/20/solid';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import type { AuthenticatedUser } from '@/lib/domain/types';
 import { TouchTarget } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/dropdown';
 import { sidebarItemClasses, SidebarNav } from '@/components/layout/sidebar-nav';
 import { cn } from '@/lib/utils';
+import { useThemePreference } from '@/lib/theme-preference';
 
 type SidebarProps = {
     user: AuthenticatedUser;
@@ -40,39 +41,6 @@ const navbarItemClasses = cn(
     'dark:data-hover:bg-white/5 dark:data-hover:*:data-[slot=icon]:fill-white',
     'dark:data-active:bg-white/5 dark:data-active:*:data-[slot=icon]:fill-white',
 );
-
-const themeStorageKey = 'theme';
-
-function getPreferredDarkMode(): boolean {
-    try {
-        const storedTheme = window.localStorage.getItem(themeStorageKey);
-
-        if (storedTheme === 'dark') {
-            return true;
-        }
-
-        if (storedTheme === 'light') {
-            return false;
-        }
-
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch {
-        return false;
-    }
-}
-
-function applyThemePreference(isDarkMode: boolean): void {
-    document.documentElement.classList.toggle('dark', isDarkMode);
-    document.documentElement.style.colorScheme = isDarkMode ? 'dark' : 'light';
-}
-
-function saveThemePreference(isDarkMode: boolean): void {
-    try {
-        window.localStorage.setItem(themeStorageKey, isDarkMode ? 'dark' : 'light');
-    } catch {
-        return;
-    }
-}
 
 export function Sidebar({ user, logoutAction }: SidebarProps): React.ReactElement {
     const [showSidebar, setShowSidebar] = useState(false);
@@ -187,18 +155,11 @@ function UserPanel({ user, logoutAction, onNavigate }: {
     onNavigate?: () => void
 }): React.ReactElement {
     const themeMenuItemId = useId();
-    const [isDarkMode, setIsDarkMode] = useState(getPreferredDarkMode);
-
-    useEffect(() => {
-        applyThemePreference(isDarkMode);
-    }, [isDarkMode]);
+    const [isDarkMode, setDarkModePreference] = useThemePreference();
 
     const toggleThemePreference = useCallback(() => {
-        const nextIsDarkMode = !isDarkMode;
-        setIsDarkMode(nextIsDarkMode);
-        applyThemePreference(nextIsDarkMode);
-        saveThemePreference(nextIsDarkMode);
-    }, [isDarkMode]);
+        setDarkModePreference(!isDarkMode);
+    }, [isDarkMode, setDarkModePreference]);
 
     const handleThemeClick = useCallback(
         (event: React.MouseEvent<HTMLButtonElement>) => {
